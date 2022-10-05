@@ -1,0 +1,52 @@
+multi_wheel_steering_controller:
+  ros__parameters:
+
+    wheel_steering_controller_name: position_trajectory_controller
+    wheel_velocity_controller_name: velocity_controller
+
+    publish_rate_in_hz: 25
+
+    module_names: [
+      right_front,
+      left_fornt,
+      left_rear,
+      right_rear,
+    ]
+
+    modules:
+      - right_front:
+          - steering_link: ""
+            drive_link: ""
+            xy_position: []
+            wheel_radius: 0.04
+            steering_motor_velocity_limits: [0.05, 0.5]
+            steering_motor_acceleration_limits: [0.05, 0.5]
+            drive_motor_velocity_limits: [0.05, 0.5]
+            drive_motor_acceleration_limits: [0.05, 0.5]
+      - left_front:
+          - steering_link: ""
+            drive_link: ""
+            xy_position: []
+            wheel_radius: 0.04
+            steering_motor_velocity_limits: [0.05, 0.5]
+            steering_motor_acceleration_limits: [0.05, 0.5]
+            drive_motor_velocity_limits: [0.05, 0.5]
+            drive_motor_acceleration_limits: [0.05, 0.5]
+      - left_rear:
+          - steering_link: ""
+            drive_link: ""
+            xy_position: []
+            wheel_radius: 0.04
+            steering_motor_velocity_limits: [0.05, 0.5]
+            steering_motor_acceleration_limits: [0.05, 0.5]
+            drive_motor_velocity_limits: [0.05, 0.5]
+            drive_motor_acceleration_limits: [0.05, 0.5]
+      - right_rear:
+          - steering_link: ""
+            drive_link: ""
+            xy_position: []
+            wheel_radius: 0.04
+            steering_motor_velocity_limits: [0.05, 0.5]
+            steering_motor_acceleration_limits: [0.05, 0.5]
+            drive_motor_velocity_limits: [0.05, 0.5]
+            drive_motor_acceleration_limits: [0.05, 0.5]

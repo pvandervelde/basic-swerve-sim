@@ -1,0 +1,16 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "D:\\dev\\languages\\miniforge3\\envs\\robostack\\Library\\include\\**",
+        "F:\\robotics\\ros_ws\\cratebot\\src\\ros-multi-wheel-steering-controller\\include\\**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
