@@ -36,6 +36,7 @@ Which translates to
 
 - No wheel side slip
 - The wheel steering axis goes through the center of the wheel in a vertical direction
+- wheel steering directions are measured from 0 to 2* pi or 0 to 360 degrees because that's how sensors measure
 
 
 ## Implementation
