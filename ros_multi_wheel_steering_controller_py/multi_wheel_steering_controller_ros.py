@@ -11,8 +11,9 @@ import rclpy
 from rclpy.node import Node
 
 # ROS message types
+from builtin_interfaces.msg import Duration
 from control_msgs.msg import DynamicJointState, InterfaceValue
-from geometry_msgs.msg import Point, Twist
+from geometry_msgs.msg import Point, PoseWithCovariance, Twist, TwistWithCovariance
 from nav_msgs.msg import Odometry
 from rcl_interfaces.msg import Parameter, ParameterDescriptor, ParameterType, SetParametersResult
 from sensor_msgs.msg import JointState
@@ -21,6 +22,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 # local
 from control_model import BodyState, DriveModuleState, body_state_from_twist, ControlModelBase, SimpleFourWheelSteeringControlModel
+from drive_module import DriveModule
 from trajectory import BodyStateTrajectory, DriveModuleStateTrajectory
 
 class ControllerParameter(object):
@@ -34,109 +36,7 @@ class ControllerParameter(object):
         self.param_type = param_type
         self.value = value
 
-class SteeringModuleDegreesOfFreedom(object):
-
-    def __init__(
-        self,
-        is_singularity: bool,
-        steering_angle: float,
-        drive_velocity: float
-        ):
-        self.is_singularity = is_singularity
-        self.steering_angle = steering_angle
-        self.drive_velocity = drive_velocity
-
-class DriveModule(object):
-
-    def __init__(
-        self,
-        steering_link: str,
-        drive_link: str,
-        steering_axis_xy_position: Point,
-        wheel_radius: float,
-        steering_motor_maximum_velocity: float,
-        steering_motor_minimum_acceleration: float,
-        steering_motor_maximum_acceleration: float,
-        drive_motor_maximum_velocity: float,
-        drive_motor_minimum_acceleration: float,
-        drive_motor_maximum_acceleration: float):
-
-        self.steering_link_name = steering_link
-        self.driving_link_name = drive_link
-
-        # Assume a vertical steering axis that goes through the center of the wheel (i.e. no steering offset)
-        self.steering_axis_xy_position = steering_axis_xy_position
-        self.wheel_radius = wheel_radius
-
-        self.steering_motor_maximum_velocity = steering_motor_maximum_velocity
-
-        self.steering_motor_minimum_acceleration = steering_motor_minimum_acceleration
-        self.steering_motor_maximum_acceleration = steering_motor_maximum_acceleration
-
-        self.drive_motor_maximum_velocity = drive_motor_maximum_velocity
-
-        self.drive_motor_minimum_acceleration = drive_motor_minimum_acceleration
-        self.drive_motor_maximum_acceleration = drive_motor_maximum_acceleration
-
-    def get_current_steering_direction_in_radians(self) -> float:
-        return self.steering_direction_in_radians
-
-    def get_current_steering_velocity_in_radians_per_second(self) -> float:
-        return self.steering_velocity_in_radians_per_second
-
-    def get_current_steering_acceleration_in_radians_per_second_squared(self) -> float:
-        return self.steering_acceleration_in_radians_per_second_squared
-
-    def get_current_drive_velocity_in_meters_per_second(self) -> float:
-        return self.drive_velocity_in_meters_per_second
-
-    def get_current_drive_acceleration_in_meters_per_second_squared(self) -> float:
-        return self.drive_acceleration_in_meters_per_second_squared
-
-    def get_steering_angle_and_wheel_velocity_for_twist(self, twist: Twist) -> SteeringModuleDegreesOfFreedom:
-        # Kinematics
-        # Literature:
-        # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
-        # -
-        # For wheel i
-        #  - velocity = sqrt( (v_x - omega * y_i)^2 + (v_y + omega * x_i)^2 )
-        #  - angle = acos( (v_x - omega * y_i) / (velocity) ) = asin( (v_y + omega * x_i) / (velocity) )
-        #
-        # Angle: 0 < alpha < Pi
-        #  The angle also needs a differentiation if it should go between Pi and 2Pi
-        #
-        # This assumes that (x_i, y_i) is the coordinate for the steering axis. And that the steering axis is in z-direction.
-        # And that the wheel contact point is on that steering axis
-        wheel_x_velocity_in_body_coordinates = twist.linear.x - twist.angular.z * self.steering_axis_xy_position.y
-        wheel_y_velocity_in_body_coordinates = twist.linear.y + twist.angular.z * self.steering_axis_xy_position.x
-        drive_velocity = sqrt(pow(wheel_x_velocity_in_body_coordinates, 2.0) + pow(wheel_y_velocity_in_body_coordinates, 2.0))
-
-        is_singularity: bool = False
-        if isclose(drive_velocity, 0.0, 1e-9, 1e-9):
-            is_singularity = True
-            steering_angle = 0
-        else:
-            steering_angle = acos(wheel_x_velocity_in_body_coordinates / drive_velocity)
-
-        return SteeringModuleDegreesOfFreedom(is_singularity, steering_angle, drive_velocity)
-
-    def set_current_steering_direction_in_radians(self, direction: float):
-        self.steering_direction_in_radians = direction
-
-    def set_current_steering_velocity_in_radians_per_second(self, velocity: float):
-        self.steering_velocity_in_radians_per_second = velocity
-
-    def set_current_steering_acceleration_in_radians_per_second_squared(self, acceleration: float):
-        self.steering_acceleration_in_radians_per_second_squared = acceleration
-
-    def set_current_drive_velocity_in_meters_per_second(self, velocity: float):
-        self.drive_velocity_in_meters_per_second = velocity
-
-    def set_current_drive_acceleration_in_meters_per_second_squared(self, acceleration: float):
-        self.drive_acceleration_in_meters_per_second_squared = acceleration
-
-
-class MultiWheelSteeringController(Node):
+class MultiWheelSteeringControllerROS(Node):
 
     # CLASS CONSTANTS
     PARAM_WHEEL_STEERING_CONTROLLER_NAME = "wheel_steering_controller_name"
@@ -162,7 +62,7 @@ class MultiWheelSteeringController(Node):
         self.modules = self.load_modules()
 
         # Use a simple control model for the time being. Just need something that roughly works
-        self.control_model = SimpleFourWheelSteeringControlModel()
+        self.control_model = SimpleFourWheelSteeringControlModel(self.modules)
 
         # Subscriptions
         # Subscribe to 'cmd_vel' to receive velocity / direction commands
@@ -393,36 +293,6 @@ class MultiWheelSteeringController(Node):
             value = value
         )
 
-    def get_steering_direction_ranges(self, current_angle_in_radians: float, desired_angle_in_radians: float) -> Tuple[List[float], List[float]]:
-        current_angle_in_degrees = degrees(current_angle_in_radians)
-        desired_angle_in_degrees = degrees(desired_angle_in_radians)
-
-        # Because circles don't map nicely on linear integers one of the ranges will have to jump the
-        # 0 degree / 360 degree point.
-        if current_angle_in_degrees > desired_angle_in_degrees:
-            # positive direction: Need to jump the 0 degree / 360 degree point
-            #                     -> compute in two sections [start, 360>, [0, end]
-            first_part = range(current_angle_in_degrees, 360, 1)
-            second_part = range(0, desired_angle_in_degrees + 1, 1)
-            forward_range = []
-            forward_range.extend(first_part)
-            forward_range.extend(second_part)
-
-            # negative direction: No issues
-            reverse_range = range(current_angle_in_degrees, desired_angle_in_degrees - 1, -1)
-            return forward_range, reverse_range
-        else:
-            # positive direction: No issues
-            forward_range = range(current_angle_in_degrees, desired_angle_in_degrees + 1, 1)
-
-            # negative direction: Need to jump the 0 degree / 360 degree point
-            first_part = range(current_angle_in_degrees, -1, -1)
-            second_part = range(359, desired_angle_in_degrees - 1, -1)
-            reverse_range = []
-            reverse_range.extend(first_part)
-            reverse_range.extend(second_part)
-            return forward_range, reverse_range
-
     def on_parameters_change(self, params):
         has_module_changes: bool = False
         for param in params:
@@ -475,6 +345,7 @@ class MultiWheelSteeringController(Node):
                 steering_axis_coordinates[2],
             )
             wheel_module = DriveModule(
+                name = key,
                 steering_link = value['steering_link'],
                 drive_link = value['drive_link'],
                 steering_axis_xy_position = point,
@@ -492,15 +363,23 @@ class MultiWheelSteeringController(Node):
     # Do stuff
     def publish_controller_commands(self):
 
+        # The following procedure assumes that all the wheels are pointing to the same ICR. Ideally
+        # there would be a node that watches the current state and stops the robot if something goes
+        # wrong.
+
         # Compute the twist trajectory, i.e. how do we get from our current (v, omega) to the
         # desired (v, omega)
         #   Ideally we want O(1) for jerk, O(2) for acceleration, O(3) for velocity
         #   Can use a spline or b-spline or other trajectory approach
-        current_body_state = self.controL_model.state_of_body_frame_from_wheel_module_states()
+        current_body_state = self.control_model.state_of_body_frame_from_wheel_module_states()
         desired_body_state = body_state_from_twist(self.current_velocity_command)
 
-        trajectory = BodyStateTrajectory(current_body_state, desired_body_state)
-        drive_module_trajectory = DriveModuleStateTrajectory()
+        # Note: We recalculate the trajectory at this stage so that we use the current snapshot of what is
+        # going on. If we were to have a trajectory that is re-used we will have to safe guard the updates
+        # because the updates would come in on different threads.
+        body_trajectory = BodyStateTrajectory()
+        body_trajectory.update_current_state(current_body_state)
+        body_trajectory.update_desired_state(desired_body_state)
 
         # use the twist trajectory to compute the state for the steering modules for the end state
         # and several intermediate points, i.e. determine the vector [[v_i];[gamma_i]].
@@ -510,72 +389,88 @@ class MultiWheelSteeringController(Node):
         #
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
-        for pair in trajectory.waypoints_for_rate(self.parameters[self.PARAM_PUBLISH_RATE_IN_HZ].value):
-            body_state_at = pair[1]
-            drive_module_states = self.control_model.state_of_wheel_modules_from_body_state(body_state_at)
-            drive_module_trajectory.add_waypoint(pair[0], drive_module_states)
+        drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
+        drive_module_trajectory.set_current_state()
+        drive_module_trajectory.set_desired_end_state(
+            self.control_model.state_of_wheel_modules_from_body_state(desired_body_state)
+        )
 
         # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
-        drive_module_trajectory.correct_for_module_capability()
+        # and make sure that the trajectories of the different modules all span the same time frame
+        drive_module_trajectory.align_module_profiles()
 
-        # Use planned steering module trajectories to figure out what the twist trajectory will be
-
-        # Can iterate this if we want.
-
-
-        # additionally we want to have a semi-continuous running loop use the current measurements
-        # for wheel angle and velocity as well as suspension state to predict where we're going to
-        # end up relative to the desired direction
-
-
-
-        # compute the wheel velocity and steering angle targets
-        module: DriveModule
-        for module in self.modules:
-            module_dofs: SteeringModuleDegreesOfFreedom = module.get_steering_angle_and_wheel_velocity_for_twist(self.current_velocity_command)
-            if module_dofs.is_singularity:
-                # If this module is in the center of rotation for the robot, then we don't have a sensible trajectory
-                # for the module. We need to turn the steering to rotate at the negative velocity of the robot.
-                continue
-
-            current_direction = module.get_current_steering_direction_in_radians()
-
-            # Get the two possible trajectories, one clockwise and one anti-clockwise
-            # Need to make sure that the endpoint is actually reachable from the start in this direction
-            # Because circles vs linear numbers ...
-            forward_range, reverse_range = self.get_steering_direction_ranges(current_direction, module_dofs.steering_angle)
-            for degree in forward_range:
-                pass
-
-            for degree in reverse_range:
-                pass
-
-
-
-
-
-            #    * based on the current steering angle (and steering velocity / acceleration) determine the trajectory
-            #      for the steering goal. In both trajectories
-            #    * based on the current wheel velocity determine the trajectory for the wheel velocity goal
-            #      --> Keep in mind velocity flip, and keep velocity, acceleration and jerk under control
-            pass
-
-        #    * Match trajectories between modules so that they all span the same time
-        #    * Apply limits and scale / recalculate trajectories --> goal is to keep the center of rotation the same for all modules
-        #    * Split trajectory in pieces and linearize
-        #    * Send to hardware
-
+        # Send commands to the hardware
         steering_trajectories = []
         velocity_trajectories = []
 
-        # Deal with singularities, e.g. rotation around a wheel
-        pass
+        for drive_module in self.modules:
+            module_id = drive_module.name
+            profile = drive_module_trajectory.profiles_for_module(module_id)
 
+            # We need the trajectory way point for the next point in time. Assuming that
+            # the first point on the trajectory is the current velocity, then we want the second
+            # point on the trajectory.
+            steering_trajectories.append(profile.steering_angle_for_waypoint_at(1))
+            velocity_trajectories.append(profile.velocity_for_waypoint_at(1))
+
+        self.publish_module_steering_angles()
+        self.publish_module_velocities(velocity_trajectories)
+        self.publish_odometry(current_body_state)
+
+    def publish_module_steering_angles(self, steering_angles: List[float]):
+        traj = JointTrajectory()
+        #traj.header
+        traj.joint_names = [drive_module.steering_link for drive_module in self.modules]
+        for angle in steering_angles:
+            point = JointTrajectoryPoint()
+            point.positions = angle
+            point.time_from_start = Duration(sec = 0) # Immediate execute --> Technically we want the motor driver to spread the movement out over the current period of the update rate
+
+            traj.points.append(point)
+        self.pub_wheel_steering.publish(traj)
+
+    def publish_module_velocities(self, wheel_velocities: List[float]):
+        wheel_velocity_message = Float64MultiArray()
+        wheel_velocity_message.data = wheel_velocities
+        self.pub_wheel_velocity.publish(wheel_velocity_message)
+
+    def publish_odometry(self, current_body_state: BodyState):
+
+        current_time = rospy.Time.now()
+
+        x, y = scuttle.get_global_position()
+        velocity_x, velocity_theta = scuttle.get_motion()
+        th = scuttle.get_heading()
+
+        odometry_quaternion = tf.transformations.quaternion_from_euler(0, 0, th)
+
+        odometry = Odometry()
+        odometry.header.stamp = current_time
+        odometry.header.frame_id = "odom"
+
+        odometry.pose.pose = PoseWithCovariance(Point(x, y, 0.), Quaternion(*odometry_quaternion))
+        # Since some ROS nodes expect non-zero pose covariance,
+        # set non-zero default pose covariance matrix.
+        odometry.pose.covariance = [0.01, 0, 0, 0, 0, 0,
+                                0, 0.01, 0, 0, 0, 0,
+                                0, 0, 0.01, 0, 0, 0,
+                                0, 0, 0, 0.1, 0, 0,
+                                0, 0, 0, 0, 0.1, 0,
+                                0, 0, 0, 0, 0, 0.1]
+
+        odometry.child_frame_id = "base_link"
+        odometry.twist.twist = Twist(Vector3(0, velocity_x, 0), Vector3(0, 0, 0))
+
+        odom_message = Odometry()
+        odom_message.pose = None
+        odom_message.twist = None
+
+        self.pub_odometry.publish(odom_message)
 
 def main(args=None):
     rclpy.init(args=args)
 
-    controller = MultiWheelSteeringController()
+    controller = MultiWheelSteeringControllerROS()
     rclpy.spin(controller)
 
     # Destroy the node explicitly

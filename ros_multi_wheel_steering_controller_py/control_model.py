@@ -3,27 +3,42 @@
 from math import acos, cos, degrees, isclose, pow, radians, sin, sqrt, tan
 from typing import Mapping, List, Tuple
 
-# ROS message types
-from geometry_msgs.msg import Point, Twist
+# local
+from drive_module import DriveModule
+from geometry import Orientation, Point, Vector3
 
-#
 class BodyState(object):
 
-    def __init__(self) -> None:
-        pass
+    def __init__(
+        self,
+        body_x_in_meters: float,
+        body_y_in_meters: float,
+        body_orientation_in_radians: float,
+        body_linear_x_velocity_in_meters_per_second: float,
+        body_linear_y_velocity_in_meters_per_second,
+        body_angular_z_velocity_in_radians_per_second) -> None:
+
+        self.position_in_world_coordinates = Point(body_x_in_meters, body_y_in_meters, 0.0)
+        self.orientation_in_world_coordinates = Orientation(0.0, 0.0, body_orientation_in_radians)
+        self.linear_velocity_body_coordinates = Vector3(body_linear_x_velocity_in_meters_per_second, body_linear_y_velocity_in_meters_per_second, 0.0)
+        self.angular_velocity_body_coordinates = Vector3(0.0, 0.0, body_angular_z_velocity_in_radians_per_second)
 
 class DriveModuleState(object):
 
     def __init__(
         self,
-        is_singularity: bool,
+        name: str,
+        module_x_in_meters: float,
+        module_y_in_meters: float,
         steering_angle: float,
         drive_velocity: float
         ):
-        self.is_singularity = is_singularity
-        self.steering_angle = steering_angle
-        self.drive_velocity = drive_velocity
+        self.name = name
+        self.position_in_body_coordinates = Point(module_x_in_meters, module_y_in_meters, 0.0)
+        self.orientation_in_body_coordinates = Orientation(0.0, 0.0, steering_angle)
+        self.drive_velocity_in_module_coordinates = Vector3(drive_velocity, 0.0, 0.0)
 
+# Abstract class for control models
 class ControlModelBase(object):
 
     def __init__(self):
@@ -31,19 +46,19 @@ class ControlModelBase(object):
 
     # Forward kinematics
     def state_of_body_frame_from_wheel_module_states(self) -> BodyState:
-        pass
+        return BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # Inverse kinematics
     def state_of_wheel_modules_from_body_state(self, state: BodyState) -> List[DriveModuleState]:
-        pass
+        return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
 
-    def __init__(self):
-        pass
+    def __init__(self, drive_modules: List[DriveModule]):
+        self.modules = drive_modules
 
     # Forward kinematics
-    def state_of_body_frame_from_wheel_module_states(self) -> BodyState:
+    def state_of_body_frame_from_wheel_module_states(self, states: List[DriveModuleState]) -> BodyState:
         pass
 
     # Inverse kinematics
@@ -74,7 +89,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             else:
                 steering_angle = acos(wheel_x_velocity_in_body_coordinates / drive_velocity)
 
-            ws = DriveModuleState(is_singularity, steering_angle, drive_velocity)
+            ws = DriveModuleState(foobar, ,is_singularity, steering_angle, drive_velocity)
             result.append(ws)
 
         return result
