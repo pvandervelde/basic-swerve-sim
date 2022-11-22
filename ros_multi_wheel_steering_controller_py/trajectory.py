@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Mapping, List, Tuple
 
-from control_model import BodyState, DriveModuleState
+from control_model import BodyState, DriveModuleState, Motion
 from drive_module import DriveModule
 
 class ProfileType(Enum):
@@ -14,36 +14,39 @@ class ProfileType(Enum):
 class TrajectoryProfile(ABC):
 
     @abstractmethod
-    def order(self) -> int:
+    def acceleration_at(self, time_fraction: float) -> float:
         pass
 
     @abstractmethod
-    def value_at(self, location: float) -> float:
+    def value_at(self, time_fraction: float) -> float:
         pass
 
-class LinearProfile(TrajectoryProfile):
+    @abstractmethod
+    def velocity_at(self, time_fraction: float) -> float:
+        pass
 
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+class JerkLimitedProfile(TrajectoryProfile):
 
-    def order(self) -> int:
-        return 1
+    def __init__(self, start_position: float, start_velocity: float, start_acceleration: float, end_position: float):
+        self.start_position = start_position
+        self.start_velocity = start_velocity
+        self.start_acceleration = start_acceleration
+        self.end_position = end_position
 
-    def value_at(self, location_fraction: float) -> float:
-        if location_fraction < 0.0:
-            return self.start
+    def acceleration_at(self, time_fraction: float) -> float:
+        pass
 
-        if location_fraction > 1.0:
-            return self.end
+    def value_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            return self.start_position
 
-        return (self.end - self.start) * location_fraction + self.start
+        if time_fraction > 1.0:
+            return self.end_position
 
-# Quadratic model
-# Cubic model
-# Spline model
-# B-spline model
-# Nurbs model
+        return (self.end_position - self.start_position) * time_fraction + self.start_position
+
+    def velocity_at(self, time_fraction: float) -> float:
+        pass
 
 def profile_for_type(type: ProfileType, order: int, values: List[float]) -> TrajectoryProfile:
     if isinstance(ProfileType.POLYNOME, type):
@@ -63,14 +66,14 @@ class DriveModuleProfile(object):
         return self.drive_profile
 
 # A collection of position / velocity / acceleration profiles
-class BodyStateTrajectory(object):
+class BodyMotionTrajectory(object):
 
-    def __init__(self, current: BodyState, desired: BodyState):
+    def __init__(self, current: Motion, desired: Motion):
         self.profile = [
             profile_for_type()
         ]
 
-    def value_at(self, time_fraction: float) -> BodyState:
+    def value_at(self, time_fraction: float) -> Motion:
         pass
 
     def time_span(self) -> float:
@@ -79,15 +82,16 @@ class BodyStateTrajectory(object):
 
 class DriveModuleStateTrajectory(object):
 
-    def __init__(self, trajectory_approximation_order: int, drive_modules: List[DriveModule]):
-        self.order = trajectory_approximation_order
+    def __init__(self, drive_modules: List[DriveModule]):
+        self.modules = drive_modules
+
+        # Kinda want a constant jerk profile
         self.profiles = []
 
     def align_module_profiles(self):
+        # for each profile adjust it in time such that none of the velocities / accelerations are too high for the motors to handle
+        # Then scale the profiles to match in time.
         pass
-
-    def required_number_of_intermediate_points(self) -> int:
-        return (self.order + 1) - 2
 
     def set_current_state(self, states: List[DriveModuleState]):
         pass

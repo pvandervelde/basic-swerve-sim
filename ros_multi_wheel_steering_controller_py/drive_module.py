@@ -14,6 +14,8 @@ class Motor(object):
         pass
 
     # Motor capabilities
+    # - RPM curve
+    # - Torgue
 
 class Encoder(object):
 

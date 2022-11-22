@@ -23,7 +23,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 # local
 from control_model import BodyState, DriveModuleState, body_state_from_twist, ControlModelBase, SimpleFourWheelSteeringControlModel
 from drive_module import DriveModule
-from trajectory import BodyStateTrajectory, DriveModuleStateTrajectory
+from trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 
 class ControllerParameter(object):
 
@@ -371,13 +371,13 @@ class MultiWheelSteeringControllerROS(Node):
         # desired (v, omega)
         #   Ideally we want O(1) for jerk, O(2) for acceleration, O(3) for velocity
         #   Can use a spline or b-spline or other trajectory approach
-        current_body_state = self.control_model.state_of_body_frame_from_wheel_module_states()
+        current_body_state = self.control_model.body_motion_from_wheel_module_states()
         desired_body_state = body_state_from_twist(self.current_velocity_command)
 
         # Note: We recalculate the trajectory at this stage so that we use the current snapshot of what is
         # going on. If we were to have a trajectory that is re-used we will have to safe guard the updates
         # because the updates would come in on different threads.
-        body_trajectory = BodyStateTrajectory()
+        body_trajectory = BodyMotionTrajectory()
         body_trajectory.update_current_state(current_body_state)
         body_trajectory.update_desired_state(desired_body_state)
 
@@ -392,7 +392,7 @@ class MultiWheelSteeringControllerROS(Node):
         drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
         drive_module_trajectory.set_current_state()
         drive_module_trajectory.set_desired_end_state(
-            self.control_model.state_of_wheel_modules_from_body_state(desired_body_state)
+            self.control_model.state_of_wheel_modules_from_body_motion(desired_body_state)
         )
 
         # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
