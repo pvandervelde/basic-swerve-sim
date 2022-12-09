@@ -1,5 +1,5 @@
 # local
-from geometry import Orientation, Point, Vector3
+from .geometry import Orientation, Point, Vector3
 
 class Wheel(object):
 
@@ -58,36 +58,6 @@ class DriveModule(object):
 
         self.drive_motor_minimum_acceleration = drive_motor_minimum_acceleration
         self.drive_motor_maximum_acceleration = drive_motor_maximum_acceleration
-
-    def get_current_steering_direction_in_radians(self) -> float:
-        return self.steering_direction_in_radians
-
-    def get_current_steering_velocity_in_radians_per_second(self) -> float:
-        return self.steering_velocity_in_radians_per_second
-
-    def get_current_steering_acceleration_in_radians_per_second_squared(self) -> float:
-        return self.steering_acceleration_in_radians_per_second_squared
-
-    def get_current_drive_velocity_in_meters_per_second(self) -> float:
-        return self.drive_velocity_in_meters_per_second
-
-    def get_current_drive_acceleration_in_meters_per_second_squared(self) -> float:
-        return self.drive_acceleration_in_meters_per_second_squared
-
-    def set_current_steering_direction_in_radians(self, direction: float):
-        self.steering_direction_in_radians = direction
-
-    def set_current_steering_velocity_in_radians_per_second(self, velocity: float):
-        self.steering_velocity_in_radians_per_second = velocity
-
-    def set_current_steering_acceleration_in_radians_per_second_squared(self, acceleration: float):
-        self.steering_acceleration_in_radians_per_second_squared = acceleration
-
-    def set_current_drive_velocity_in_meters_per_second(self, velocity: float):
-        self.drive_velocity_in_meters_per_second = velocity
-
-    def set_current_drive_acceleration_in_meters_per_second_squared(self, acceleration: float):
-        self.drive_acceleration_in_meters_per_second_squared = acceleration
 
     # Motors
     # Wheel
