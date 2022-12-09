@@ -7,20 +7,25 @@ import numpy as np
 from typing import Mapping, List, Tuple
 
 # local
-from control_model import BodyState, DriveModuleState, Motion, SimpleFourWheelSteeringControlModel
-from drive_module import DriveModule
-from trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
+from .control_model import BodyState, DriveModuleState, Motion, SimpleFourWheelSteeringControlModel
+from .drive_module import DriveModule
+from .trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 
 class MultiWheelSteeringController(object):
 
     def __init__(self, drive_modules: List[DriveModule]):
-        super().__init__('multi_wheel_steering_controller')
-
         # Get the geometry for the robot
         self.modules = drive_modules
 
         # Use a simple control model for the time being. Just need something that roughly works
         self.control_model = SimpleFourWheelSteeringControlModel(self.modules)
+
+        # The controller should track past / present / future so that it can create the trajectories
+        # and then match against those, otherwise we lose information about accelerations and decelerations
+        #
+        # The controller should sort of 'know' about time, or at least about the movement of time,
+        # but it shouldn't be tied to actual time.
+
 
     def body_motion_from_drive_module_states(
         self,
@@ -45,14 +50,12 @@ class MultiWheelSteeringController(object):
         # desired (v, omega)
         #   Ideally we want O(1) for jerk, O(2) for acceleration, O(3) for velocity
         #   Can use a spline or b-spline or other trajectory approach
-        current_body_state = self.control_model.body_motion_from_wheel_module_states(current_module_states)
+        current_body_motion = self.control_model.body_motion_from_wheel_module_states(current_module_states)
 
         # Note: We recalculate the trajectory at this stage so that we use the current snapshot of what is
         # going on. If we were to have a trajectory that is re-used we will have to safe guard the updates
         # because the updates would come in on different threads.
-        body_trajectory = BodyMotionTrajectory()
-        body_trajectory.update_current_state(current_body_state)
-        body_trajectory.update_desired_state(desired_body_motion)
+        body_trajectory = BodyMotionTrajectory(current_body_motion, desired_body_motion, 1.0)
 
         # use the twist trajectory to compute the state for the steering modules for the end state
         # and several intermediate points, i.e. determine the vector [[v_i];[gamma_i]].
@@ -65,8 +68,13 @@ class MultiWheelSteeringController(object):
         drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
         drive_module_trajectory.set_current_state(current_module_states)
 
+
+
+        # WRONG
+
+
         drive_module_trajectory.set_desired_end_state(
-            self.control_model.state_of_wheel_modules_from_body_motion(body_trajectory.value_at(1.0))
+            self.control_model.state_of_wheel_modules_from_body_motion(current_module_states, body_trajectory.value_at(1.0))
         )
 
         # SET_INTERMEDIATE_POINTS
