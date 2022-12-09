@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
-from math import acos, cos, degrees, isclose, pow, radians, sin, sqrt, tan
+import math
+import numpy as np
+from numpy.linalg import pinv
 from typing import Mapping, List, Tuple
 
 # local
-from drive_module import DriveModule
-from geometry import Orientation, Point, Vector3
+from .drive_module import DriveModule
+from .geometry import Orientation, Point, Vector3
 
 class Position(object):
     pass
@@ -22,6 +24,7 @@ class Motion(object):
 
 class BodyState(object):
 
+    # Angles are measured between 0 and 2pi
     def __init__(
         self,
         body_x_in_meters: float,
@@ -37,6 +40,25 @@ class BodyState(object):
             body_linear_x_velocity_in_meters_per_second,
             body_linear_y_velocity_in_meters_per_second,
             body_angular_z_velocity_in_radians_per_second)
+
+# Defines the required combination of steering angle and drive velocity for a given drive module in order
+# to achieve a given Motion of the robot body.
+#
+# Stores both an angle and a forward velocity as well as the opposing angle combined with the reversing
+# velocity
+class DriveModuleProposedStates(object):
+
+    def __init__(
+        self,
+        forward_steering_angle: float,
+        forward_drive_velocity: float,
+        reverse_steering_angle: float,
+        reverse_drive_velocity: float,
+        ):
+        self.forward_steering_angle = forward_steering_angle
+        self.forward_drive_velocity = forward_drive_velocity
+        self.reverse_steering_angle = reverse_steering_angle
+        self.reverse_drive_velocity = reverse_drive_velocity
 
 class DriveModuleState(object):
 
@@ -57,6 +79,12 @@ class DriveModuleState(object):
         self.drive_velocity_in_module_coordinates = Vector3(drive_velocity, 0.0, 0.0)
         self.drive_acceleration_in_module_coordinates = Vector3(drive_acceleration, 0.0, 0.0)
 
+    def xy_drive_velocity(self) -> Tuple[float, float]:
+        v_x = self.drive_velocity_in_module_coordinates.x * math.cos(self.orientation_in_body_coordinates.z)
+        v_y = self.drive_velocity_in_module_coordinates.x * math.sin(self.orientation_in_body_coordinates.z)
+
+        return v_x, v_y
+
 # Abstract class for control models
 class ControlModelBase(object):
 
@@ -68,7 +96,7 @@ class ControlModelBase(object):
         return Motion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, state: Motion) -> List[DriveModuleState]:
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[DriveModuleProposedStates]:
         return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
@@ -76,46 +104,163 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
     def __init__(self, drive_modules: List[DriveModule]):
         self.modules = drive_modules
 
+        # The state of the drive modules can be found with the following equation:
+        #
+        #    V_i = |A| * V
+        #
+        # where
+        #
+        #  V = The state vector for the robot body = [v_x, v_y, omega]^T
+        #  |A| = The state matrix that translates the body state to the drive module state
+        #  V_i = The state vector for the drive modules = [v_1_x, v_1_y, v_2_x, v_2_y, ... , v_n_x, v_n_y]
+        #
+        # the state matrix is an [2 * n ; 3] matrix
+        # [
+        #    1.0   0.0   -module_1.y
+        #    0.0   1.0   module_1.x
+        #    1.0   0.0   -module_2.y
+        #    0.0   1.0   module_2.x
+        #    1.0   0.0   -module_3.y
+        #    0.0   1.0   module_3.x
+        #    1.0   0.0   -module_4.y
+        #    0.0   1.0   module_4.x
+        # ]
+        arr = []
+        for drive_module in drive_modules:
+            x_vel = [1.0, 0.0, -1 * drive_module.steering_axis_xy_position.y]
+            y_vel = [0.0, 1.0, 1 * drive_module.steering_axis_xy_position.x]
+
+            arr.append(x_vel)
+            arr.append(y_vel)
+
+        self.inverse_kinematics_matrix = np.array(arr)
+        self.forward_kinematics_matrix = pinv(self.inverse_kinematics_matrix)
+
     # Forward kinematics
     def body_motion_from_wheel_module_states(self, states: List[DriveModuleState]) -> Motion:
-        pass
+        # To calculate the body state from the module state we need to invert the state equation. Because the state matrix
+        # isn't square we can't use the normal matrix inverse, instead we use the pseudo-inverse. This gets us
+        #
+        #    |A|_* V_i = V
+        #
+        #  where
+        #
+        #  |A|_* = pseudo-inverse of |A|
+
+        # Calculate the v_x and v_y for each module, using the module drive velocity and the steering angle
+        drive_state_array: List[float] = []
+        for state in states:
+            v_x, v_y = state.xy_drive_velocity()
+            drive_state_array.append(v_x)
+            drive_state_array.append(v_y)
+
+        drive_state_vector = np.array(drive_state_array)
+        body_state_vector = np.matmul(self.forward_kinematics_matrix, drive_state_vector)
+
+        return Motion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, state: Motion) -> List[DriveModuleState]:
-        result = []
-        for module in self.modules:
-            # Kinematics
-            # Literature:
-            # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
-            # -
-            # For wheel i
-            #  - velocity = sqrt( (v_x - omega * y_i)^2 + (v_y + omega * x_i)^2 )
-            #  - angle = acos( (v_x - omega * y_i) / (velocity) ) = asin( (v_y + omega * x_i) / (velocity) )
-            #
-            # Angle: 0 < alpha < Pi
-            #  The angle also needs a differentiation if it should go between Pi and 2Pi
-            #
-            # This assumes that (x_i, y_i) is the coordinate for the steering axis. And that the steering axis is in z-direction.
-            # And that the wheel contact point is on that steering axis
-            wheel_x_velocity_in_body_coordinates = state.linear_velocity.x - state.angular_velocity.z * module.steering_axis_xy_position.y
-            wheel_y_velocity_in_body_coordinates = state.linear_velocity.y + state.angular_velocity.z * module.steering_axis_xy_position.x
-            drive_velocity = sqrt(pow(wheel_x_velocity_in_body_coordinates, 2.0) + pow(wheel_y_velocity_in_body_coordinates, 2.0))
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[DriveModuleProposedStates]:
+        # Kinematics
+        # Literature:
+        # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
+        # -
+        # For wheel i
+        #  - velocity = sqrt( (v_x - omega * y_i)^2 + (v_y + omega * x_i)^2 )
+        #  - angle = acos( (v_x - omega * y_i) / (velocity) ) = asin( (v_y + omega * x_i) / (velocity) )
+        #
+        # Angle: 0 < alpha < Pi
+        #  The angle also needs a differentiation if it should go between Pi and 2Pi
+        #
+        # This assumes that (x_i, y_i) is the coordinate for the steering axis. And that the steering axis is in z-direction.
+        # And that the wheel contact point is on that steering axis
 
-            is_singularity: bool = False
-            if isclose(drive_velocity, 0.0, 1e-9, 1e-9):
-                is_singularity = True
-                steering_angle = 0  # THIS IS WRONG. IT SHOULD BE WHAT EVER THE STEERING ANGLE WAS
+        body_state_array: List[float] = [
+            state.linear_velocity.x,
+            state.linear_velocity.y,
+            state.angular_velocity.z
+        ]
+        body_state_vector = np.array(body_state_array)
+        drive_state_vector = np.matmul(self.inverse_kinematics_matrix, body_state_vector)
+
+        # Calculate the drive speeds and the ratio between the required wheel velocity and the
+        # maximum velocity that the motor can provide.
+        drive_velocities: List[float] = []
+        scales: List[float] = []
+        for i in range(len(self.modules)):
+
+            v_x = drive_state_vector[2 * i + 0]
+            v_y = drive_state_vector[2 * i + 1]
+            drive_velocity = math.sqrt(pow(v_x, 2.0) + pow(v_y, 2.0))
+            drive_velocities.append(drive_velocity)
+
+            # If the scale factor is less than 1 then we want higher velocity than the motor can provide
+            # Using the scale factor this way so we can easily multiply by the scale factor to get the maximum allowed
+            # velocity later on.
+            if not math.isclose(drive_velocity, 0.0, rel_tol=1e-15, abs_tol=1e-15):
+                scale = self.modules[i].drive_motor_maximum_velocity / drive_velocity
+                scale = scale if (scale < 1.0) else 1.0
             else:
-                steering_angle = acos(wheel_x_velocity_in_body_coordinates / drive_velocity)
+                scale = 1.0
+            scales.append(scale)
 
-            ws = DriveModuleState(
-                module.name,
-                module.steering_axis_xy_position.x,
-                module.steering_axis_xy_position.y,
-                steering_angle,
-                steering_velocity,
-                drive_velocity,
-                drive_acceleration)
+        scales.sort(reverse=True)
+        normalization_factor = scales[0]
+
+        # Assume that the steering angle is between 0 and 2 * pi
+        result: List[DriveModuleProposedStates] = []
+        for i in range(len(self.modules)):
+            v_x = drive_state_vector[2 * i + 0]
+            v_y = drive_state_vector[2 * i + 1]
+            drive_velocity = drive_velocities[i]
+
+            current_module_state: DriveModuleState = current_state[i]
+            if math.isclose(drive_velocity, 0.0, rel_tol=1e-9, abs_tol=1e-9):
+                # If the other wheels are moving then we might be rotating around the current wheel, so then rotate with the
+                # same rotational velocity as the body, but negative
+                #
+                # If other wheels aren't moving then maybe we're at a stop
+                #
+                # In either case we just keep the position of the wheel where it was
+                forward_steering_angle = current_module_state.orientation_in_body_coordinates.z
+            else:
+                # Calculate the position of the drive wheel.
+                #
+                # math.acos returns values between 0 and pi
+                cos_angle = math.acos(v_x / drive_velocity)
+
+                # math.asin returns values between -1/2 pi and 1/2 pi
+                sin_angle = math.asin(v_y / drive_velocity)
+
+                # The acos value decides if the wheel orientation is between 0 - 90 degrees or 90 - 180 degrees, i.e. top and bottom, but
+                # doesn't distinguish between left and right
+                # the asin value decides if the wheel orientation is between 90 - 0 degrees or 360 - 270 degrees, i.e. left and right
+                if cos_angle <= 0.5 * math.pi:
+                    if sin_angle < 0:
+                        forward_steering_angle = sin_angle + 2 * math.pi
+                    else:
+                        forward_steering_angle = sin_angle
+                else:
+                    # cos_angle is larger than 1/2 * pi. In that case if the
+                    if sin_angle < 0:
+                        # In this case we want to mirror the current angle relative to Pi (or 180 degrees)
+                        forward_steering_angle = (math.pi - cos_angle) + math.pi
+                    else:
+                        forward_steering_angle = cos_angle
+
+            if forward_steering_angle >= 2 * math.pi:
+                forward_steering_angle -= 2 * math.pi
+
+            reverse_steering_angle = forward_steering_angle + math.pi
+            if reverse_steering_angle >= 2 * math.pi:
+                reverse_steering_angle -= 2 * math.pi
+
+            ws = DriveModuleProposedStates(
+                forward_steering_angle,
+                drive_velocity * normalization_factor,
+                reverse_steering_angle,
+                -1.0 * drive_velocity * normalization_factor,
+            )
             result.append(ws)
 
         return result
