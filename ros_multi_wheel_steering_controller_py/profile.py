@@ -33,14 +33,14 @@ class LinearProfile(TransientValueProfile):
         # Linear profile. There should never be an acceleration
         return 0.0
 
-    def value_at(self, location_fraction: float) -> float:
-        if location_fraction < 0.0:
+    def value_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
             return self.start
 
-        if location_fraction > 1.0:
+        if time_fraction > 1.0:
             return self.end
 
-        return (self.end - self.start) * location_fraction + self.start
+        return (self.end - self.start) * time_fraction + self.start
 
 class CompoundProfileSection(object):
 
@@ -177,45 +177,51 @@ class CompoundProfile(TransientValueProfile):
                         ))
 
         # We should never end here. But if we do, we're hosed
-        assert False
+        return CompoundProfileSection(
+            0.0,
+            1.0,
+            LinearProfile(
+                0.0,
+                0.0
+            ))
 
     def first_derivative_at(self, time_fraction: float) -> float:
-        if location_fraction < 0.0:
-            location_fraction = 0.0
+        if time_fraction < 0.0:
+            time_fraction = 0.0
 
-        if location_fraction > 1.0:
-            location_fraction = 1.0
+        if time_fraction > 1.0:
+            time_fraction = 1.0
 
-        profile = self.find_profile_for_time_fraction(location_fraction)
-        from_start = location_fraction - profile.starting_location
+        profile = self.find_profile_for_time_fraction(time_fraction)
+        from_start = time_fraction - profile.starting_location
         total = profile.ending_location - profile.starting_location
 
         local_fraction = from_start / total
         return profile.profile.first_derivative_at(local_fraction)
 
     def second_derivative_at(self, time_fraction: float) -> float:
-        if location_fraction < 0.0:
-            location_fraction = 0.0
+        if time_fraction < 0.0:
+            time_fraction = 0.0
 
-        if location_fraction > 1.0:
-            location_fraction = 1.0
+        if time_fraction > 1.0:
+            time_fraction = 1.0
 
-        profile = self.find_profile_for_time_fraction(location_fraction)
-        from_start = location_fraction - profile.starting_location
+        profile = self.find_profile_for_time_fraction(time_fraction)
+        from_start = time_fraction - profile.starting_location
         total = profile.ending_location - profile.starting_location
 
         local_fraction = from_start / total
         return profile.profile.second_derivative_at(local_fraction)
 
-    def value_at(self, location_fraction: float) -> float:
-        if location_fraction < 0.0:
-            location_fraction = 0.0
+    def value_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
 
-        if location_fraction > 1.0:
-            location_fraction = 1.0
+        if time_fraction > 1.0:
+            time_fraction = 1.0
 
-        profile = self.find_profile_for_time_fraction(location_fraction)
-        from_start = location_fraction - profile.starting_location
+        profile = self.find_profile_for_time_fraction(time_fraction)
+        from_start = time_fraction - profile.starting_location
         total = profile.ending_location - profile.starting_location
 
         local_fraction = from_start / total

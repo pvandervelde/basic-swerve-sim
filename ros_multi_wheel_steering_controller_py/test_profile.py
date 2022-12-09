@@ -160,7 +160,11 @@ def test_should_throw_error_with_multiple_overlapping_sub_profiles_in_compound_p
         profile.add_profile(0.35, 0.70, sub_profile_2)
 
 def test_should_show_value_at_with_no_sub_profile_in_compound_profile():
-    pytest.fail("not implemented yet")
+    profile = CompoundProfile()
+
+    assert math.isclose(profile.value_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(0.5), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_value_at_with_single_sub_profile_that_covers_start_in_compound_profile():
     profile = CompoundProfile()
@@ -193,10 +197,36 @@ def test_should_show_value_at_with_single_sub_profile_that_covers_end_in_compoun
     assert profile.value_at(1.0) == sub_profile.value_at(1.0)
 
 def test_should_show_first_derivative_at_with_single_sub_profile_in_compound_profile():
-    pytest.fail("not implemented yet")
+    profile = CompoundProfile()
+
+    sub_profile = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 1.0, sub_profile)
+
+    assert profile.first_derivative_at(0.0) == sub_profile.first_derivative_at(0.0)
+    assert profile.first_derivative_at(0.5) == sub_profile.first_derivative_at(0.5)
+    assert profile.first_derivative_at(1.0) == sub_profile.first_derivative_at(1.0)
 
 def test_should_show_first_derivative_at_with_multiple_sub_profiles_in_compound_profile():
-    pytest.fail("not implemented yet")
+    profile = CompoundProfile()
+
+    sub_profile_1 = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 0.4, sub_profile_1)
+
+    sub_profile_2 = LinearProfile(3.0, 4.0)
+    profile.add_profile(0.4, 0.70, sub_profile_2)
+
+    sub_profile_3 = LinearProfile(5.0, 6.0)
+    profile.add_profile(0.70, 1.0, sub_profile_3)
+
+    assert profile.first_derivative_at(0.0) == sub_profile_1.first_derivative_at(0.0)
+    assert profile.first_derivative_at(0.2) == sub_profile_1.first_derivative_at(0.5)
+
+    assert profile.first_derivative_at(0.4) == sub_profile_2.first_derivative_at(0.0)
+    assert profile.first_derivative_at(0.55) == sub_profile_2.first_derivative_at(0.5)
+
+    assert profile.first_derivative_at(0.7) == sub_profile_3.first_derivative_at(0.0)
+    assert profile.first_derivative_at(0.85) == sub_profile_3.first_derivative_at(0.5)
+    assert profile.first_derivative_at(1.0) == sub_profile_3.first_derivative_at(1.0)
 
 def test_should_show_second_derivative_at_with_single_sub_profile_in_compound_profile():
     pytest.fail("not implemented yet")
