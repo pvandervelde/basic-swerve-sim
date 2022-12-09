@@ -13,11 +13,11 @@ from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajecto
 class SimulatorTrack(object):
 
     @abstractmethod
-    def body_motion_for_time(time_in_seconds: float, body_state: BodyState) -> Motion:
+    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> Motion:
         pass
 
     @abstractmethod
-    def has_reached_endpoint(time_in_seconds: float, body_state: BodyState) -> bool:
+    def has_reached_endpoint(self, time_in_seconds: float, body_state: BodyState) -> bool:
         return True
 
     # The yaw of the body describes the orientation of the body, i.e. in which direction it is pointing
@@ -33,13 +33,13 @@ class SimulatorTrack(object):
 # Straight line track in x-direction only.
 class StraightLineTrack(SimulatorTrack):
 
-    def body_motion_for_time(time_in_seconds: float, body_state: BodyState) -> Motion:
+    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> Motion:
         if body_state.position_in_world_coordinates.x > 1.0:
             return Motion(0.0, 0.0, 0.0)
         else:
             return Motion(0.1, 0.0, 0.0)
 
-    def has_reached_endpoint(time_in_seconds: float, body_state: BodyState) -> bool:
+    def has_reached_endpoint(self, time_in_seconds: float, body_state: BodyState) -> bool:
         return body_state.position_in_world_coordinates.x > 1.0 and isclose(body_state.motion_in_body_coordinates.linear_velocity.x, 0.0, 1e-9, 1e-9)
 
     # The yaw of the body describes the orientation of the body, i.e. in which direction it is pointing
@@ -143,15 +143,18 @@ def get_simulation_track(name_of_path: str) -> SimulatorTrack:
 def initialize_drive_modules(drive_modules: List[DriveModule], align_modules: bool) -> List[DriveModuleState]:
     states: List[DriveModuleState] = []
     for drive_module in drive_modules:
-        steering_angle = drive_module.steering_direction_in_radians
+        steering_angle = 0.0
         if not align_modules:
             steering_angle = 2 * pi * random()
 
         state = DriveModuleState(
+            drive_module.name,
             drive_module.steering_axis_xy_position.x,
             drive_module.steering_axis_xy_position.y,
             steering_angle,
-            0.0
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(state)
 
@@ -167,12 +170,12 @@ def initialize_state_file(file_path: str, number_of_modules: int):
 
         file_.write("number of modules (-),")
         for i in range(number_of_modules):
-            file_.write("x-module-{} [bc] (m), y-module-{} [bc] (m), z-module-{} [bc] (m),".format(i))
-            file_.write("x-rot-module-{} [bc] (rad), y-rot-module-{} [bc] (rad), z-rot-module-{} [bc] (rad),".format(i))
-            file_.write("x-rot-module-{} [bc] (rad), y-rot-module-{} [bc] (rad), z-rot-module-{} [bc] (rad),".format(i))
-            file_.write("x-vel-module-{} [mc] (m/s), y-vel-module-{} [mc] (m/s), y-vel-module-{} [mc] (m/s),".format(i))
+            file_.write(f"x-module-{i} [bc] (m), y-module-{i} [bc] (m), z-module-{i} [bc] (m),")
+            file_.write(f"x-rot-module-{i} [bc] (rad), y-rot-module-{i} [bc] (rad), z-rot-module-{i} [bc] (rad),")
+            file_.write(f"x-rot-module-{i} [bc] (rad), y-rot-module-{i} [bc] (rad), z-rot-module-{i} [bc] (rad),")
+            file_.write(f"x-vel-module-{i} [mc] (m/s), y-vel-module-{i} [mc] (m/s), y-vel-module-{i} [mc] (m/s),")
 
-def read_arguments() -> dict[str, any]:
+def read_arguments() -> Mapping[str, any]:
     parser = argparse.ArgumentParser(
         description="Simulate a 4 wheel steering robot in 2D",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -257,14 +260,18 @@ def simulation_align_drive_modules(
         # DO STUFF HERE
 
         pass
+    return sim_time_in_seconds
 
-def simulation_orient_body() -> float:
+def simulation_orient_body(
+    sim_time_in_seconds: float,
+    time_step_in_seconds: float,
+    ) -> float:
 
 
     # DO STUFF HERE
 
 
-    pass
+    return sim_time_in_seconds
 
 def simulation_process_module_trajectory(
     state_file_path: str,
@@ -315,7 +322,14 @@ def main(args=None):
     # Initialize drive module state
     drive_modules = get_drive_module_info()
     drive_module_states: List[DriveModuleState] = initialize_drive_modules(drive_modules, align_modules)
-    body_state: BodyState = None # DETERMINE THE BODY STATE ONCE THE WHEELS ARE IN PLACE
+    body_state: BodyState = BodyState(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        )
 
     initialize_state_file(state_file_path, len(drive_modules))
 
@@ -340,7 +354,7 @@ def main(args=None):
         time_step_in_seconds)
 
     # Follow the track
-    simulation_finished: bool = track.has_reached_endpoint(current_sim_time_in_seconds, body_state.position_in_world_coordinates)
+    simulation_finished: bool = track.has_reached_endpoint(current_sim_time_in_seconds, body_state)
     while not simulation_finished:
         current_sim_time_in_seconds = current_sim_time_in_seconds + time_step_in_seconds
 
@@ -366,7 +380,7 @@ def main(args=None):
             drive_module_states,
             drive_module_trajectory)
 
-        simulation_finished = track.has_reached_endpoint(current_sim_time_in_seconds, body_state.position_in_world_coordinates)
+        simulation_finished = track.has_reached_endpoint(current_sim_time_in_seconds, body_state)
 
 if __name__ == '__main__':
     main()
