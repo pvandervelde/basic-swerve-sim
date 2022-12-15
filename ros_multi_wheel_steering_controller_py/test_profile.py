@@ -3,6 +3,7 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
+from .errors import InvalidTimeFractionException
 from .profile import CompoundProfile, InvalidTimeFractionException, LinearProfile
 
 # LinearProfile

@@ -1,10 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-class InvalidTimeFractionException(Exception):
+# local
+from .errors import InvalidTimeFractionException
 
-    def __init__(self, *args):
-        super().__init__(*args)
+class ProfilePoint(object):
+
+    def __init__(
+        self,
+        time_fraction: float,
+        value: float,
+        first_derivative: float,
+        second_derivative: float,
+        third_derivative: float
+    ):
+        self.time_fraction = time_fraction
+        self.value = value
+        self.first_derivative = first_derivative
+        self.second_derivative = second_derivative
+        self.third_derivative = third_derivative
 
 class TransientValueProfile(ABC):
 
@@ -13,7 +27,15 @@ class TransientValueProfile(ABC):
         pass
 
     @abstractmethod
+    def inflection_points(self) -> List[ProfilePoint]:
+        pass
+
+    @abstractmethod
     def second_derivative_at(self, time_fraction: float) -> float:
+        pass
+
+    @abstractmethod
+    def third_derivative_at(self, time_fraction: float) -> float:
         pass
 
     @abstractmethod
@@ -29,8 +51,29 @@ class LinearProfile(TransientValueProfile):
     def first_derivative_at(self, time_fraction: float) -> float:
         return self.end - self.start
 
+    def inflection_points(self) -> List[ProfilePoint]:
+        return [
+            ProfilePoint(
+                0.0,
+                self.start,
+                self.first_derivative_at(0.0),
+                self.second_derivative_at(0.0),
+                self.third_derivative_at(0.0)
+            ),
+            ProfilePoint(
+                1.0,
+                self.end,
+                self.first_derivative_at(1.0),
+                self.second_derivative_at(1.0),
+                self.third_derivative_at(1.0)
+            )
+        ]
+
     def second_derivative_at(self, time_fraction: float) -> float:
         # Linear profile. There should never be an acceleration
+        return 0.0
+
+    def third_derivative_at(self, time_fraction: float) -> float:
         return 0.0
 
     def value_at(self, time_fraction: float) -> float:
@@ -199,6 +242,28 @@ class CompoundProfile(TransientValueProfile):
         local_fraction = from_start / total
         return profile.profile.first_derivative_at(local_fraction)
 
+    def inflection_points(self) -> List[ProfilePoint]:
+        result: List[ProfilePoint] = []
+        for profile in self.profiles:
+            profile_inflection_points = profile.profile.inflection_points()
+            for point in profile_inflection_points:
+                time = profile.starting_location + point.time_fraction * (profile.ending_location - profile.starting_location)
+
+                inflection_point = ProfilePoint(
+                    time,
+                    point.value,
+                    point.first_derivative,
+                    point.second_derivative,
+                    point.third_derivative,
+                )
+
+                if result[-1].time_fraction == time:
+                    result[-1] = inflection_point
+                else:
+                    result.append(inflection_point)
+
+        return result
+
     def second_derivative_at(self, time_fraction: float) -> float:
         if time_fraction < 0.0:
             time_fraction = 0.0
@@ -212,6 +277,20 @@ class CompoundProfile(TransientValueProfile):
 
         local_fraction = from_start / total
         return profile.profile.second_derivative_at(local_fraction)
+
+    def third_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        profile = self.find_profile_for_time_fraction(time_fraction)
+        from_start = time_fraction - profile.starting_location
+        total = profile.ending_location - profile.starting_location
+
+        local_fraction = from_start / total
+        return profile.profile.third_derivative_at(local_fraction)
 
     def value_at(self, time_fraction: float) -> float:
         if time_fraction < 0.0:
