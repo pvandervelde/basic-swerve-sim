@@ -6,21 +6,8 @@ from numpy.linalg import pinv
 from typing import Mapping, List, Tuple
 
 # local
-from .drive_module import DriveModule
-from .geometry import Orientation, Point, Vector3
-
-class Position(object):
-    pass
-
-class Motion(object):
-
-    def __init__(
-        self,
-        linear_x_velocity_in_meters_per_second: float,
-        linear_y_velocity_in_meters_per_second: float,
-        angular_z_velocity_in_radians_per_second: float):
-        self.linear_velocity = Vector3(linear_x_velocity_in_meters_per_second, linear_y_velocity_in_meters_per_second, 0.0)
-        self.angular_velocity = Vector3(0.0, 0.0, angular_z_velocity_in_radians_per_second)
+from .drive_module import DriveModule, DriveModuleProposedState, DriveModuleState
+from .geometry import Motion, Orientation, Point, Vector3
 
 class BodyState(object):
 
@@ -31,8 +18,8 @@ class BodyState(object):
         body_y_in_meters: float,
         body_orientation_in_radians: float,
         body_linear_x_velocity_in_meters_per_second: float,
-        body_linear_y_velocity_in_meters_per_second,
-        body_angular_z_velocity_in_radians_per_second):
+        body_linear_y_velocity_in_meters_per_second: float,
+        body_angular_z_velocity_in_radians_per_second: float):
 
         self.position_in_world_coordinates = Point(body_x_in_meters, body_y_in_meters, 0.0)
         self.orientation_in_world_coordinates = Orientation(0.0, 0.0, body_orientation_in_radians)
@@ -40,50 +27,6 @@ class BodyState(object):
             body_linear_x_velocity_in_meters_per_second,
             body_linear_y_velocity_in_meters_per_second,
             body_angular_z_velocity_in_radians_per_second)
-
-# Defines the required combination of steering angle and drive velocity for a given drive module in order
-# to achieve a given Motion of the robot body.
-#
-# Stores both an angle and a forward velocity as well as the opposing angle combined with the reversing
-# velocity
-class DriveModuleProposedStates(object):
-
-    def __init__(
-        self,
-        forward_steering_angle: float,
-        forward_drive_velocity: float,
-        reverse_steering_angle: float,
-        reverse_drive_velocity: float,
-        ):
-        self.forward_steering_angle = forward_steering_angle
-        self.forward_drive_velocity = forward_drive_velocity
-        self.reverse_steering_angle = reverse_steering_angle
-        self.reverse_drive_velocity = reverse_drive_velocity
-
-class DriveModuleState(object):
-
-    def __init__(
-        self,
-        name: str,
-        module_x_in_meters: float,
-        module_y_in_meters: float,
-        steering_angle: float,
-        steering_velocity: float,
-        drive_velocity: float,
-        drive_acceleration: float,
-        ):
-        self.name = name
-        self.position_in_body_coordinates = Point(module_x_in_meters, module_y_in_meters, 0.0)
-        self.orientation_in_body_coordinates = Orientation(0.0, 0.0, steering_angle)
-        self.orientation_change_in_body_coordinates = Vector3(0.0, 0.0, steering_velocity)
-        self.drive_velocity_in_module_coordinates = Vector3(drive_velocity, 0.0, 0.0)
-        self.drive_acceleration_in_module_coordinates = Vector3(drive_acceleration, 0.0, 0.0)
-
-    def xy_drive_velocity(self) -> Tuple[float, float]:
-        v_x = self.drive_velocity_in_module_coordinates.x * math.cos(self.orientation_in_body_coordinates.z)
-        v_y = self.drive_velocity_in_module_coordinates.x * math.sin(self.orientation_in_body_coordinates.z)
-
-        return v_x, v_y
 
 # Abstract class for control models
 class ControlModelBase(object):
@@ -95,8 +38,10 @@ class ControlModelBase(object):
     def body_motion_from_wheel_module_states(self) -> Motion:
         return Motion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
-    # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[DriveModuleProposedStates]:
+    # Returns the proposed wheel states which will achieve the given body motion. The list will contain
+    # both a forward, i.e. with the steering angle such that the drive motor turns 'forwards', and a
+    # reverse state, i.e. with the steering angle such that the drive motor turns 'backwards'.
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[Tuple[DriveModuleProposedState]]:
         return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
@@ -160,7 +105,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         return Motion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[DriveModuleProposedStates]:
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[Tuple[DriveModuleProposedState]]:
         # Kinematics
         # Literature:
         # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
@@ -208,7 +153,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         normalization_factor = scales[0]
 
         # Assume that the steering angle is between 0 and 2 * pi
-        result: List[DriveModuleProposedStates] = []
+        result: List[Tuple[DriveModuleProposedState]] = []
         for i in range(len(self.modules)):
             v_x = drive_state_vector[2 * i + 0]
             v_y = drive_state_vector[2 * i + 1]
@@ -255,13 +200,16 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             if reverse_steering_angle >= 2 * math.pi:
                 reverse_steering_angle -= 2 * math.pi
 
-            ws = DriveModuleProposedStates(
+            forward_state = DriveModuleProposedState(
                 forward_steering_angle,
                 drive_velocity * normalization_factor,
+            )
+
+            reverse_state = DriveModuleProposedState(
                 reverse_steering_angle,
                 -1.0 * drive_velocity * normalization_factor,
             )
-            result.append(ws)
+            result.append((forward_state, reverse_state))
 
         return result
 
