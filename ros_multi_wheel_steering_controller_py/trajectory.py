@@ -2,15 +2,11 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Mapping, List, Tuple
 
-from .control_model import BodyState, DriveModuleState, Motion
-from .drive_module import DriveModule
-from .profile import LinearProfile, TransientValueProfile
-
-class ProfileType(Enum):
-    POLYNOME = 1
-    SPLINE = 2
-    BSPLINE = 3
-    NURBS = 4
+from .control_model import BodyState
+from .errors import IncompleteTrajectoryException
+from .geometry import Motion
+from .drive_module import DriveModule, DriveModuleProposedState, DriveModuleState
+from .profile import LinearProfile, ProfilePoint, TransientValueProfile
 
 class DriveModuleProfile(object):
 
@@ -42,6 +38,9 @@ class BodyMotionTrajectory(object):
             LinearProfile(current.angular_velocity.z, desired.angular_velocity.z),
         ]
 
+    def inflection_points(self) -> List[List[ProfilePoint]]:
+        pass
+
     def value_at(self, time_fraction: float) -> Motion:
         return Motion(
             self.profile[0].value_at(time_fraction),
@@ -57,12 +56,15 @@ class DriveModuleStateTrajectory(object):
     def __init__(self, drive_modules: List[DriveModule]):
         self.modules = drive_modules
         self.start_states: List[DriveModuleState] = []
-        self.end_states: List[DriveModuleState] = []
+        self.end_states: List[DriveModuleProposedState] = []
 
         # Kinda want a constant jerk profile
         self.profiles: Mapping[str, List[TransientValueProfile]] = {}
 
     def align_module_profiles(self):
+        if len(self.start_states) == 0 or len(self.end_states) == 0:
+            raise IncompleteTrajectoryException()
+
         # for each profile adjust it in time such that none of the velocities / accelerations are too high for the motors to handle
         # Then scale the profiles to match in time.
         pass
@@ -81,27 +83,16 @@ class DriveModuleStateTrajectory(object):
 
             module_profiles = [
                 # Orientation
-                LinearProfile(start.orientation_in_body_coordinates.x, end.orientation_in_body_coordinates.x),
-                LinearProfile(start.orientation_in_body_coordinates.y, end.orientation_in_body_coordinates.y),
-                LinearProfile(start.orientation_in_body_coordinates.z, end.orientation_in_body_coordinates.z),
-
-                # Orientation velocity
-                LinearProfile(start.orientation_change_in_body_coordinates.x, end.orientation_change_in_body_coordinates.x),
-                LinearProfile(start.orientation_change_in_body_coordinates.y, end.orientation_change_in_body_coordinates.y),
-                LinearProfile(start.orientation_change_in_body_coordinates.z, end.orientation_change_in_body_coordinates.z),
+                LinearProfile(start.orientation_in_body_coordinates.z, end.steering_angle_in_radians),
 
                 # Drive velocity
-                LinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_module_coordinates.x),
-                LinearProfile(start.drive_velocity_in_module_coordinates.y, end.drive_velocity_in_module_coordinates.y),
-                LinearProfile(start.drive_velocity_in_module_coordinates.z, end.drive_velocity_in_module_coordinates.z),
-
-                # Drive acceleration
-                LinearProfile(start.drive_acceleration_in_module_coordinates.x, end.drive_acceleration_in_module_coordinates.x),
-                LinearProfile(start.drive_acceleration_in_module_coordinates.y, end.drive_acceleration_in_module_coordinates.y),
-                LinearProfile(start.drive_acceleration_in_module_coordinates.z, end.drive_acceleration_in_module_coordinates.z),
+                LinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
             ]
 
             self.profiles[self.modules[i].name] = module_profiles
+
+    def inflection_points(self) -> List[List[ProfilePoint]]:
+        pass
 
     def set_current_state(self, states: List[DriveModuleState]):
         if len(states) != len(self.modules):
@@ -110,7 +101,7 @@ class DriveModuleStateTrajectory(object):
         self.start_states = states
         self._create_profiles()
 
-    def set_desired_end_state(self, states: List[DriveModuleState]):
+    def set_desired_end_state(self, states: List[DriveModuleProposedState]):
         if len(states) != len(self.modules):
             raise ValueError(f"The length of the drive module states list ({ len(states) }) does not match the number of drive modules.")
 
@@ -122,6 +113,9 @@ class DriveModuleStateTrajectory(object):
         return 1.0
 
     def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleState:
+        if len(self.start_states) == 0 or len(self.end_states) == 0:
+            raise IncompleteTrajectoryException()
+
         if not id in self.profiles:
             raise ValueError(f"There are no profiles for a drive module with name { id }")
 
@@ -137,8 +131,8 @@ class DriveModuleStateTrajectory(object):
             steering_module.name,
             steering_module.steering_axis_xy_position.x,
             steering_module.steering_axis_xy_position.y,
-            profiles[2].value_at(time_fraction),
-            profiles[5].value_at(time_fraction),
-            profiles[6].value_at(time_fraction),
-            profiles[9].value_at(time_fraction)
+            profiles[0].value_at(time_fraction),
+            profiles[0].first_derivative_at(time_fraction),
+            profiles[1].value_at(time_fraction),
+            profiles[1].first_derivative_at(time_fraction)
         )
