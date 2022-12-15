@@ -17,45 +17,101 @@ class MultiWheelSteeringController(object):
         # Get the geometry for the robot
         self.modules = drive_modules
 
+        # Store the current (estimated) state of the body
+        self.body_state: BodyState = BodyState(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
+
+        # Store the current (measured) state of the drive modules
+        self.module_states: List[DriveModuleState] = [
+            DriveModuleState(
+                drive_module.name,
+                drive_module.steering_axis_xy_position.x,
+                drive_module.steering_axis_xy_position.y,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ) for drive_module in drive_modules
+        ]
+
         # Use a simple control model for the time being. Just need something that roughly works
         self.control_model = SimpleFourWheelSteeringControlModel(self.modules)
 
-        # The controller should track past / present / future so that it can create the trajectories
-        # and then match against those, otherwise we lose information about accelerations and decelerations
-        #
-        # The controller should sort of 'know' about time, or at least about the movement of time,
-        # but it shouldn't be tied to actual time.
+        # Store the desired body motion, and the last point in time where this value
+        # was updated
+        self.desired_body_motion: Motion = Motion(0.0, 0.0, 0.0)
+        self.body_motion_changed_at_time_in_seconds = 0.0
 
+        # Track the current trajectories and update them if necessary
+        self.drive_module_trajectory: DriveModuleStateTrajectory = None
 
-    def body_motion_from_drive_module_states(
-        self,
-        current_module_states: List[DriveModuleState]) -> Motion:
-        pass
+        # Track the time at which the trajectories were created
+        self.trajectory_created_at_time_in_seconds = 0.0
 
-    def drive_module_trajectory_to_achieve_desired_body_motion(
-        self,
-        desired_body_motion: Motion,
-        current_module_states: List[DriveModuleState]) -> DriveModuleStateTrajectory:
+        # Store the time pointer for where we are on the trajectory
+        self.trajectory_current_time_in_seconds = 0.0
 
-        # We may need a pre-trajectory section that aligns the wheel modules to the movement we want
-        # to make. This would only be the case if we're currently not moving. If we're moving all
-        # modules should be aligned.
-        #
-        # If we're moving and the modules are not aligned (given a certain tolerance) then we need to
-        # rectify that first!
-        #
-        # --> This almost feels like we need some kind of decision tree structure?
+        # Keep track of our position in time so that we can figure out where on the current
+        # trajectory we should be
+        self.current_time_in_seconds = 0.0
+        self.trajectory_was_started_at_time_in_seconds = 0.0
 
-        # Compute the twist trajectory, i.e. how do we get from our current (v, omega) to the
-        # desired (v, omega)
-        #   Ideally we want O(1) for jerk, O(2) for acceleration, O(3) for velocity
-        #   Can use a spline or b-spline or other trajectory approach
-        current_body_motion = self.control_model.body_motion_from_wheel_module_states(current_module_states)
+    # Returns the current pose of the robot body, based on the current state of the
+    # drive modules.
+    def current_pose(self) -> BodyState:
+        return self.body_state
 
-        # Note: We recalculate the trajectory at this stage so that we use the current snapshot of what is
-        # going on. If we were to have a trajectory that is re-used we will have to safe guard the updates
-        # because the updates would come in on different threads.
-        body_trajectory = BodyMotionTrajectory(current_body_motion, desired_body_motion, 1.0)
+    # Returns the states of the drive modules, as measured at the current time.
+    def drive_module_state_at_current_time(self) -> List[DriveModuleState]:
+        return self.module_states
+
+    # Returns the state of the drive modules to required to match the current trajectory at the given
+    # time.
+    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleState]:
+        time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+        time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span
+
+        result: List[DriveModuleState] = []
+        for drive_module in self.modules:
+            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
+            result.append(state)
+
+        return result
+
+    # Updates the currently stored drive module state
+    def on_state_update(self, current_module_states: List[DriveModuleState]):
+        if current_module_states is None:
+            raise TypeError()
+
+        if len(current_module_states) != len(self.modules):
+            raise ValueError()
+
+        self.module_states.clear()
+        self.module_states.extend(current_module_states)
+
+    # Updates the currently stored desired body state. On the next time tick the
+    # drive module trajectory will be updated to match the new desired end state.
+    def on_desired_state_update(self, desired_body_motion: Motion):
+        self.desired_body_motion = desired_body_motion
+        self.body_motion_changed_at_time_in_seconds = self.current_time_in_seconds
+
+    # On clock tick, determine if we need to recalculate the trajectories for the drive modules
+    def on_tick(self, delta_time_in_seconds: float):
+        self.current_time_in_seconds += delta_time_in_seconds
+
+        # Calculate the current body state
+        self.body_state = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+
+        # If the desired body motion was updated after the trajectory was created, then we need to
+        # update the trajectory.
+        if (self.body_motion_changed_at_time_in_seconds <= self.trajectory_was_started_at_time_in_seconds):
+            return
 
         # use the twist trajectory to compute the state for the steering modules for the end state
         # and several intermediate points, i.e. determine the vector [[v_i];[gamma_i]].
@@ -66,32 +122,29 @@ class MultiWheelSteeringController(object):
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
         drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
-        drive_module_trajectory.set_current_state(current_module_states)
+        drive_module_trajectory.set_current_state(self.current_module_states)
 
+        # We may need a pre-trajectory section that aligns the wheel modules to the movement we want
+        # to make. This would only be the case if we're currently not moving. If we're moving all
+        # modules should be aligned.
+        #
+        # If we're moving and the modules are not aligned (given a certain tolerance) then we need to
+        # rectify that first!
+        #
+        # --> This almost feels like we need some kind of decision tree structure?
+        #
+        #
 
+        # We get both the forward and reverse options here. We should see which is the better one
+        # For now just use the forward one
+        drive_module_potential_states = self.control_model.state_of_wheel_modules_from_body_motion(self.module_states, self.desired_body_motion)
+        drive_module_desired_states = [x[0] for x in drive_module_potential_states]
 
-        # WRONG
-
-
-        drive_module_trajectory.set_desired_end_state(
-            self.control_model.state_of_wheel_modules_from_body_motion(current_module_states, body_trajectory.value_at(1.0))
-        )
-
-        # SET_INTERMEDIATE_POINTS
+        drive_module_trajectory.set_desired_end_state(drive_module_desired_states)
 
         # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
         # and make sure that the trajectories of the different modules all span the same time frame
         drive_module_trajectory.align_module_profiles()
 
-        return drive_module_trajectory
-
-    def drive_module_trajectory_to_achieve_desired_drive_module_orientation(
-        self,
-        desired_module_states: List[DriveModuleState],
-        current_module_states: List[DriveModuleState]) -> DriveModuleStateTrajectory:
-
-        # If the modules are currently stopped, i.e. no forward speed on the wheels, then
-        # we can just turn them all at the most efficient rate
-
-        # In this state the ICR for different wheel sets may not be aligned
-        pass
+        self.drive_module_trajectory = drive_module_trajectory
+        self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
