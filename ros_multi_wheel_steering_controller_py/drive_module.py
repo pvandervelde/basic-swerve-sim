@@ -80,6 +80,10 @@ class DriveModuleProposedState(object):
         self.steering_angle_in_radians = steering_angle_in_radians
         self.drive_velocity_in_meters_per_second = drive_velocity_in_meters_per_second
 
+
+## DriveModuleState --> DriveModuleMeasuredValues??
+## DriveModuleProposedState --> DriveModuleDesiredValues
+
 class DriveModuleState(object):
 
     def __init__(
