@@ -8,6 +8,66 @@ from .profile import CompoundProfile, InvalidTimeFractionException, LinearProfil
 
 # LinearProfile
 
+def test_should_show_first_derivative_at_with_increasing_linear_profile():
+    start = 1.0
+    end = 2.0
+    profile = LinearProfile(start, end)
+
+    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_first_derivative_at_with_decreasing_linear_profile():
+    start = 2.0
+    end = 1.0
+    profile = LinearProfile(start, end)
+
+    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_inflection_points_with_increasing_linear_profile():
+    start = 1.0
+    end = 2.0
+    profile = LinearProfile(start, end)
+
+    points = profile.inflection_points()
+
+    assert len(points) == 2
+
+    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_inflection_points_with_decreasing_linear_profile():
+    start = 2.0
+    end = 1.0
+    profile = LinearProfile(start, end)
+
+    points = profile.inflection_points()
+
+    assert len(points) == 2
+
+    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
 def test_should_show_second_derivative_at_with_increasing_linear_profile():
     start = 1.0
     end = 2.0
@@ -26,23 +86,23 @@ def test_should_show_second_derivative_at_with_decreasing_linear_profile():
     assert math.isclose(profile.second_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.second_derivative_at(0.5), 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-def test_should_show_first_derivative_at_with_increasing_linear_profile():
+def test_should_show_third_derivative_at_with_increasing_linear_profile():
     start = 1.0
     end = 2.0
     profile = LinearProfile(start, end)
 
-    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(0.5), 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-def test_should_show_first_derivative_at_with_decreasing_linear_profile():
+def test_should_show_third_derivative_at_with_decreasing_linear_profile():
     start = 2.0
     end = 1.0
     profile = LinearProfile(start, end)
 
-    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(0.5), 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_value_at_with_increasing_linear_profile():
     start = 1.0
@@ -230,7 +290,74 @@ def test_should_show_first_derivative_at_with_multiple_sub_profiles_in_compound_
     assert profile.first_derivative_at(1.0) == sub_profile_3.first_derivative_at(1.0)
 
 def test_should_show_second_derivative_at_with_single_sub_profile_in_compound_profile():
-    pytest.fail("not implemented yet")
+    profile = CompoundProfile()
+
+    sub_profile = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 1.0, sub_profile)
+
+    assert profile.second_derivative_at(0.0) == sub_profile.second_derivative_at(0.0)
+    assert profile.second_derivative_at(0.5) == sub_profile.second_derivative_at(0.5)
+    assert profile.second_derivative_at(1.0) == sub_profile.second_derivative_at(1.0)
 
 def test_should_show_second_derivative_at_with_multiple_sub_profiles_in_compound_profile():
+    profile = CompoundProfile()
+
+    sub_profile_1 = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 0.4, sub_profile_1)
+
+    sub_profile_2 = LinearProfile(3.0, 4.0)
+    profile.add_profile(0.4, 0.70, sub_profile_2)
+
+    sub_profile_3 = LinearProfile(5.0, 6.0)
+    profile.add_profile(0.70, 1.0, sub_profile_3)
+
+    assert profile.second_derivative_at(0.0) == sub_profile_1.second_derivative_at(0.0)
+    assert profile.second_derivative_at(0.2) == sub_profile_1.second_derivative_at(0.5)
+
+    assert profile.second_derivative_at(0.4) == sub_profile_2.second_derivative_at(0.0)
+    assert profile.second_derivative_at(0.55) == sub_profile_2.second_derivative_at(0.5)
+
+    assert profile.second_derivative_at(0.7) == sub_profile_3.second_derivative_at(0.0)
+    assert profile.second_derivative_at(0.85) == sub_profile_3.second_derivative_at(0.5)
+    assert profile.second_derivative_at(1.0) == sub_profile_3.second_derivative_at(1.0)
+
+def test_should_show_third_derivative_at_with_single_sub_profile_in_compound_profile():
+    profile = CompoundProfile()
+
+    sub_profile = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 1.0, sub_profile)
+
+    assert profile.third_derivative_at(0.0) == sub_profile.third_derivative_at(0.0)
+    assert profile.third_derivative_at(0.5) == sub_profile.third_derivative_at(0.5)
+    assert profile.third_derivative_at(1.0) == sub_profile.third_derivative_at(1.0)
+
+def test_should_show_third_derivative_at_with_multiple_sub_profiles_in_compound_profile():
+    profile = CompoundProfile()
+
+    sub_profile_1 = LinearProfile(1.0, 2.0)
+    profile.add_profile(0.0, 0.4, sub_profile_1)
+
+    sub_profile_2 = LinearProfile(3.0, 4.0)
+    profile.add_profile(0.4, 0.70, sub_profile_2)
+
+    sub_profile_3 = LinearProfile(5.0, 6.0)
+    profile.add_profile(0.70, 1.0, sub_profile_3)
+
+    assert profile.third_derivative_at(0.0) == sub_profile_1.third_derivative_at(0.0)
+    assert profile.third_derivative_at(0.2) == sub_profile_1.third_derivative_at(0.5)
+
+    assert profile.third_derivative_at(0.4) == sub_profile_2.third_derivative_at(0.0)
+    assert profile.third_derivative_at(0.55) == sub_profile_2.third_derivative_at(0.5)
+
+    assert profile.third_derivative_at(0.7) == sub_profile_3.third_derivative_at(0.0)
+    assert profile.third_derivative_at(0.85) == sub_profile_3.third_derivative_at(0.5)
+    assert profile.third_derivative_at(1.0) == sub_profile_3.third_derivative_at(1.0)
+
+def test_should_show_inflection_points_with_single_profile():
+    pytest.fail("not implemented yet")
+
+def test_should_show_inflection_points_with_multiple_not_connected_profiles():
+    pytest.fail("not implemented yet")
+
+def test_should_show_inflection_points_with_multiple_connected_profiles():
     pytest.fail("not implemented yet")

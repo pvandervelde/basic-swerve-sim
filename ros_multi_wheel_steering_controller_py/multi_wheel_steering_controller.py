@@ -36,6 +36,9 @@ class MultiWheelSteeringController(object):
                 0.0,
                 0.0,
                 0.0,
+                0.0,
+                0.0,
+                0.0,
                 0.0
             ) for drive_module in drive_modules
         ]

@@ -95,8 +95,11 @@ def test_should_show_forward_movement_when_modules_are_pointing_forward_with_vel
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -123,7 +126,10 @@ def test_should_show_no_movement_when_modules_are_pointing_forward_without_veloc
             math.radians(0),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -149,8 +155,11 @@ def test_should_show_reverse_movement_when_modules_are_pointing_forward_with_neg
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
             0.0,
+            0.0,
+            0.0,
             -1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -176,8 +185,11 @@ def test_should_show_reverse_movement_when_modules_are_pointing_backwards_with_v
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(180),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -203,8 +215,11 @@ def test_should_show_left_sideways_movement_when_modules_are_pointing_left_with_
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(90),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -230,8 +245,11 @@ def test_should_show_right_sideways_movement_when_modules_are_pointing_left_with
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(270),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -257,8 +275,11 @@ def test_should_show_left_diagonal_movement_when_modules_are_pointing_left_diago
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(45),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -284,8 +305,11 @@ def test_should_show_right_diagonal_movement_when_modules_are_pointing_angled_wi
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(315),
             0.0,
+            0.0,
+            0.0,
             1.0,
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -311,8 +335,11 @@ def test_should_show_pure_rotation_movement_when_modules_are_pointing_left_diago
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(45 + i * 90),
             0.0,
+            0.0,
+            0.0,
             math.sqrt(0.5),
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -349,7 +376,10 @@ def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -360,11 +390,11 @@ def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.pi, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.pi, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_excessive_forward_motion():
     drive_modules = create_drive_modules(drive_max_velocity=1.0)
@@ -381,7 +411,10 @@ def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_ex
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -392,11 +425,11 @@ def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_ex
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.pi, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.pi, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward_motion():
     drive_modules = create_drive_modules(1.0, 1.0)
@@ -413,7 +446,10 @@ def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -424,11 +460,11 @@ def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.pi, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.pi, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_sideways_motion():
     drive_modules = create_drive_modules(1.0, 1.0)
@@ -445,7 +481,10 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -456,11 +495,11 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_sideways_motion():
     drive_modules = create_drive_modules(1.0, 1.0)
@@ -477,7 +516,10 @@ def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_s
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -488,11 +530,11 @@ def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_s
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagonal_motion():
     drive_modules = create_drive_modules(1.0, 1.0)
@@ -509,7 +551,10 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
             math.radians(90),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -520,11 +565,11 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -1.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
     drive_modules = create_drive_modules(1.0, 1.0)
@@ -541,7 +586,10 @@ def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
             math.radians(0),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -552,14 +600,14 @@ def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
 
         reversing_angle = 45 + i * 90 + 180
         if reversing_angle >= 360:
             reversing_angle -= 360
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, -math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_angled_wheels_with_individual_velocities_when_rotation_and_translation():
     pytest.fail("not implemented yet")
@@ -579,7 +627,10 @@ def test_should_not_move_wheels_when_zero_motion():
             math.radians(45),
             0.0,
             0.0,
-            0.0
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -590,11 +641,11 @@ def test_should_not_move_wheels_when_zero_motion():
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_not_move_wheels_when_stopping():
     drive_modules = create_drive_modules()
@@ -610,8 +661,11 @@ def test_should_not_move_wheels_when_stopping():
             drive_modules[i].steering_axis_xy_position.y,
             math.radians(45 + i * 90),
             0.0,
+            0.0,
+            0.0,
             math.sqrt(0.5),
-            0.0
+            0.0,
+            0.0,
         )
         states.append(module_state)
 
@@ -622,11 +676,11 @@ def test_should_not_move_wheels_when_stopping():
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state.steering_angle_in_radians, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
         reversing_angle = 45 + i * 90 + 180
         if reversing_angle >= 360:
             reversing_angle -= 360
-        assert math.isclose(module_state.reverse_steering_angle, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
-        assert math.isclose(module_state.reverse_drive_velocity, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)

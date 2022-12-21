@@ -155,6 +155,10 @@ def initialize_drive_modules(drive_modules: List[DriveModule], align_modules: bo
             0.0,
             0.0,
             0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
         states.append(state)
 
@@ -165,20 +169,45 @@ def initialize_state_file(file_path: str, number_of_modules: int):
         file_.write("Time (s),")
         file_.write("x-body [wc] (m),y-body [wc] (m),z-body [wc] (m),")
         file_.write("x-rot-body [wc] (rad),y-rot-body [wc] (rad),z-rot-body [wc] (rad),")
+
         file_.write("x-vel-body [bc] (m/s), y-vel-body [bc] (m/s), z-vel-body [bc] (m/s),")
-        file_.write("x-vel-body [bc] (rad/s), y-vel-body [bc] (rad/s), z-vel-body [bc] (rad/s),")
+        file_.write("x-rotvel-body [bc] (rad/s), y-rotvel-body [bc] (rad/s), z-rotvel-body [bc] (rad/s),")
 
         file_.write("number of modules (-),")
         for i in range(number_of_modules):
             file_.write(f"x-module-{i} [bc] (m), y-module-{i} [bc] (m), z-module-{i} [bc] (m),")
             file_.write(f"x-rot-module-{i} [bc] (rad), y-rot-module-{i} [bc] (rad), z-rot-module-{i} [bc] (rad),")
-            file_.write(f"x-rot-module-{i} [bc] (rad), y-rot-module-{i} [bc] (rad), z-rot-module-{i} [bc] (rad),")
-            file_.write(f"x-vel-module-{i} [mc] (m/s), y-vel-module-{i} [mc] (m/s), y-vel-module-{i} [mc] (m/s),")
+
+            file_.write(f"x-vel-module-{i} [mc] (m/s), y-vel-module-{i} [mc] (m/s), z-vel-module-{i} [mc] (m/s),")
+            file_.write(f"x-rotvel-module-{i} [bc] (rad/s), y-rotvel-module-{i} [bc] (rad/s), z-rotvel-module-{i} [bc] (rad/s),")
+
+            file_.write(f"x-acc-module-{i} [mc] (m/s^2), y-acc-module-{i} [mc] (m/s^2), z-acc-module-{i} [mc] (m/s^2),")
+            file_.write(f"x-rotacc-module-{i} [bc] (rad/s^2), y-rotacc-module-{i} [bc] (rad/s^2), z-rotacc-module-{i} [bc] (rad/s^2),")
+
+            file_.write(f"x-jerk-module-{i} [mc] (m/s^3), y-jerk-module-{i} [mc] (m/s^3), z-jerk-module-{i} [mc] (m/s^3),")
+            file_.write(f"x-rotjerk-module-{i} [bc] (rad/s^3), y-rotjerk-module-{i} [bc] (rad/s^3), z-rotjerk-module-{i} [bc] (rad/s^3),")
 
 def read_arguments() -> Mapping[str, any]:
     parser = argparse.ArgumentParser(
         description="Simulate a 4 wheel steering robot in 2D",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument(
+        "-t",
+        "--run_trajectory",
+        action="store_true",
+        default=True,
+        required=False,
+        help="Calculates the drive module trajectories for a given change.")
+
+
+    parser.add_argument(
+        "-s",
+        "--run_simulation",
+        action="store_true",
+        default=True,
+        required=False,
+        help="Runs a path simulation, which simulates the robot following a path.")
     parser.add_argument(
         "-a",
         "--align_modules",
@@ -192,7 +221,7 @@ def read_arguments() -> Mapping[str, any]:
         action="store",
         default="straight-line-forwards",
         required=False,
-        help="The name of the path that should be simulated.")
+        help="The name of the path that should be simulated. Only valid if the run_simulation command is given.")
     parser.add_argument(
         "-o",
         "--output",
@@ -202,11 +231,12 @@ def read_arguments() -> Mapping[str, any]:
     args = parser.parse_args()
     return vars(args)
 
-def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleState], drive_module_trajectory: DriveModuleStateTrajectory):
+def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleState]):
 
     # Create a CSV with the following layout
-    # body pose in wc, body twist, module count, module 1 pose
-    # body_x_wc, body_y_wc, body_gamma_wc, body_v_x, body_v_y, body_v_omega, number_of_modules, module_1_x_bc, module_1_y_bc, module_1_gamma_bc, module_1_v, module_2_x_bc, ...
+    # body pose in wc, body twist, module count, module 1 info, .. , module N info
+    # with:
+    #     body_x_wc, body_y_wc, body_gamma_wc, body_v_x, body_v_y, body_v_omega, number_of_modules, module_1_x_bc, module_1_y_bc, module_1_gamma_bc, module_1_v, module_2_x_bc, ...
     with open(file_path, mode='a') as file_:
         # Write the current time
         file_.write("{},".format(current_time_in_seconds))
@@ -218,10 +248,10 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
         body_orient = body_state.orientation_in_world_coordinates
         file_.write("{},{},{},".format(body_orient.x, body_orient.y, body_orient.z))
 
-        body_linear_vel = body_state.linear_velocity_body_coordinates
+        body_linear_vel = body_state.motion_in_body_coordinates.linear_velocity
         file_.write("{},{},{},".format(body_linear_vel.x, body_linear_vel.y, body_linear_vel.z))
 
-        body_angular_vel = body_state.angular_velocity_body_coordinates
+        body_angular_vel = body_state.motion_in_body_coordinates.angular_velocity
         file_.write("{},{},{},".format(body_angular_vel.x, body_angular_vel.y, body_angular_vel.z))
 
         # Write the number of modules
@@ -231,14 +261,23 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
         for drive_module in drive_module_states:
             module_pos = drive_module.position_in_body_coordinates
             file_.write("{},{},{},".format(module_pos.x, module_pos.y, module_pos.z))
-
             module_orient = drive_module.orientation_in_body_coordinates
             file_.write("{},{},{},".format(module_orient.x, module_orient.y, module_orient.z))
 
-            module_vel = drive_module.drive_velocity_in_module_coordinates
-            file_.write("{},{},{},".format(module_vel.x, module_vel.y, module_vel.z))
+            module_lin_vel = drive_module.drive_velocity_in_module_coordinates
+            file_.write("{},{},{},".format(module_lin_vel.x, module_lin_vel.y, module_lin_vel.z))
+            module_rot_vel = drive_module.orientation_velocity_in_body_coordinates
+            file_.write("{},{},{},".format(module_rot_vel.x, module_rot_vel.y, module_rot_vel.z))
 
-        # Record the trajectory
+            module_lin_acc = drive_module.drive_acceleration_in_module_coordinates
+            file_.write("{},{},{},".format(module_lin_acc.x, module_lin_acc.y, module_lin_acc.z))
+            module_rot_acc = drive_module.orientation_acceleration_in_body_coordinates
+            file_.write("{},{},{},".format(module_rot_acc.x, module_rot_acc.y, module_rot_acc.z))
+
+            module_lin_jerk = drive_module.drive_jerk_in_module_coordinates
+            file_.write("{},{},{},".format(module_lin_jerk.x, module_lin_jerk.y, module_lin_jerk.z))
+            module_rot_jerk = drive_module.orientation_jerk_in_body_coordinates
+            file_.write("{},{},{},".format(module_rot_jerk.x, module_rot_jerk.y, module_rot_jerk.z))
 
         file_.write("\n")  # Next line.
 
@@ -313,8 +352,27 @@ def simulation_process_module_trajectory(
 
     return drive_module_states, updated_body_state
 
-def main(args=None):
-    arg_dict = read_arguments()
+
+
+
+
+
+
+# ALLOW GETTING THE BODY AND DRIVE TRAJECTORIES AND PRINTING THOSE, BECAUSE WE NEED TO WORK OUT WHAT INFLUENCE THEY HAVE ON EACH OTHER
+
+
+
+
+
+
+
+
+
+
+
+
+
+def simulation_run_path_following(arg_dict: Mapping[str, any]):
     align_modules: bool = arg_dict["align_modules"] if "align_modules" in arg_dict else False
     name_of_path_to_follow: str = arg_dict["path_to_follow"]
     state_file_path: str = arg_dict["output"]
@@ -377,10 +435,71 @@ def main(args=None):
             state_file_path,
             current_sim_time_in_seconds,
             body_state,
-            drive_module_states,
-            drive_module_trajectory)
+            drive_module_states)
 
         simulation_finished = track.has_reached_endpoint(current_sim_time_in_seconds, body_state)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def simulation_run_trajectory(arg_dict: Mapping[str, any]):
+    align_modules: bool = arg_dict["align_modules"] if "align_modules" in arg_dict else False
+    state_file_path: str = arg_dict["output"]
+
+    # Initialize drive module state
+    drive_modules = get_drive_module_info()
+    drive_module_states: List[DriveModuleState] = initialize_drive_modules(drive_modules, align_modules)
+    body_state: BodyState = BodyState(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        )
+
+    initialize_state_file(state_file_path, len(drive_modules))
+
+    controller = get_controller(drive_modules)
+
+    time_step_in_seconds = 0.01
+    current_sim_time_in_seconds = 0.0
+
+    controller.on_desired_state_update(Motion(1.0, 0.0, 0.0))
+    controller.on_tick(time_step_in_seconds)
+
+    record_trajectory_at_time(
+        state_file_path,
+        current_sim_time_in_seconds,
+        body_state,
+        drive_module_states,
+        controller.drive_module_trajectory)
+
+def main(args=None):
+    arg_dict = read_arguments()
+
+    run_trajectory: bool = arg_dict["run_trajectory"] if "run_trajectory" in arg_dict else False
+    if run_trajectory:
+        simulation_run_trajectory(arg_dict)
+    else:
+        simulation_run_path_following(arg_dict)
 
 if __name__ == '__main__':
     main()

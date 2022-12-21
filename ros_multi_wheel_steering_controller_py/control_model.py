@@ -200,12 +200,15 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             if reverse_steering_angle >= 2 * math.pi:
                 reverse_steering_angle -= 2 * math.pi
 
+            name = self.modules[i].name
             forward_state = DriveModuleProposedState(
+                name,
                 forward_steering_angle,
                 drive_velocity * normalization_factor,
             )
 
             reverse_state = DriveModuleProposedState(
+                name,
                 reverse_steering_angle,
                 -1.0 * drive_velocity * normalization_factor,
             )

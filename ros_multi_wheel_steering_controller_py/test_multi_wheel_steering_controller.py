@@ -10,4 +10,8 @@ from .geometry import Point
 from .trajectory import BodyMotionTrajectory, DriveModuleProfile, DriveModuleStateTrajectory
 
 
-def test_controller_should
+def test_controller_should_update_body_state_on_state_update():
+    pass
+
+def test_controller_should_update_trajectory_on_desired_state_update():
+    pass

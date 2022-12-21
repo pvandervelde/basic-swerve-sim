@@ -1,4 +1,5 @@
 import math
+from typing import Mapping, List, Tuple
 
 # local
 from .geometry import Orientation, Point, Vector3
@@ -88,15 +89,24 @@ class DriveModuleState(object):
         module_y_in_meters: float,
         steering_angle: float,
         steering_velocity: float,
+        steering_acceleration: float,
+        steering_jerk: float,
         drive_velocity: float,
         drive_acceleration: float,
+        drive_jerk: float
         ):
         self.name = name
         self.position_in_body_coordinates = Point(module_x_in_meters, module_y_in_meters, 0.0)
         self.orientation_in_body_coordinates = Orientation(0.0, 0.0, steering_angle)
-        self.orientation_change_in_body_coordinates = Vector3(0.0, 0.0, steering_velocity)
+
         self.drive_velocity_in_module_coordinates = Vector3(drive_velocity, 0.0, 0.0)
+        self.orientation_velocity_in_body_coordinates = Vector3(0.0, 0.0, steering_velocity)
+
         self.drive_acceleration_in_module_coordinates = Vector3(drive_acceleration, 0.0, 0.0)
+        self.orientation_acceleration_in_body_coordinates = Vector3(0.0, 0.0, steering_acceleration)
+
+        self.drive_jerk_in_module_coordinates = Vector3(drive_jerk, 0.0, 0.0)
+        self.orientation_jerk_in_body_coordinates = Vector3(0.0, 0.0, steering_jerk)
 
     def xy_drive_velocity(self) -> Tuple[float, float]:
         v_x = self.drive_velocity_in_module_coordinates.x * math.cos(self.orientation_in_body_coordinates.z)
