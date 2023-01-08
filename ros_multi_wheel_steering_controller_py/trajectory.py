@@ -91,8 +91,20 @@ class DriveModuleStateTrajectory(object):
 
             self.profiles[self.modules[i].name] = module_profiles
 
-    def inflection_points(self) -> List[List[ProfilePoint]]:
-        pass
+    def inflection_points(self) -> Mapping[str, List[List[ProfilePoint]]]:
+        result = {}
+        for drive_module in self.modules:
+            profile_list = self.profiles[drive_module.name]
+
+            # GRAB THE POINTS FOR EACH MODULE
+            for profile in profile_list:
+                inflection_points = profile.inflection_points()
+
+                # EACH PROFILE MIGHT BE DIFFERENT. SO SHOULD WE UNIFY THE INFLECTION POINTS
+
+            pass
+
+        return result
 
     def set_current_state(self, states: List[DriveModuleState]):
         if len(states) != len(self.modules):
@@ -133,6 +145,9 @@ class DriveModuleStateTrajectory(object):
             steering_module.steering_axis_xy_position.y,
             profiles[0].value_at(time_fraction),
             profiles[0].first_derivative_at(time_fraction),
+            profiles[0].second_derivative_at(time_fraction),
+            profiles[0].third_derivative_at(time_fraction),
             profiles[1].value_at(time_fraction),
-            profiles[1].first_derivative_at(time_fraction)
+            profiles[1].first_derivative_at(time_fraction),
+            profiles[1].second_derivative_at(time_fraction),
         )
