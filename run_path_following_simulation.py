@@ -7,7 +7,7 @@ from typing import Mapping, List, Tuple
 # local
 from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleState, Motion, Orientation, Point
 from ros_multi_wheel_steering_controller_py.drive_module import DriveModule
-from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import MultiWheelSteeringController
+from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import LinearModuleFirstSteeringController, MultiWheelSteeringController
 from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 
 class SimulatorTrack(object):
@@ -71,7 +71,7 @@ class StraightLineTrack(SimulatorTrack):
 #       y(t) = (R - r) * sin(t) - rho * sin( ((R - r) / r) * t )
 
 def get_controller(drive_modules: List[DriveModule]) -> MultiWheelSteeringController:
-    return MultiWheelSteeringController(drive_modules)
+    return LinearModuleFirstSteeringController(drive_modules)
 
 def get_drive_module_info() -> List[DriveModule]:
     drive_modules: List[DriveModule] = []
@@ -158,7 +158,6 @@ def initialize_drive_modules(drive_modules: List[DriveModule], align_modules: bo
             0.0,
             0.0,
             0.0,
-            0.0,
         )
         states.append(state)
 
@@ -192,22 +191,6 @@ def read_arguments() -> Mapping[str, any]:
         description="Simulate a 4 wheel steering robot in 2D",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument(
-        "-t",
-        "--run_trajectory",
-        action="store_true",
-        default=True,
-        required=False,
-        help="Calculates the drive module trajectories for a given change.")
-
-
-    parser.add_argument(
-        "-s",
-        "--run_simulation",
-        action="store_true",
-        default=True,
-        required=False,
-        help="Runs a path simulation, which simulates the robot following a path.")
     parser.add_argument(
         "-a",
         "--align_modules",
@@ -352,26 +335,6 @@ def simulation_process_module_trajectory(
 
     return drive_module_states, updated_body_state
 
-
-
-
-
-
-
-# ALLOW GETTING THE BODY AND DRIVE TRAJECTORIES AND PRINTING THOSE, BECAUSE WE NEED TO WORK OUT WHAT INFLUENCE THEY HAVE ON EACH OTHER
-
-
-
-
-
-
-
-
-
-
-
-
-
 def simulation_run_path_following(arg_dict: Mapping[str, any]):
     align_modules: bool = arg_dict["align_modules"] if "align_modules" in arg_dict else False
     name_of_path_to_follow: str = arg_dict["path_to_follow"]
@@ -439,67 +402,10 @@ def simulation_run_path_following(arg_dict: Mapping[str, any]):
 
         simulation_finished = track.has_reached_endpoint(current_sim_time_in_seconds, body_state)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def simulation_run_trajectory(arg_dict: Mapping[str, any]):
-    align_modules: bool = arg_dict["align_modules"] if "align_modules" in arg_dict else False
-    state_file_path: str = arg_dict["output"]
-
-    # Initialize drive module state
-    drive_modules = get_drive_module_info()
-    drive_module_states: List[DriveModuleState] = initialize_drive_modules(drive_modules, align_modules)
-    body_state: BodyState = BodyState(
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        )
-
-    initialize_state_file(state_file_path, len(drive_modules))
-
-    controller = get_controller(drive_modules)
-
-    time_step_in_seconds = 0.01
-    current_sim_time_in_seconds = 0.0
-
-    controller.on_desired_state_update(Motion(1.0, 0.0, 0.0))
-    controller.on_tick(time_step_in_seconds)
-
-    record_trajectory_at_time(
-        state_file_path,
-        current_sim_time_in_seconds,
-        body_state,
-        drive_module_states,
-        controller.drive_module_trajectory)
-
 def main(args=None):
     arg_dict = read_arguments()
 
-    run_trajectory: bool = arg_dict["run_trajectory"] if "run_trajectory" in arg_dict else False
-    if run_trajectory:
-        simulation_run_trajectory(arg_dict)
-    else:
-        simulation_run_path_following(arg_dict)
+    simulation_run_path_following(arg_dict)
 
 if __name__ == '__main__':
     main()
