@@ -185,17 +185,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
 
     desired_states: List[DriveModuleProposedState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -204,19 +197,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
@@ -245,16 +238,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
             0.0,
         )
         desired_states.append(module_state)
@@ -264,19 +250,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
@@ -305,17 +291,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(90),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -324,19 +303,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
@@ -365,16 +344,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(90),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
             0.0,
         )
         desired_states.append(module_state)
@@ -384,19 +356,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
@@ -425,17 +397,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -446,19 +411,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceleration():
@@ -485,17 +450,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(90),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -506,19 +464,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sideways_transition():
@@ -545,17 +503,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(90),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -566,19 +517,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwards_transition():
@@ -605,17 +556,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(0),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -626,19 +570,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, -math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotation_transition():
@@ -665,17 +609,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(45 + i * 90),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -688,19 +625,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians((45 + i * 90) / 2), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotation_transition():
@@ -727,17 +664,10 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
 
     desired_states: List[DriveModuleState] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleProposedState(
             drive_modules[i].name,
-            drive_modules[i].steering_axis_xy_position.x,
-            drive_modules[i].steering_axis_xy_position.y,
             math.radians(45 + i * 90),
-            0.0,
-            0.0,
-            0.0,
             1.0,
-            0.0,
-            0.0,
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
@@ -750,19 +680,19 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90) - math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90) - math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians((45 + i * 90 + 90) / 2), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(45 + i * 90) - math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_should_align_module_profiles_with_single_profile_for_drive_module_trajectory():
