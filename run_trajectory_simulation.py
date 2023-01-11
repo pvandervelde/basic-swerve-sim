@@ -11,7 +11,7 @@ from typing import List, Mapping, NamedTuple, Tuple
 # local
 from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleProposedState, DriveModuleState, Motion, Orientation, Point
 from ros_multi_wheel_steering_controller_py.drive_module import DriveModule
-from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import LinearModuleFirstSteeringController, MultiWheelSteeringController
+from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import LinearBodyFirstSteeringController, LinearModuleFirstSteeringController, MultiWheelSteeringController
 from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 
 class ProfilePlotValues(NamedTuple):
@@ -40,8 +40,11 @@ class ProfilePlotValues(NamedTuple):
 #       x(t) = (R - r) * cos(t) + rho * cos( ((R - r) / r) * t )
 #       y(t) = (R - r) * sin(t) - rho * sin( ((R - r) / r) * t )
 
-def get_controller(drive_modules: List[DriveModule]) -> MultiWheelSteeringController:
-    return LinearModuleFirstSteeringController(drive_modules)
+def get_controller(drive_modules: List[DriveModule]) -> Mapping[str, MultiWheelSteeringController]:
+    return {
+        "LinearModuleFirstSteeringController": LinearModuleFirstSteeringController(drive_modules),
+        #"LinearBodyFirstSteeringController": LinearBodyFirstSteeringController(drive_modules),
+    }
 
 def get_drive_module_info() -> List[DriveModule]:
     drive_modules: List[DriveModule] = []
@@ -398,196 +401,214 @@ def plot_trajectories(
     fig: go.Figure,
     set_name: str,
     output_directory: str,
+    controller_names: List[str],
     points_in_time: List[float],
-    body_states: List[BodyState],
+    body_states: Mapping[str, List[List[BodyState]]],
     drive_modules: List[DriveModule],
-    drive_states: List[List[DriveModuleState]]
+    drive_states: Mapping[str, List[List[List[DriveModuleState]]]]
     ):
 
-    default_marker_type = dict(color = 'black', size=2)
+    default_marker_type = dict(size=3)
 
-    plots: List[List[ProfilePlotValues]] = []
+    controller_plots : Mapping[str, List[List[ProfilePlotValues]]] = {}
+    for name in controller_names:
+        plots: List[List[ProfilePlotValues]] = []
 
-    module_index = 0
-    for drive_module in drive_modules:
-        sub_plots: List[ProfilePlotValues] = []
-        plots.append(sub_plots)
+        module_index = 0
+        for drive_module in drive_modules:
+            sub_plots: List[ProfilePlotValues] = []
+            plots.append(sub_plots)
 
-        sub_plots.append(
+            sub_plots.append(
+                ProfilePlotValues(
+                    name="{} drive velocity".format(drive_module.name),
+                    markers=default_marker_type,
+                    x_values=points_in_time,
+                    y_values=[[d2[module_index].drive_velocity_in_module_coordinates.x for d2 in d1] for d1 in drive_states[name]]
+                )
+            )
+
+            # sub_plots.append(
+            #     ProfilePlotValues(
+            #         name="{} drive acceleration".format(drive_module.name),
+            #         markers=default_marker_type,
+            #         x_values=points_in_time,
+            #         y_values=[d[module_index].drive_acceleration_in_module_coordinates.x for d in drive_states[name]]
+            #     )
+            # )
+
+            # sub_plots.append(
+            #     ProfilePlotValues(
+            #         name="{} drive jerk".format(drive_module.name),
+            #         markers=default_marker_type,
+            #         x_values=points_in_time,
+            #         y_values=[d[module_index].drive_jerk_in_module_coordinates.x for d in drive_states[name]]
+            #     )
+            # )
+
+            sub_plots.append(
+                ProfilePlotValues(
+                    name="{} drive orientation".format(drive_module.name),
+                    markers=default_marker_type,
+                    x_values=points_in_time,
+                    y_values=[[d2[module_index].orientation_in_body_coordinates.z for d2 in d1 ] for d1 in drive_states[name]]
+                )
+            )
+
+            # sub_plots.append(
+            #     ProfilePlotValues(
+            #         name="{} drive orientation velocity".format(drive_module.name),
+            #         markers=default_marker_type,
+            #         x_values=points_in_time,
+            #         y_values=[d[module_index].orientation_velocity_in_body_coordinates.z for d in drive_states[name]]
+            #     )
+            # )
+
+            # sub_plots.append(
+            #     ProfilePlotValues(
+            #         name="{} drive orientation acceleration".format(drive_module.name),
+            #         markers=default_marker_type,
+            #         x_values=points_in_time,
+            #         y_values=[d[module_index].orientation_acceleration_in_body_coordinates.z for d in drive_states[name]]
+            #     )
+            # )
+
+            # sub_plots.append(
+            #     ProfilePlotValues(
+            #         name="{} drive orientation jerk".format(drive_module.name),
+            #         markers=default_marker_type,
+            #         x_values=points_in_time,
+            #         y_values=[d[module_index].orientation_jerk_in_body_coordinates.z for d in drive_states[name]]
+            #     )
+            # )
+
+            module_index += 1
+
+        # Body position
+        plots[0].insert(
+            0,
             ProfilePlotValues(
-                name="{} drive velocity".format(drive_module.name),
+                name="body position",
                 markers=default_marker_type,
-                x_values=points_in_time,
-                y_values=[d[module_index].drive_velocity_in_module_coordinates.x for d in drive_states]
+                x_values=[[b2.position_in_world_coordinates.x for b2 in b1] for b1 in body_states[name]],
+                y_values=[[b2.position_in_world_coordinates.y for b2 in b1] for b1 in body_states[name]]
             )
         )
 
-        # sub_plots.append(
-        #     ProfilePlotValues(
-        #         name="{} drive acceleration".format(drive_module.name),
-        #         markers=default_marker_type,
-        #         x_values=points_in_time,
-        #         y_values=[d[module_index].drive_acceleration_in_module_coordinates.x for d in drive_states]
-        #     )
-        # )
-
-        # sub_plots.append(
-        #     ProfilePlotValues(
-        #         name="{} drive jerk".format(drive_module.name),
-        #         markers=default_marker_type,
-        #         x_values=points_in_time,
-        #         y_values=[d[module_index].drive_jerk_in_module_coordinates.x for d in drive_states]
-        #     )
-        # )
-
-        sub_plots.append(
+        plots[1].insert(
+            0,
             ProfilePlotValues(
-                name="{} drive orientation".format(drive_module.name),
+                name="body x-position",
                 markers=default_marker_type,
                 x_values=points_in_time,
-                y_values=[d[module_index].orientation_in_body_coordinates.z for d in drive_states]
+                y_values=[[b2.position_in_world_coordinates.x for b2 in b1] for b1 in body_states[name]]
             )
         )
 
-        # sub_plots.append(
-        #     ProfilePlotValues(
-        #         name="{} drive orientation velocity".format(drive_module.name),
-        #         markers=default_marker_type,
-        #         x_values=points_in_time,
-        #         y_values=[d[module_index].orientation_velocity_in_body_coordinates.z for d in drive_states]
-        #     )
-        # )
-
-        # sub_plots.append(
-        #     ProfilePlotValues(
-        #         name="{} drive orientation acceleration".format(drive_module.name),
-        #         markers=default_marker_type,
-        #         x_values=points_in_time,
-        #         y_values=[d[module_index].orientation_acceleration_in_body_coordinates.z for d in drive_states]
-        #     )
-        # )
-
-        # sub_plots.append(
-        #     ProfilePlotValues(
-        #         name="{} drive orientation jerk".format(drive_module.name),
-        #         markers=default_marker_type,
-        #         x_values=points_in_time,
-        #         y_values=[d[module_index].orientation_jerk_in_body_coordinates.z for d in drive_states]
-        #     )
-        # )
-
-        module_index += 1
-
-    # Body position
-    plots[0].insert(
-        0,
-        ProfilePlotValues(
-            name="body position",
-            markers=default_marker_type,
-            x_values=[b.position_in_world_coordinates.x for b in body_states],
-            y_values=[b.position_in_world_coordinates.y for b in body_states]
+        plots[2].insert(
+            0,
+            ProfilePlotValues(
+                name="body y-position",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[[b2.position_in_world_coordinates.y for b2 in b1] for b1 in body_states[name]]
+            )
         )
-    )
 
-    plots[1].insert(
-        0,
-        ProfilePlotValues(
-            name="body x-position",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.position_in_world_coordinates.x for b in body_states]
+        plots[3].insert(
+            0,
+            ProfilePlotValues(
+                name="body orientation",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[[b2.orientation_in_world_coordinates.z for b2 in b1] for b1 in body_states[name]]
+            )
         )
-    )
 
-    plots[2].insert(
-        0,
-        ProfilePlotValues(
-            name="body y-position",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.position_in_world_coordinates.y for b in body_states]
+        # Body velocity
+        plots[0].insert(
+            1,
+            ProfilePlotValues(
+                name="body x-velocity",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[[b2.motion_in_body_coordinates.linear_velocity.x for b2 in b1] for b1 in body_states[name]]
+            )
         )
-    )
 
-    plots[3].insert(
-        0,
-        ProfilePlotValues(
-            name="body orientation",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.orientation_in_world_coordinates.z for b in body_states]
+        plots[1].insert(
+            1,
+            ProfilePlotValues(
+                name="body y-velocity",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[[b2.motion_in_body_coordinates.linear_velocity.y for b2 in b1] for b1 in body_states[name]]
+            )
         )
-    )
 
-    # Body velocity
-    plots[0].insert(
-        1,
-        ProfilePlotValues(
-            name="body x-velocity",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.motion_in_body_coordinates.linear_velocity.x for b in body_states]
+        plots[2].insert(
+            1,
+            ProfilePlotValues(
+                name="body rotation-velocity",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[[b2.motion_in_body_coordinates.angular_velocity.z for b2 in b1] for b1 in body_states[name]]
+            )
         )
-    )
 
-    plots[1].insert(
-        1,
-        ProfilePlotValues(
-            name="body y-velocity",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.motion_in_body_coordinates.linear_velocity.y for b in body_states]
+        plots[3].insert(
+            1,
+            ProfilePlotValues(
+                name="empty-on-purpose",
+                markers=default_marker_type,
+                x_values=points_in_time,
+                y_values=[]
+            )
         )
-    )
 
-    plots[2].insert(
-        1,
-        ProfilePlotValues(
-            name="body rotation-velocity",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[b.motion_in_body_coordinates.angular_velocity.z for b in body_states]
-        )
-    )
+        controller_plots[name] = plots
 
-    plots[3].insert(
-        1,
-        ProfilePlotValues(
-            name="empty-on-purpose",
-            markers=default_marker_type,
-            x_values=points_in_time,
-            y_values=[]
-        )
-    )
+    fig_length = 0
+    for name, plots in controller_plots.items():
+        col_index = 1
+        fig_length = len(plots)
+        for lists in plots:
 
-    col_index = 1
-    for lists in plots:
-
-        row_index = 1
-        for values in lists:
-            print("Appending plot [{}, {}] with title [{}] ...".format(row_index, col_index, values.name))
-            fig.append_trace(
+            row_index = 1
+            for values in lists:
+                print("Appending plot [{}, {}] with title [{}] ...".format(row_index, col_index, values.name))
+                fig.add_trace(
                     go.Scatter(
                         x=values.x_values,
                         y=values.y_values,
                         mode='markers',
                         marker=values.markers,
+                        name="{} for {}".format(values.name, name),
+                        showlegend=True,
+                        visible=True,
                     ),
                     row=row_index,
                     col=col_index)
-            fig.update_yaxes(title_text=values.name, row=row_index, col=col_index)
-            row_index += 1
+                fig.update_yaxes(title_text=values.name, row=row_index, col=col_index)
+                row_index += 1
 
-            # Updat the trace with the mathematical expectation
+                # Updat the trace with the mathematical expectation
 
-        col_index += 1
+            col_index += 1
 
+    fig.update_traces(
+        marker=dict(
+            size=12,
+            line=dict(
+                width=2,
+                color='DarkSlateGrey')),
+        selector=dict(mode='markers'))
     fig.update_layout(
         template='ggplot2',
         title=set_name,
         width=2400,
-        height=350 * len(plots[0]),
-        showlegend=False
+        height=350 * fig_length,
+        showlegend=True
         )
 
     plot_file_path = path.join(output_directory, "{}.html".format(set_name))
@@ -735,63 +756,72 @@ def simulation_run_trajectory(
     print("Creating figure with {} plots".format(plot_count))
     fig = get_plot(plot_count, 4)
 
-
-    # We want to compare plots between:
-    # - computing the module profiles based on the current state and the desired end body state
-    # -
-
-
-
-
-
-    controller = get_controller(drive_modules)
-    controller.on_state_update(drive_module_states)
+    controllers = get_controller(drive_modules)
+    for name, controller in controllers.items():
+        print("Setting the state for the {} controller ...".format(name))
+        controller.on_state_update(drive_module_states)
 
     time_step_in_seconds = 0.01
     current_sim_time_in_seconds = 0.0
 
-    for motion in motion_set:
-        controller.on_desired_state_update(motion)
-        controller.on_tick(time_step_in_seconds)
+    points_in_time: List[float] = [ i * time_step_in_seconds for i in range(0, 101) ]
+    body_states: Mapping[str, List[List[BodyState]]] = {}
+    drive_states: Mapping[str, List[List[List[DriveModuleState]]]] = {}
 
-        points_in_time: List[float] = [ 0.0 ]
-        body_states: List[BodyState] = []
-        drive_states: List[List[DriveModuleState]] = []
+    for name, controller in controllers.items():
+        body_states.update({ name: [] })
+        drive_states.update({ name: [] })
 
-        for i in range(1, 101):
-            time_delta = i * time_step_in_seconds
+        for motion in motion_set:
+            controller.on_desired_state_update(motion)
+            controller.on_tick(time_step_in_seconds)
 
-            print("Processing step at {} ...".format(time_delta))
+            body_state_for_motion: List[BodyState] = []
+            drive_state_for_motion: List[List[DriveModuleState]] = []
 
-            points_in_time.append(time_delta)
+            for time_delta in points_in_time:
+                print("Processing step at {} for controller {} ...".format(time_delta, name))
 
-            drive_module_states = controller.drive_module_state_at_future_time(time_delta)
-            drive_states.append(drive_module_states)
+                drive_module_states = controller.drive_module_state_at_future_time(time_delta)
+                drive_state_for_motion.append(drive_module_states)
 
-            body_motion = controller.control_model.body_motion_from_wheel_module_states(drive_module_states)
+                body_motion = controller.control_model.body_motion_from_wheel_module_states(drive_module_states)
 
-            local_x_distance = time_step_in_seconds * body_motion.linear_velocity.x
-            local_y_distance = time_step_in_seconds * body_motion.linear_velocity.y
-            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * body_motion.angular_velocity.z
-            body_state = BodyState(
-                body_state.position_in_world_coordinates.x + local_x_distance * cos(global_orientation) - local_y_distance * sin(global_orientation),
-                body_state.position_in_world_coordinates.y + local_x_distance * sin(global_orientation) + local_y_distance * cos(global_orientation),
-                global_orientation,
-                body_motion.linear_velocity.x,
-                body_motion.linear_velocity.y,
-                body_motion.angular_velocity.z,
-            )
+                local_x_distance = time_step_in_seconds * body_motion.linear_velocity.x
+                local_y_distance = time_step_in_seconds * body_motion.linear_velocity.y
+                global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * body_motion.angular_velocity.z
+                body_state = BodyState(
+                    body_state.position_in_world_coordinates.x + local_x_distance * cos(global_orientation) - local_y_distance * sin(global_orientation),
+                    body_state.position_in_world_coordinates.y + local_x_distance * sin(global_orientation) + local_y_distance * cos(global_orientation),
+                    global_orientation,
+                    body_motion.linear_velocity.x,
+                    body_motion.linear_velocity.y,
+                    body_motion.angular_velocity.z,
+                )
 
-            body_states.append(body_state)
+                body_state_for_motion.append(body_state)
 
-            record_state_at_time(
-                state_file_path,
-                time_delta,
-                body_state,
-                drive_module_states)
+                record_state_at_time(
+                    state_file_path,
+                    time_delta,
+                    body_state,
+                    drive_module_states)
+
+            body_states[name].append(body_state_for_motion)
+            drive_states[name].append(drive_state_for_motion)
+
+        print("")
 
     # Now draw all the graphs
-    plot_trajectories(fig, set_name, output_directory, points_in_time, body_states, drive_modules, drive_states)
+    plot_trajectories(
+        fig,
+        set_name,
+        output_directory,
+        [n for n in controllers.keys()],
+        points_in_time,
+        body_states,
+        drive_modules,
+        drive_states)
 
 def main(args=None):
     arg_dict = read_arguments()

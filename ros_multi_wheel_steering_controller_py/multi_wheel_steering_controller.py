@@ -327,9 +327,9 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         #
 
         # We get both the forward and reverse options here. We should see which is the better one
-        # For now just use the forward one
+        # For now just use the negative one
         drive_module_potential_states = self.control_model.state_of_wheel_modules_from_body_motion(self.module_states, self.desired_body_motion)
-        drive_module_desired_states = [x[0] for x in drive_module_potential_states]
+        drive_module_desired_states = [x[1] for x in drive_module_potential_states]
 
         drive_module_trajectory.set_desired_end_state(drive_module_desired_states)
 
@@ -341,4 +341,5 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
 class SmoothSteeringController(MultiWheelSteeringController):
+    # low jerk controller
     pass
