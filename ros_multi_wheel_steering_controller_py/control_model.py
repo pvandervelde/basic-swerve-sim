@@ -35,7 +35,7 @@ class ControlModelBase(object):
         pass
 
     # Forward kinematics
-    def body_motion_from_wheel_module_states(self) -> Motion:
+    def body_motion_from_wheel_module_states(self, states: List[DriveModuleState]) -> Motion:
         return Motion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # Returns the proposed wheel states which will achieve the given body motion. The list will contain

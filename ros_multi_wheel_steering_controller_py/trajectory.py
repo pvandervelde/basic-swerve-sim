@@ -1,8 +1,5 @@
-from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Mapping, List, Tuple
+from typing import Mapping, List
 
-from .control_model import BodyState
 from .errors import IncompleteTrajectoryException
 from .geometry import Motion
 from .drive_module import DriveModule, DriveModuleProposedState, DriveModuleState
