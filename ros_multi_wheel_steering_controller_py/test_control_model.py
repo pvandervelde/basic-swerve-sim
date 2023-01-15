@@ -4,7 +4,7 @@ from typing import Mapping, List, Tuple
 
 # locals
 from .control_model import BodyState, SimpleFourWheelSteeringControlModel
-from .drive_module import DriveModule, DriveModuleState
+from .drive_module import DriveModule, DriveModuleMeasuredValues
 from .geometry import Motion, Point
 
 def create_drive_modules(
@@ -87,9 +87,9 @@ def test_should_show_forward_movement_when_modules_are_pointing_forward_with_vel
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -117,9 +117,9 @@ def test_should_show_no_movement_when_modules_are_pointing_forward_without_veloc
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -147,9 +147,9 @@ def test_should_show_reverse_movement_when_modules_are_pointing_forward_with_neg
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -177,9 +177,9 @@ def test_should_show_reverse_movement_when_modules_are_pointing_backwards_with_v
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -207,9 +207,9 @@ def test_should_show_left_sideways_movement_when_modules_are_pointing_left_with_
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -237,9 +237,9 @@ def test_should_show_right_sideways_movement_when_modules_are_pointing_left_with
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -267,9 +267,9 @@ def test_should_show_left_diagonal_movement_when_modules_are_pointing_left_diago
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -297,9 +297,9 @@ def test_should_show_right_diagonal_movement_when_modules_are_pointing_angled_wi
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -327,9 +327,9 @@ def test_should_show_pure_rotation_movement_when_modules_are_pointing_left_diago
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -367,9 +367,9 @@ def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_
 
     motion = Motion(1.0, 0.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -402,9 +402,9 @@ def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_ex
 
     motion = Motion(2.0, 0.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -437,9 +437,9 @@ def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward
 
     motion = Motion(-1.0, 0.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -472,9 +472,9 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
 
     motion = Motion(0.0, 1.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -507,9 +507,9 @@ def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_s
 
     motion = Motion(0.0, -1.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -542,9 +542,9 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
 
     motion = Motion(1.0, 1.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -577,9 +577,9 @@ def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
 
     motion = Motion(0.0, 0.0, 1.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -618,9 +618,9 @@ def test_should_not_move_wheels_when_zero_motion():
 
     motion = Motion(0.0, 0.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -653,9 +653,9 @@ def test_should_not_move_wheels_when_stopping():
 
     motion = Motion(0.0, 0.0, 0.0)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,

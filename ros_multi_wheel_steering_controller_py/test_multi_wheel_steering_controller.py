@@ -3,7 +3,7 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .control_model import BodyState, DriveModuleState, Motion, SimpleFourWheelSteeringControlModel
+from .control_model import BodyState, DriveModuleMeasuredValues, Motion, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .errors import IncompleteTrajectoryException
 from .geometry import Point

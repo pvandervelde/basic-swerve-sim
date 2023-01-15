@@ -21,7 +21,7 @@ from std_msgs.msg import Float64MultiArray
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 # local
-from control_model import BodyState, DriveModuleState, body_state_from_twist, ControlModelBase, SimpleFourWheelSteeringControlModel
+from control_model import BodyState, DriveModuleMeasuredValues, body_state_from_twist, ControlModelBase, SimpleFourWheelSteeringControlModel
 from drive_module import DriveModule
 from trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 

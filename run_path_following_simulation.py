@@ -5,7 +5,7 @@ from random import random
 from typing import Mapping, List, Tuple
 
 # local
-from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleState, Motion, Orientation, Point
+from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleMeasuredValues, Motion, Orientation, Point
 from ros_multi_wheel_steering_controller_py.drive_module import DriveModule
 from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import LinearModuleFirstSteeringController, MultiWheelSteeringController
 from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
@@ -140,14 +140,14 @@ def get_drive_module_info() -> List[DriveModule]:
 def get_simulation_track(name_of_path: str) -> SimulatorTrack:
     return StraightLineTrack()
 
-def initialize_drive_modules(drive_modules: List[DriveModule], align_modules: bool) -> List[DriveModuleState]:
-    states: List[DriveModuleState] = []
+def initialize_drive_modules(drive_modules: List[DriveModule], align_modules: bool) -> List[DriveModuleMeasuredValues]:
+    states: List[DriveModuleMeasuredValues] = []
     for drive_module in drive_modules:
         steering_angle = 0.0
         if not align_modules:
             steering_angle = 2 * pi * random()
 
-        state = DriveModuleState(
+        state = DriveModuleMeasuredValues(
             drive_module.name,
             drive_module.steering_axis_xy_position.x,
             drive_module.steering_axis_xy_position.y,
@@ -214,7 +214,7 @@ def read_arguments() -> Mapping[str, any]:
     args = parser.parse_args()
     return vars(args)
 
-def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleState]):
+def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleMeasuredValues]):
 
     # Create a CSV with the following layout
     # body pose in wc, body twist, module count, module 1 info, .. , module N info
@@ -268,7 +268,7 @@ def simulation_align_drive_modules(
     sim_time_in_seconds: float,
     time_step_in_seconds: float,
     drive_modules: List[DriveModule],
-    drive_module_states: List[DriveModuleState],
+    drive_module_states: List[DriveModuleMeasuredValues],
     body_state: BodyState,
     controller: MultiWheelSteeringController
     ) -> float:
@@ -303,14 +303,14 @@ def simulation_process_module_trajectory(
     drive_module_trajectory: DriveModuleStateTrajectory,
     current_body_state: BodyState,
     controller: MultiWheelSteeringController
-    ) -> Tuple[List[DriveModuleState], BodyState]:
+    ) -> Tuple[List[DriveModuleMeasuredValues], BodyState]:
 
     # For each drive module get the state for the steering and the drive
     # send the values to the drawing / storage API
     time_span_for_trajectory = drive_module_trajectory.time_span()
     time_fraction = time_step_in_seconds / time_span_for_trajectory
 
-    drive_module_states: List[DriveModuleState] = []
+    drive_module_states: List[DriveModuleMeasuredValues] = []
     for drive_module in drive_modules:
         drive_module_state = drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
         drive_module_states.append(drive_module_state)
@@ -342,7 +342,7 @@ def simulation_run_path_following(arg_dict: Mapping[str, any]):
 
     # Initialize drive module state
     drive_modules = get_drive_module_info()
-    drive_module_states: List[DriveModuleState] = initialize_drive_modules(drive_modules, align_modules)
+    drive_module_states: List[DriveModuleMeasuredValues] = initialize_drive_modules(drive_modules, align_modules)
     body_state: BodyState = BodyState(
         0.0,
         0.0,

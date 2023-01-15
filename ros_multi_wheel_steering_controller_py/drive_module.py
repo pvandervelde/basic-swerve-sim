@@ -68,7 +68,7 @@ class DriveModule(object):
 
 # Defines the required combination of steering angle and drive velocity for a given drive module in order
 # to achieve a given Motion of the robot body.
-class DriveModuleProposedState(object):
+class DriveModuleDesiredValues(object):
 
     def __init__(
         self,
@@ -80,11 +80,7 @@ class DriveModuleProposedState(object):
         self.steering_angle_in_radians = steering_angle_in_radians
         self.drive_velocity_in_meters_per_second = drive_velocity_in_meters_per_second
 
-
-## DriveModuleState --> DriveModuleMeasuredValues??
-## DriveModuleProposedState --> DriveModuleDesiredValues
-
-class DriveModuleState(object):
+class DriveModuleMeasuredValues(object):
 
     def __init__(
         self,

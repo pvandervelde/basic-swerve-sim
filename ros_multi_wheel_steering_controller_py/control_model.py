@@ -6,7 +6,7 @@ from numpy.linalg import pinv
 from typing import Mapping, List, Tuple
 
 # local
-from .drive_module import DriveModule, DriveModuleProposedState, DriveModuleState
+from .drive_module import DriveModule, DriveModuleDesiredValues, DriveModuleMeasuredValues
 from .geometry import Motion, Orientation, Point, Vector3
 
 class BodyState(object):
@@ -35,13 +35,13 @@ class ControlModelBase(object):
         pass
 
     # Forward kinematics
-    def body_motion_from_wheel_module_states(self, states: List[DriveModuleState]) -> Motion:
+    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> Motion:
         return Motion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # Returns the proposed wheel states which will achieve the given body motion. The list will contain
     # both a forward, i.e. with the steering angle such that the drive motor turns 'forwards', and a
     # reverse state, i.e. with the steering angle such that the drive motor turns 'backwards'.
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[Tuple[DriveModuleProposedState]]:
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleMeasuredValues], state: Motion) -> List[Tuple[DriveModuleDesiredValues]]:
         return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
@@ -82,7 +82,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         self.forward_kinematics_matrix = pinv(self.inverse_kinematics_matrix)
 
     # Forward kinematics
-    def body_motion_from_wheel_module_states(self, states: List[DriveModuleState]) -> Motion:
+    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> Motion:
         # To calculate the body state from the module state we need to invert the state equation. Because the state matrix
         # isn't square we can't use the normal matrix inverse, instead we use the pseudo-inverse. This gets us
         #
@@ -105,7 +105,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         return Motion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleState], state: Motion) -> List[Tuple[DriveModuleProposedState]]:
+    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleMeasuredValues], state: Motion) -> List[Tuple[DriveModuleDesiredValues]]:
         # Kinematics
         # Literature:
         # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
@@ -153,13 +153,13 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         normalization_factor = scales[0]
 
         # Assume that the steering angle is between 0 and 2 * pi
-        result: List[Tuple[DriveModuleProposedState]] = []
+        result: List[Tuple[DriveModuleDesiredValues]] = []
         for i in range(len(self.modules)):
             v_x = drive_state_vector[2 * i + 0]
             v_y = drive_state_vector[2 * i + 1]
             drive_velocity = drive_velocities[i]
 
-            current_module_state: DriveModuleState = current_state[i]
+            current_module_state: DriveModuleMeasuredValues = current_state[i]
             if math.isclose(drive_velocity, 0.0, rel_tol=1e-9, abs_tol=1e-9):
                 # If the other wheels are moving then we might be rotating around the current wheel, so then rotate with the
                 # same rotational velocity as the body, but negative
@@ -201,13 +201,13 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                 reverse_steering_angle -= 2 * math.pi
 
             name = self.modules[i].name
-            forward_state = DriveModuleProposedState(
+            forward_state = DriveModuleDesiredValues(
                 name,
                 forward_steering_angle,
                 drive_velocity * normalization_factor,
             )
 
-            reverse_state = DriveModuleProposedState(
+            reverse_state = DriveModuleDesiredValues(
                 name,
                 reverse_steering_angle,
                 -1.0 * drive_velocity * normalization_factor,

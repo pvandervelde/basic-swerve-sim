@@ -8,7 +8,8 @@ import numpy as np
 from typing import Mapping, List, Tuple
 
 # local
-from .control_model import BodyState, ControlModelBase, DriveModuleState, Motion, SimpleFourWheelSteeringControlModel
+from .control import MotionCommand
+from .control_model import BodyState, ControlModelBase, DriveModuleMeasuredValues, Motion, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .geometry import Point
 from .trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
@@ -51,7 +52,7 @@ def get_intersect(a1: Point, a2: Point, b1: Point, b2: Point) -> Point:
 
     return Point(x/z, y/z, 0.0)
 
-def instantaneous_center_of_rotation_at_current_time(drive_module_states: List[DriveModuleState]) -> List[Tuple[DriveModuleState, DriveModuleState, Point]]:
+def instantaneous_center_of_rotation_at_current_time(drive_module_states: List[DriveModuleMeasuredValues]) -> List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]:
     # Get axle lines for each drive module
     #
     # First point is the location of the drive module
@@ -103,18 +104,18 @@ class MultiWheelSteeringController(ABC):
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
     @abstractmethod
-    def current_pose(self) -> BodyState:
+    def body_state_at_current_time(self) -> BodyState:
         pass
 
     # Returns the states of the drive modules, as measured at the current time.
     @abstractmethod
-    def drive_module_state_at_current_time(self) -> List[DriveModuleState]:
+    def drive_module_state_at_current_time(self) -> List[DriveModuleMeasuredValues]:
         pass
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
     @abstractmethod
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleState]:
+    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleMeasuredValues]:
         pass
 
     # Gets the control model that is used to determine the state of the body and the drive modules.
@@ -124,13 +125,13 @@ class MultiWheelSteeringController(ABC):
 
     # Updates the currently stored drive module state
     @abstractmethod
-    def on_state_update(self, current_module_states: List[DriveModuleState]):
+    def on_state_update(self, current_module_states: List[DriveModuleMeasuredValues]):
         pass
 
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     @abstractmethod
-    def on_desired_state_update(self, desired_body_motion: Motion):
+    def on_desired_state_update(self, desired_motion: MotionCommand):
         pass
 
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
@@ -155,8 +156,8 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         )
 
         # Store the current (measured) state of the drive modules
-        self.module_states: List[DriveModuleState] = [
-            DriveModuleState(
+        self.module_states: List[DriveModuleMeasuredValues] = [
+            DriveModuleMeasuredValues(
                 drive_module.name,
                 drive_module.steering_axis_xy_position.x,
                 drive_module.steering_axis_xy_position.y,
@@ -194,20 +195,20 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
 
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
-    def current_pose(self) -> BodyState:
+    def body_state_at_current_time(self) -> BodyState:
         return self.body_state
 
     # Returns the states of the drive modules, as measured at the current time.
-    def drive_module_state_at_current_time(self) -> List[DriveModuleState]:
+    def drive_module_state_at_current_time(self) -> List[DriveModuleMeasuredValues]:
         return self.module_states
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleState]:
+    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleMeasuredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
         time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span()
 
-        result: List[DriveModuleState] = []
+        result: List[DriveModuleMeasuredValues] = []
         for drive_module in self.modules:
             state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
             result.append(state)
@@ -219,7 +220,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         return self.control_model
 
     # Updates the currently stored drive module state
-    def on_state_update(self, current_module_states: List[DriveModuleState]):
+    def on_state_update(self, current_module_states: List[DriveModuleMeasuredValues]):
         if current_module_states is None:
             raise TypeError()
 
@@ -231,7 +232,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
 
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
-    def on_desired_state_update(self, desired_body_motion: Motion):
+    def on_desired_state_update(self, desired_motion: MotionCommand):
         self.desired_body_motion = desired_body_motion
         self.body_motion_changed_at_time_in_seconds = self.current_time_in_seconds
 
@@ -300,8 +301,8 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         )
 
         # Store the current (measured) state of the drive modules
-        self.module_states: List[DriveModuleState] = [
-            DriveModuleState(
+        self.module_states: List[DriveModuleMeasuredValues] = [
+            DriveModuleMeasuredValues(
                 drive_module.name,
                 drive_module.steering_axis_xy_position.x,
                 drive_module.steering_axis_xy_position.y,
@@ -339,20 +340,20 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
-    def current_pose(self) -> BodyState:
+    def body_state_at_current_time(self) -> BodyState:
         return self.body_state
 
     # Returns the states of the drive modules, as measured at the current time.
-    def drive_module_state_at_current_time(self) -> List[DriveModuleState]:
+    def drive_module_state_at_current_time(self) -> List[DriveModuleMeasuredValues]:
         return self.module_states
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleState]:
+    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleMeasuredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
         time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span()
 
-        result: List[DriveModuleState] = []
+        result: List[DriveModuleMeasuredValues] = []
         for drive_module in self.modules:
             state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
             result.append(state)
@@ -364,7 +365,7 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         return self.control_model
 
     # Updates the currently stored drive module state
-    def on_state_update(self, current_module_states: List[DriveModuleState]):
+    def on_state_update(self, current_module_states: List[DriveModuleMeasuredValues]):
         if current_module_states is None:
             raise TypeError()
 
@@ -376,7 +377,7 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
-    def on_desired_state_update(self, desired_body_motion: Motion):
+    def on_desired_state_update(self, desired_motion: MotionCommand):
         self.desired_body_motion = desired_body_motion
         self.body_motion_changed_at_time_in_seconds = self.current_time_in_seconds
 

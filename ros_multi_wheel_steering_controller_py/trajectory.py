@@ -2,7 +2,7 @@ from typing import Mapping, List
 
 from .errors import IncompleteTrajectoryException
 from .geometry import Motion
-from .drive_module import DriveModule, DriveModuleProposedState, DriveModuleState
+from .drive_module import DriveModule, DriveModuleDesiredValues, DriveModuleMeasuredValues
 from .profile import LinearProfile, ProfilePoint, TransientValueProfile
 
 class DriveModuleProfile(object):
@@ -52,8 +52,8 @@ class DriveModuleStateTrajectory(object):
 
     def __init__(self, drive_modules: List[DriveModule]):
         self.modules = drive_modules
-        self.start_states: List[DriveModuleState] = []
-        self.end_states: List[DriveModuleProposedState] = []
+        self.start_states: List[DriveModuleMeasuredValues] = []
+        self.end_states: List[DriveModuleDesiredValues] = []
 
         # Kinda want a constant jerk profile
         self.profiles: Mapping[str, List[TransientValueProfile]] = {}
@@ -103,14 +103,14 @@ class DriveModuleStateTrajectory(object):
 
         return result
 
-    def set_current_state(self, states: List[DriveModuleState]):
+    def set_current_state(self, states: List[DriveModuleMeasuredValues]):
         if len(states) != len(self.modules):
             raise ValueError(f"The length of the drive module states list ({ len(states) }) does not match the number of drive modules.")
 
         self.start_states = states
         self._create_profiles()
 
-    def set_desired_end_state(self, states: List[DriveModuleProposedState]):
+    def set_desired_end_state(self, states: List[DriveModuleDesiredValues]):
         if len(states) != len(self.modules):
             raise ValueError(f"The length of the drive module states list ({ len(states) }) does not match the number of drive modules.")
 
@@ -121,7 +121,7 @@ class DriveModuleStateTrajectory(object):
         # Return the time in seconds which the trajectory spans
         return 1.0
 
-    def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleState:
+    def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
         if len(self.start_states) == 0 or len(self.end_states) == 0:
             raise IncompleteTrajectoryException()
 
@@ -136,7 +136,7 @@ class DriveModuleStateTrajectory(object):
 
         profiles = self.profiles[id]
 
-        return DriveModuleState(
+        return DriveModuleMeasuredValues(
             steering_module.name,
             steering_module.steering_axis_xy_position.x,
             steering_module.steering_axis_xy_position.y,

@@ -3,7 +3,7 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .control_model import BodyState, DriveModuleProposedState, DriveModuleState, Motion, SimpleFourWheelSteeringControlModel
+from .control_model import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, Motion, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .errors import IncompleteTrajectoryException
 from .geometry import Point
@@ -116,9 +116,9 @@ def test_drive_module_trajectory_should_create_trajectory_with_start():
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -141,9 +141,9 @@ def test_drive_module_trajectory_should_create_trajectory_with_end():
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    states: List[DriveModuleState] = []
+    states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -166,9 +166,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -183,9 +183,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleProposedState] = []
+    desired_states: List[DriveModuleDesiredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(0),
             1.0,
@@ -219,9 +219,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -236,9 +236,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(0),
             0.0,
@@ -272,9 +272,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -289,9 +289,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(90),
             1.0,
@@ -325,9 +325,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -342,9 +342,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(90),
             0.0,
@@ -378,9 +378,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -395,9 +395,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(0),
             1.0,
@@ -431,9 +431,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -448,9 +448,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(90),
             1.0,
@@ -484,9 +484,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -501,9 +501,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(90),
             1.0,
@@ -537,9 +537,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -554,9 +554,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(0),
             1.0,
@@ -590,9 +590,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -607,9 +607,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(45 + i * 90),
             1.0,
@@ -645,9 +645,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
 
     trajectory = DriveModuleStateTrajectory(drive_modules)
 
-    current_states: List[DriveModuleState] = []
+    current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleState(
+        module_state = DriveModuleMeasuredValues(
             drive_modules[i].name,
             drive_modules[i].steering_axis_xy_position.x,
             drive_modules[i].steering_axis_xy_position.y,
@@ -662,9 +662,9 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
         current_states.append(module_state)
     trajectory.set_current_state(current_states)
 
-    desired_states: List[DriveModuleState] = []
+    desired_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
-        module_state = DriveModuleProposedState(
+        module_state = DriveModuleDesiredValues(
             drive_modules[i].name,
             math.radians(45 + i * 90),
             1.0,
