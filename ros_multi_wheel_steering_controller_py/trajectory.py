@@ -1,9 +1,10 @@
+import math
 from typing import Mapping, List
 
 from .errors import IncompleteTrajectoryException
-from .geometry import Motion
-from .drive_module import DriveModule, DriveModuleDesiredValues, DriveModuleMeasuredValues
+from .drive_module import DriveModule
 from .profile import LinearProfile, ProfilePoint, TransientValueProfile
+from .states import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 class DriveModuleProfile(object):
 
@@ -20,7 +21,7 @@ class DriveModuleProfile(object):
 # A collection of position / velocity / acceleration profiles
 class BodyMotionTrajectory(object):
 
-    def __init__(self, current: Motion, desired: Motion, trajectory_time_in_seconds: float):
+    def __init__(self, current: BodyMotion, desired: BodyMotion, trajectory_time_in_seconds: float):
         self.start_state = current
         self.end_state = desired
         self.trajectory_time_in_seconds = trajectory_time_in_seconds
@@ -38,8 +39,8 @@ class BodyMotionTrajectory(object):
     def inflection_points(self) -> List[List[ProfilePoint]]:
         pass
 
-    def value_at(self, time_fraction: float) -> Motion:
-        return Motion(
+    def value_at(self, time_fraction: float) -> BodyMotion:
+        return BodyMotion(
             self.profile[0].value_at(time_fraction),
             self.profile[1].value_at(time_fraction),
             self.profile[5].value_at(time_fraction)
@@ -78,9 +79,10 @@ class DriveModuleStateTrajectory(object):
             start = self.start_states[i]
             end = self.end_states[i]
 
+            end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                LinearProfile(start.orientation_in_body_coordinates.z, end.steering_angle_in_radians),
+                LinearProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
 
                 # Drive velocity
                 LinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),

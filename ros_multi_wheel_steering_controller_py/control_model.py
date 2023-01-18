@@ -6,27 +6,9 @@ from numpy.linalg import pinv
 from typing import Mapping, List, Tuple
 
 # local
-from .drive_module import DriveModule, DriveModuleDesiredValues, DriveModuleMeasuredValues
-from .geometry import Motion, Orientation, Point, Vector3
-
-class BodyState(object):
-
-    # Angles are measured between 0 and 2pi
-    def __init__(
-        self,
-        body_x_in_meters: float,
-        body_y_in_meters: float,
-        body_orientation_in_radians: float,
-        body_linear_x_velocity_in_meters_per_second: float,
-        body_linear_y_velocity_in_meters_per_second: float,
-        body_angular_z_velocity_in_radians_per_second: float):
-
-        self.position_in_world_coordinates = Point(body_x_in_meters, body_y_in_meters, 0.0)
-        self.orientation_in_world_coordinates = Orientation(0.0, 0.0, body_orientation_in_radians)
-        self.motion_in_body_coordinates = Motion(
-            body_linear_x_velocity_in_meters_per_second,
-            body_linear_y_velocity_in_meters_per_second,
-            body_angular_z_velocity_in_radians_per_second)
+from .drive_module import DriveModule
+from .geometry import Orientation, Point, Vector3
+from .states import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 # Abstract class for control models
 class ControlModelBase(object):
@@ -35,13 +17,13 @@ class ControlModelBase(object):
         pass
 
     # Forward kinematics
-    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> Motion:
-        return Motion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> BodyMotion:
+        return BodyMotion(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     # Returns the proposed wheel states which will achieve the given body motion. The list will contain
     # both a forward, i.e. with the steering angle such that the drive motor turns 'forwards', and a
     # reverse state, i.e. with the steering angle such that the drive motor turns 'backwards'.
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleMeasuredValues], state: Motion) -> List[Tuple[DriveModuleDesiredValues]]:
+    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues]]:
         return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
@@ -82,7 +64,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         self.forward_kinematics_matrix = pinv(self.inverse_kinematics_matrix)
 
     # Forward kinematics
-    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> Motion:
+    def body_motion_from_wheel_module_states(self, states: List[DriveModuleMeasuredValues]) -> BodyMotion:
         # To calculate the body state from the module state we need to invert the state equation. Because the state matrix
         # isn't square we can't use the normal matrix inverse, instead we use the pseudo-inverse. This gets us
         #
@@ -102,10 +84,10 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         drive_state_vector = np.array(drive_state_array)
         body_state_vector = np.matmul(self.forward_kinematics_matrix, drive_state_vector)
 
-        return Motion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
+        return BodyMotion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, current_state: List[DriveModuleMeasuredValues], state: Motion) -> List[Tuple[DriveModuleDesiredValues]]:
+    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues]]:
         # Kinematics
         # Literature:
         # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
@@ -159,7 +141,6 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             v_y = drive_state_vector[2 * i + 1]
             drive_velocity = drive_velocities[i]
 
-            current_module_state: DriveModuleMeasuredValues = current_state[i]
             if math.isclose(drive_velocity, 0.0, rel_tol=1e-9, abs_tol=1e-9):
                 # If the other wheels are moving then we might be rotating around the current wheel, so then rotate with the
                 # same rotational velocity as the body, but negative
@@ -167,7 +148,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                 # If other wheels aren't moving then maybe we're at a stop
                 #
                 # In either case we just keep the position of the wheel where it was
-                forward_steering_angle = current_module_state.orientation_in_body_coordinates.z
+                forward_steering_angle = float('infinity')
             else:
                 # Calculate the position of the drive wheel.
                 #
@@ -193,12 +174,15 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                     else:
                         forward_steering_angle = cos_angle
 
-            if forward_steering_angle >= 2 * math.pi:
-                forward_steering_angle -= 2 * math.pi
+            if not math.isinf(forward_steering_angle):
+                if forward_steering_angle >= 2 * math.pi:
+                    forward_steering_angle -= 2 * math.pi
 
-            reverse_steering_angle = forward_steering_angle + math.pi
-            if reverse_steering_angle >= 2 * math.pi:
-                reverse_steering_angle -= 2 * math.pi
+                reverse_steering_angle = forward_steering_angle + math.pi
+                if reverse_steering_angle >= 2 * math.pi:
+                    reverse_steering_angle -= 2 * math.pi
+            else:
+                reverse_steering_angle = float("-infinity")
 
             name = self.modules[i].name
             forward_state = DriveModuleDesiredValues(

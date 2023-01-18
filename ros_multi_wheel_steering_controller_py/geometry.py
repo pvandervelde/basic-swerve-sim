@@ -18,13 +18,3 @@ class Vector3(object):
         self.x = x
         self.y = y
         self.z = z
-
-class Motion(object):
-
-    def __init__(
-        self,
-        linear_x_velocity_in_meters_per_second: float,
-        linear_y_velocity_in_meters_per_second: float,
-        angular_z_velocity_in_radians_per_second: float):
-        self.linear_velocity = Vector3(linear_x_velocity_in_meters_per_second, linear_y_velocity_in_meters_per_second, 0.0)
-        self.angular_velocity = Vector3(0.0, 0.0, angular_z_velocity_in_radians_per_second)

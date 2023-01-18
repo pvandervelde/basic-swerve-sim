@@ -5,7 +5,7 @@ from random import random
 from typing import Mapping, List, Tuple
 
 # local
-from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleMeasuredValues, Motion, Orientation, Point
+from ros_multi_wheel_steering_controller_py.control_model import BodyState, DriveModuleMeasuredValues, BodyMotion, Orientation, Point
 from ros_multi_wheel_steering_controller_py.drive_module import DriveModule
 from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import LinearModuleFirstSteeringController, MultiWheelSteeringController
 from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
@@ -13,7 +13,7 @@ from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajecto
 class SimulatorTrack(object):
 
     @abstractmethod
-    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> Motion:
+    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> BodyMotion:
         pass
 
     @abstractmethod
@@ -33,11 +33,11 @@ class SimulatorTrack(object):
 # Straight line track in x-direction only.
 class StraightLineTrack(SimulatorTrack):
 
-    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> Motion:
+    def body_motion_for_time(self, time_in_seconds: float, body_state: BodyState) -> BodyMotion:
         if body_state.position_in_world_coordinates.x > 1.0:
-            return Motion(0.0, 0.0, 0.0)
+            return BodyMotion(0.0, 0.0, 0.0)
         else:
-            return Motion(0.1, 0.0, 0.0)
+            return BodyMotion(0.1, 0.0, 0.0)
 
     def has_reached_endpoint(self, time_in_seconds: float, body_state: BodyState) -> bool:
         return body_state.position_in_world_coordinates.x > 1.0 and isclose(body_state.motion_in_body_coordinates.linear_velocity.x, 0.0, 1e-9, 1e-9)

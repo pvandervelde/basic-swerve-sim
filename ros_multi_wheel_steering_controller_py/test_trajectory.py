@@ -3,10 +3,11 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .control_model import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, Motion, SimpleFourWheelSteeringControlModel
+from .control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .errors import IncompleteTrajectoryException
 from .geometry import Point
+from .states import BodyState
 from .trajectory import BodyMotionTrajectory, DriveModuleProfile, DriveModuleStateTrajectory
 
 def create_drive_modules(
@@ -88,12 +89,12 @@ def create_drive_modules(
 def test_should_show_value_at_in_body_motion():
     time = 10.0
 
-    start_motion = Motion(
+    start_motion = BodyMotion(
         1.0,
         2.0,
         3.0
     )
-    end_motion = Motion(
+    end_motion = BodyMotion(
         4.0,
         5.0,
         6.0

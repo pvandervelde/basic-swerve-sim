@@ -3,11 +3,12 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .control_model import BodyState, DriveModuleMeasuredValues, Motion, SimpleFourWheelSteeringControlModel
+from .control_model import DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .errors import IncompleteTrajectoryException
 from .geometry import Point
-from .multi_wheel_steering_controller import get_intersect
+from .sim_utils import get_intersect
+from .states import BodyState
 from .trajectory import BodyMotionTrajectory, DriveModuleProfile, DriveModuleStateTrajectory
 
 def test_intersect_with_parallel_lines():
