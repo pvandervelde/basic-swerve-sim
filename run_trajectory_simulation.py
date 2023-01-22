@@ -408,7 +408,29 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
 
     result.append(
         (
-            "90-degree forward from stand still",
+            "90-degree forward from stand still with rotation first",
+            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            [
+                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
+                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
+                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
+                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
+            ],
+            [
+                DriveModuleMotionCommand([
+                    DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
+                    DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
+                    DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
+                    DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
+                ]),
+                BodyMotionCommand(0.0, 1.0, 0.0),
+            ]
+        )
+    )
+
+    result.append(
+        (
+            "0-degree forwards to 90 degree forwards, without changing orientation",
             BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
             [
                 DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
@@ -488,22 +510,6 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
 
     # result.append(
     #     (
-    #         "0-degree forwards to 90 degree forwards, without changing orientation",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[1].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[2].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[3].name, radians(0),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 1.0, 0.0),
-    #         ]
-    #     )
-    # )
-
-    # result.append(
-    #     (
     #         "90-degree forwards to 0 degree forwards, without changing orientation",
     #         BodyState(0.0, 0.0, 0.0, 0.0, 1.0, 0.0),
     #         [
@@ -545,12 +551,19 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
             "in place rotation from 45-degree forwards",
             BodyState(0.0, 0.0, 0.0, sqrt(0.5), sqrt(0.5), 0.0),
             [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(45),  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(45),  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(45),  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(45),  1.0),
+                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  0.0),
+                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  0.0),
+                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  0.0),
+                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  0.0),
             ],
             [
+                DriveModuleMotionCommand([
+                    DriveModuleDesiredValues(drive_modules[0].name, radians(45),  0.0),
+                    DriveModuleDesiredValues(drive_modules[1].name, radians(45),  0.0),
+                    DriveModuleDesiredValues(drive_modules[2].name, radians(45),  0.0),
+                    DriveModuleDesiredValues(drive_modules[3].name, radians(45),  0.0)
+                ]),
+                BodyMotionCommand(sqrt(0.5), sqrt(0.5), 0.0),
                 BodyMotionCommand(0.0, 0.0, 1.0),
             ]
         )
@@ -576,24 +589,24 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
         )
     )
 
-    result.append(
-        (
-            "circle while keeping the orientation tangentially to movement",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
-            ],
-            [
-                BodyMotionCommand(0.0, 1.0, 1.0),
-                BodyMotionCommand(-1.0, 0.0, 1.0),
-                BodyMotionCommand(0.0, -1.0, 1.0),
-                BodyMotionCommand(1.0, 0.0, 1.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "circle while keeping the orientation tangentially to movement",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(0.0, 1.0, 1.0),
+    #             BodyMotionCommand(-1.0, 0.0, 1.0),
+    #             BodyMotionCommand(0.0, -1.0, 1.0),
+    #             BodyMotionCommand(1.0, 0.0, 1.0),
+    #         ]
+    #     )
+    # )
 
     # # circle with orientation rotation counter circle
 
@@ -853,24 +866,24 @@ def simulation_run_trajectory(
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the
     # time span over which the command state should be achieved
 
+    points_in_time: List[float] = [ 0.0 ]
+    body_states: List[BodyState] = []
+    drive_states: List[List[DriveModuleMeasuredValues]] = []
+    icr_map: List[ List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]] = []
+
     for motion in motion_set:
         controller.on_desired_state_update(motion)
-        controller.on_tick(time_step_in_seconds)
-
-        points_in_time: List[float] = [ 0.0 ]
-        body_states: List[BodyState] = []
-        drive_states: List[List[DriveModuleMeasuredValues]] = []
-        icr_map: List[ List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]] = []
 
         for i in range(1, 101):
-            time_delta = i * time_step_in_seconds
+            controller.on_tick(time_step_in_seconds)
+
             current_sim_time_in_seconds += time_step_in_seconds
 
-            print("Processing step at {} ...".format(time_delta))
+            print("Processing step at {} ...".format(current_sim_time_in_seconds))
 
             points_in_time.append(current_sim_time_in_seconds)
 
-            drive_module_states = controller.drive_module_state_at_future_time(time_delta)
+            drive_module_states = controller.drive_module_state_at_future_time(current_sim_time_in_seconds)
             drive_states.append(drive_module_states)
 
             icr_coordinate_map = instantaneous_center_of_rotation_at_current_time(drive_module_states)
@@ -894,9 +907,28 @@ def simulation_run_trajectory(
 
             record_state_at_time(
                 state_file_path,
-                time_delta,
+                current_sim_time_in_seconds,
                 body_state,
                 drive_module_states)
+
+            current_drive_states: List[DriveModuleMeasuredValues] = []
+            for desired_state in drive_module_states:
+                current_drive_states.append(
+                    DriveModuleMeasuredValues(
+                        desired_state.name,
+                        desired_state.position_in_body_coordinates.x,
+                        desired_state.position_in_body_coordinates.y,
+                        desired_state.orientation_in_body_coordinates.z,
+                        desired_state.orientation_velocity_in_body_coordinates.z,
+                        desired_state.orientation_acceleration_in_body_coordinates.z,
+                        desired_state.orientation_jerk_in_body_coordinates.z,
+                        desired_state.drive_velocity_in_module_coordinates.x,
+                        desired_state.drive_acceleration_in_module_coordinates.x,
+                        desired_state.drive_jerk_in_module_coordinates.x,
+                    )
+                )
+
+            controller.on_state_update(current_drive_states)
 
     # Now draw all the graphs
     plot_trajectories(fig, set_name, output_directory, points_in_time, body_states, drive_modules, drive_states, icr_map, "blue")
