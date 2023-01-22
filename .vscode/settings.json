@@ -1,13 +1,14 @@
 {
     "python.autoComplete.extraPaths": [
-        "D:/dev/languages/miniforge3/envs/robostack/Library\\lib/site-packages",
         "D:\\dev\\languages\\miniforge3\\envs\\ros-humble\\Library\\lib/site-packages",
         "D:/dev/languages/miniforge3/envs/ros-humble\\Lib\\site-packages"
     ],
     "python.analysis.extraPaths": [
-        "D:/dev/languages/miniforge3/envs/robostack/Library\\lib/site-packages",
         "D:\\dev\\languages\\miniforge3\\envs\\ros-humble\\Library\\lib/site-packages",
         "D:/dev/languages/miniforge3/envs/ros-humble\\Lib\\site-packages"
     ],
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "python.testing.pytestArgs": [],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }

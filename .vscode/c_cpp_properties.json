@@ -6,7 +6,7 @@
         "limitSymbolsToIncludedHeaders": false
       },
       "includePath": [
-        "D:\\dev\\languages\\miniforge3\\envs\\robostack\\Library\\include\\**",
+        "D:\\dev\\languages\\miniforge3\\envs\\ros-humble\\Library\\include\\**",
         "F:\\robotics\\ros_ws\\cratebot\\src\\ros-multi-wheel-steering-controller\\include\\**"
       ],
       "name": "ROS"
