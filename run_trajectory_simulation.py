@@ -144,10 +144,21 @@ def generate_plot_information(
         for icrs_at_time in icr_coordinate_map:
             index = 0
             for icr in icrs_at_time:
-                if (icr[0].name == drive_modules[module_index].name or icr[1].name == drive_modules[module_index].name) and not isinf(icr[2].x) and not isinf(icr[2].y):
-                    if abs(icr[2].x) < 25 and abs(icr[2].y) < 25:
-                        x_values[index].append(icr[2].x)
-                        y_values[index].append(icr[2].y)
+                should_plot = False
+
+                if icr[0].name == drive_modules[module_index].name:
+                    if not isclose(icr[0].drive_velocity_in_module_coordinates.x, 0.0, abs_tol=1e-6, rel_tol=1e-6):
+                        should_plot = True
+                if icr[1].name == drive_modules[module_index].name:
+                    if not isclose(icr[1].drive_velocity_in_module_coordinates.x, 0.0, abs_tol=1e-6, rel_tol=1e-6):
+                        should_plot = True
+
+                if should_plot:
+                    if not isinf(icr[2].x) and not isinf(icr[2].y):
+
+                        if abs(icr[2].x) < 25 and abs(icr[2].y) < 25:
+                            x_values[index].append(icr[2].x)
+                            y_values[index].append(icr[2].y)
 
                     index += 1
 
@@ -390,59 +401,59 @@ def get_plot(rows: int, cols: int) -> go.Figure:
 def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, List[DriveModuleDesiredValues], List[MotionCommand]]]:
     result: List[Tuple[str, BodyState, List[DriveModuleDesiredValues], List[MotionCommand]]] = []
 
-    result.append(
-        (
-            "0-degree forward from stand still",
-            BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-            ],
-            [
-                BodyMotionCommand(1.0, 0.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "0-degree forward from stand still",
+    #         BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(1.0, 0.0, 0.0),
+    #         ]
+    #     )
+    # )
 
-    result.append(
-        (
-            "90-degree forward from stand still with rotation first",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-            ],
-            [
-                DriveModuleMotionCommand([
-                    DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
-                ]),
-                BodyMotionCommand(0.0, 1.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "90-degree forward from stand still with rotation first",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
+    #         ],
+    #         [
+    #             DriveModuleMotionCommand([
+    #                 DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
+    #             ]),
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #         ]
+    #     )
+    # )
 
-    result.append(
-        (
-            "0-degree forwards to 90 degree forwards, without changing orientation",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
-            ],
-            [
-                BodyMotionCommand(0.0, 1.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "0-degree forwards to 90 degree forwards, without changing orientation",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #         ]
+    #     )
+    # )
 
     # result.append(
     #     (
@@ -569,25 +580,24 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
         )
     )
 
-
-    result.append(
-        (
-            "circle without changing orientation from moving forwards at 0 degrees",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
-            ],
-            [
-                BodyMotionCommand(0.0, 1.0, 0.0),
-                BodyMotionCommand(-1.0, 0.0, 0.0),
-                BodyMotionCommand(0.0, -1.0, 0.0),
-                BodyMotionCommand(1.0, 0.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "circle without changing orientation from moving forwards at 0 degrees",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #             BodyMotionCommand(-1.0, 0.0, 0.0),
+    #             BodyMotionCommand(0.0, -1.0, 0.0),
+    #             BodyMotionCommand(1.0, 0.0, 0.0),
+    #         ]
+    #     )
+    # )
 
     # result.append(
     #     (
@@ -875,7 +885,7 @@ def simulation_run_trajectory(
         controller.on_desired_state_update(motion)
 
         for i in range(1, 101):
-            controller.on_tick(time_step_in_seconds)
+            controller.on_tick(current_sim_time_in_seconds)
 
             current_sim_time_in_seconds += time_step_in_seconds
 

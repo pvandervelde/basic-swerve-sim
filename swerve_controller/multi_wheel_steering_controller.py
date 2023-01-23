@@ -52,7 +52,7 @@ class MultiWheelSteeringController(ABC):
 
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
     @abstractmethod
-    def on_tick(self, delta_time_in_seconds: float):
+    def on_tick(self, current_time_in_seconds: float):
         pass
 
 class LinearModuleFirstSteeringController(MultiWheelSteeringController):
@@ -155,8 +155,8 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.motion_command_changed_at_time_in_seconds = self.current_time_in_seconds
 
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
-    def on_tick(self, delta_time_in_seconds: float):
-        self.current_time_in_seconds += delta_time_in_seconds
+    def on_tick(self, current_time_in_seconds: float):
+        self.current_time_in_seconds = current_time_in_seconds
 
         # Calculate the current body state
         self.body_state = self.control_model.body_motion_from_wheel_module_states(self.module_states)
@@ -283,8 +283,8 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         self.body_motion_changed_at_time_in_seconds = self.current_time_in_seconds
 
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
-    def on_tick(self, delta_time_in_seconds: float):
-        self.current_time_in_seconds += delta_time_in_seconds
+    def on_tick(self, current_time_in_seconds: float):
+        self.current_time_in_seconds = current_time_in_seconds
 
         # Calculate the current body state
         self.body_state = self.control_model.body_motion_from_wheel_module_states(self.module_states)
