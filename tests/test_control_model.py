@@ -3,10 +3,10 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .control_model import SimpleFourWheelSteeringControlModel
-from .drive_module import DriveModule
-from .geometry import Point
-from .states import BodyMotion, BodyState, DriveModuleMeasuredValues
+from ..swerve_controller.control_model import SimpleFourWheelSteeringControlModel
+from ..swerve_controller.drive_module import DriveModule
+from ..swerve_controller.geometry import Point
+from ..swerve_controller.states import BodyMotion, BodyState, DriveModuleMeasuredValues
 
 def create_drive_modules(
     length: float = 1.0,

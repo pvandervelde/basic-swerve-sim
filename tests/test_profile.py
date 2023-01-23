@@ -3,8 +3,8 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from .errors import InvalidTimeFractionException
-from .profile import CompoundProfile, InvalidTimeFractionException, LinearProfile
+from ..swerve_controller.errors import InvalidTimeFractionException
+from ..swerve_controller.profile import CompoundProfile, InvalidTimeFractionException, LinearProfile
 
 # LinearProfile
 
