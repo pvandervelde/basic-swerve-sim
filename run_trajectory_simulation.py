@@ -9,17 +9,17 @@ from random import random
 from typing import List, Mapping, NamedTuple, Tuple
 
 # local
-from ros_multi_wheel_steering_controller_py.control import BodyMotionCommand, DriveModuleMotionCommand, MotionCommand
-from ros_multi_wheel_steering_controller_py.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Orientation, Point
-from ros_multi_wheel_steering_controller_py.drive_module import DriveModule
-from ros_multi_wheel_steering_controller_py.multi_wheel_steering_controller import (
+from swerve_controller.control import BodyMotionCommand, DriveModuleMotionCommand, MotionCommand
+from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Orientation, Point
+from swerve_controller.drive_module import DriveModule
+from swerve_controller.multi_wheel_steering_controller import (
     LinearBodyFirstSteeringController,
     LinearModuleFirstSteeringController,
     MultiWheelSteeringController,
 )
-from ros_multi_wheel_steering_controller_py.sim_utils import instantaneous_center_of_rotation_at_current_time
-from ros_multi_wheel_steering_controller_py.states import BodyState, BodyMotion
-from ros_multi_wheel_steering_controller_py.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
+from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
+from swerve_controller.states import BodyState, BodyMotion
+from swerve_controller.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
 
 class ProfilePlotValues(NamedTuple):
     name: str
@@ -411,10 +411,10 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
             "90-degree forward from stand still with rotation first",
             BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
             [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
+                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
+                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
+                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
+                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
             ],
             [
                 DriveModuleMotionCommand([
