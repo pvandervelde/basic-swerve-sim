@@ -26,6 +26,7 @@ class ProfilePlotValues(NamedTuple):
     markers: Mapping[str, int]
     x_values: List[float]
     y_values: List[float]
+    annotations: List[str] = []
     x_pos: int = -1
     y_pos: int = -1
 
@@ -54,7 +55,7 @@ def generate_plot_information(
     body_states: List[BodyState],
     drive_modules: List[DriveModule],
     drive_states: List[List[DriveModuleMeasuredValues]],
-    icr_coordinate_map: List[List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]],
+    icr_coordinate_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]],
     color: str,
     ) -> List[List[ProfilePlotValues]]:
     default_size = 2
@@ -131,6 +132,7 @@ def generate_plot_information(
 
         # Plot the ICR
         # There are 4 wheels, so there are 3 ICR combinations for each wheel.
+        # icr_names: List[str] = ["icr:{} - {}".format(, d.name) for d in drive_modules if d.name != drive_modules[module_index].name]
         x_values: List[List[float]] = [
             [],
             [],
@@ -141,23 +143,50 @@ def generate_plot_information(
             [],
             [],
         ]
+        annotations: List[List[Tuple[str, str]]] = [
+            [],
+            [],
+            [],
+        ]
         for icrs_at_time in icr_coordinate_map:
             index = 0
-            for icr in icrs_at_time:
-                if (icr[0].name == drive_modules[module_index].name or icr[1].name == drive_modules[module_index].name) and not isinf(icr[2].x) and not isinf(icr[2].y):
-                    if abs(icr[2].x) < 25 and abs(icr[2].y) < 25:
-                        x_values[index].append(icr[2].x)
-                        y_values[index].append(icr[2].y)
+            for icr in icrs_at_time[1]:
+                should_plot = False
+
+                other_module_name: str = ""
+                if icr[0].name == drive_modules[module_index].name:
+                    if not isclose(icr[0].drive_velocity_in_module_coordinates.x, 0.0, abs_tol=1e-6, rel_tol=1e-6):
+                        should_plot = True
+                        other_module_name = icr[1].name
+                if icr[1].name == drive_modules[module_index].name:
+                    if not isclose(icr[1].drive_velocity_in_module_coordinates.x, 0.0, abs_tol=1e-6, rel_tol=1e-6):
+                        should_plot = True
+                        other_module_name = icr[0].name
+
+                if should_plot:
+                    if not isinf(icr[2].x) and not isinf(icr[2].y):
+
+                        if abs(icr[2].x) < 25 and abs(icr[2].y) < 25:
+                            x_values[index].append(icr[2].x)
+                            y_values[index].append(icr[2].y)
+                            annotations[index].append(
+                                    (
+                                        other_module_name,
+                                        icrs_at_time[0]
+                                    )
+                                )
 
                     index += 1
 
         if len(x_values) > 0:
+            plot_name = "icr - {}".format(drive_modules[module_index].name)
             sub_plots.append(
                 ProfilePlotValues(
-                    name="icr position",
+                    name=plot_name,
                     markers=dict(color = color, size=default_size),
                     x_values=x_values[0],
                     y_values=y_values[0],
+                    annotations=annotations[0],
                     x_pos=module_index + 1,
                     y_pos=5
                 )
@@ -165,10 +194,11 @@ def generate_plot_information(
 
             sub_plots.append(
                 ProfilePlotValues(
-                    name="icr position",
+                    name=plot_name,
                     markers=dict(color = "light{}".format(color), size=default_size),
                     x_values=x_values[1],
                     y_values=y_values[1],
+                    annotations=annotations[1],
                     x_pos=module_index + 1,
                     y_pos=5
                 )
@@ -176,10 +206,11 @@ def generate_plot_information(
 
             sub_plots.append(
                 ProfilePlotValues(
-                    name="icr position",
+                    name=plot_name,
                     markers=dict(color = "dark{}".format(color), size=default_size),
                     x_values=x_values[2],
                     y_values=y_values[2],
+                    annotations=annotations[2],
                     x_pos=module_index + 1,
                     y_pos=5
                 )
@@ -203,7 +234,8 @@ def generate_plot_information(
             name="body position",
             markers=dict(color = color, size=default_size),
             x_values=[b.position_in_world_coordinates.x for b in body_states],
-            y_values=[b.position_in_world_coordinates.y for b in body_states]
+            y_values=[b.position_in_world_coordinates.y for b in body_states],
+            annotations=points_in_time,
         )
     )
 
@@ -213,7 +245,7 @@ def generate_plot_information(
             name="body x-position",
             markers=dict(color = color, size=default_size),
             x_values=points_in_time,
-            y_values=[b.position_in_world_coordinates.x for b in body_states]
+            y_values=[b.position_in_world_coordinates.x for b in body_states],
         )
     )
 
@@ -293,12 +325,11 @@ def generate_plot_traces(fig: go.Figure, plots: List[List[ProfilePlotValues]]):
                     go.Scatter(
                         x=values.x_values,
                         y=values.y_values,
-                        legendgroup="a",
-                        legendgrouptitle_text="a-title",
                         mode='markers',
                         marker=values.markers,
                         name=values.name,
-                        showlegend=True,
+                        showlegend=False,
+                        text=values.annotations,
                     ),
                     row=row,
                     col=col)
@@ -390,59 +421,59 @@ def get_plot(rows: int, cols: int) -> go.Figure:
 def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, List[DriveModuleDesiredValues], List[MotionCommand]]]:
     result: List[Tuple[str, BodyState, List[DriveModuleDesiredValues], List[MotionCommand]]] = []
 
-    result.append(
-        (
-            "0-degree forward from stand still",
-            BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-            ],
-            [
-                BodyMotionCommand(1.0, 0.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "0-degree forward from stand still",
+    #         BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(1.0, 0.0, 0.0),
+    #         ]
+    #     )
+    # )
 
-    result.append(
-        (
-            "90-degree forward from stand still with rotation first",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-            ],
-            [
-                DriveModuleMotionCommand([
-                    DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
-                    DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
-                ]),
-                BodyMotionCommand(0.0, 1.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "90-degree forward from stand still with rotation first",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
+    #         ],
+    #         [
+    #             DriveModuleMotionCommand([
+    #                 DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
+    #                 DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
+    #             ]),
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #         ]
+    #     )
+    # )
 
-    result.append(
-        (
-            "0-degree forwards to 90 degree forwards, without changing orientation",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
-            ],
-            [
-                BodyMotionCommand(0.0, 1.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "0-degree forwards to 90 degree forwards, without changing orientation",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #         ]
+    #     )
+    # )
 
     # result.append(
     #     (
@@ -569,25 +600,24 @@ def get_motions(drive_modules: List[DriveModule]) -> List[Tuple[str, BodyState, 
         )
     )
 
-
-    result.append(
-        (
-            "circle without changing orientation from moving forwards at 0 degrees",
-            BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
-            ],
-            [
-                BodyMotionCommand(0.0, 1.0, 0.0),
-                BodyMotionCommand(-1.0, 0.0, 0.0),
-                BodyMotionCommand(0.0, -1.0, 0.0),
-                BodyMotionCommand(1.0, 0.0, 0.0),
-            ]
-        )
-    )
+    # result.append(
+    #     (
+    #         "circle without changing orientation from moving forwards at 0 degrees",
+    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+    #         [
+    #             DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
+    #             DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
+    #         ],
+    #         [
+    #             BodyMotionCommand(0.0, 1.0, 0.0),
+    #             BodyMotionCommand(-1.0, 0.0, 0.0),
+    #             BodyMotionCommand(0.0, -1.0, 0.0),
+    #             BodyMotionCommand(1.0, 0.0, 0.0),
+    #         ]
+    #     )
+    # )
 
     # result.append(
     #     (
@@ -691,7 +721,7 @@ def plot_trajectories(
     body_states: List[BodyState],
     drive_modules: List[DriveModule],
     drive_states: List[List[DriveModuleMeasuredValues]],
-    icr_coordinate_map: List[List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]],
+    icr_coordinate_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]],
     color: str,
     ):
 
@@ -710,6 +740,7 @@ def plot_trajectories(
         title=set_name,
         width=2800,
         height=500 * len(plots[0]),
+        hovermode="x unified",
         showlegend=True,
         legend= {'itemsizing': 'constant'}
         )
@@ -869,13 +900,13 @@ def simulation_run_trajectory(
     points_in_time: List[float] = [ 0.0 ]
     body_states: List[BodyState] = []
     drive_states: List[List[DriveModuleMeasuredValues]] = []
-    icr_map: List[ List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]] = []
+    icr_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]] = []
 
     for motion in motion_set:
         controller.on_desired_state_update(motion)
 
         for i in range(1, 101):
-            controller.on_tick(time_step_in_seconds)
+            controller.on_tick(current_sim_time_in_seconds)
 
             current_sim_time_in_seconds += time_step_in_seconds
 
@@ -887,7 +918,12 @@ def simulation_run_trajectory(
             drive_states.append(drive_module_states)
 
             icr_coordinate_map = instantaneous_center_of_rotation_at_current_time(drive_module_states)
-            icr_map.append(icr_coordinate_map)
+            icr_map.append(
+                    (
+                        current_sim_time_in_seconds,
+                        icr_coordinate_map
+                    )
+                )
 
             body_motion = controller.get_control_model().body_motion_from_wheel_module_states(drive_module_states)
 
