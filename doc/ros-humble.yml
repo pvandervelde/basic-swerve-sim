@@ -1,0 +1,22 @@
+name: ros-humble
+channels:
+- conda-forge
+- robostack
+- robostack-humble
+- robostack-experimental
+dependencies:
+- python
+- pytest
+- pyyaml
+- pydantic
+- ros-humble-ros2cli
+- ros-humble-ros2cli-common-extensions
+- ros-humble-ros2cli-test-interfaces
+- ros-humble-control-msgs
+- ros-humble-nav-msgs
+- ros-humble-nav2-msgs
+- ros-humble-nav2-behavior-tree
+- ros-humble-tf2
+- ros-humble-tf2-msgs
+- ros-humble-tf2-geometry-msgs
+- ros-humble-tf2-sensor-msgs

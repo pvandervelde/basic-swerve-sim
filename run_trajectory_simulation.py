@@ -2,11 +2,14 @@ from abc import ABC, abstractmethod
 import argparse
 from math import cos, isclose, isinf, pi, radians, sin, sqrt
 from os import makedirs, path
+from pathlib import Path
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.offline as py
 from random import random
 from typing import List, Mapping, NamedTuple, Tuple
+import yaml
+from yaml.loader import SafeLoader
 
 # local
 from swerve_controller.control import BodyMotionCommand, DriveModuleMotionCommand, MotionCommand
@@ -29,8 +32,8 @@ class ProfilePlotValues(NamedTuple):
     annotations: List[str] = []
 
 class MotionPlan(NamedTuple):
+    description: str
     name: str
-    short_name: str
     body_state: BodyState
     initial_drive_module_states: List[DriveModuleDesiredValues]
     motions: List[MotionCommand]
@@ -367,254 +370,80 @@ def get_plot(rows: int, cols: int) -> go.Figure:
 
     return fig
 
-def get_motions(drive_modules: List[DriveModule]) -> List[MotionPlan]:
+def get_motions(input_files: List[str]) -> List[MotionPlan]:
     result: List[MotionPlan] = []
 
-    result.append(
-        MotionPlan(
-            "0-degree forward from stand still",
-            "0_deg_fwd_from_stop",
-            BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-            ],
-            [
-                BodyMotionCommand(1.0, 0.0, 0.0),
-            ]
-        )
-    )
+    for input_file in input_files:
+        relative = Path(input_file)
 
-    # result.append(
-    #     MotionPlan(
-    #         "90-degree forward from stand still with rotation first",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  0.0),
-    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  0.0),
-    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  0.0),
-    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  0.0),
-    #         ],
-    #         [
-    #             DriveModuleMotionCommand([
-    #                 DriveModuleDesiredValues(drive_modules[0].name, radians(90),  0.0),
-    #                 DriveModuleDesiredValues(drive_modules[1].name, radians(90),  0.0),
-    #                 DriveModuleDesiredValues(drive_modules[2].name, radians(90),  0.0),
-    #                 DriveModuleDesiredValues(drive_modules[3].name, radians(90),  0.0)
-    #             ]),
-    #             BodyMotionCommand(0.0, 1.0, 0.0),
-    #         ]
-    #     )
-    # )
+        with open(relative.absolute()) as f:
+            print("Reading {} ...".format(f.name))
+            data = yaml.load(f, Loader=SafeLoader)
+            data_plan = data["plan"]
 
-    # result.append(
-    #     MotionPlan(
-    #         "0-degree forwards to 90 degree forwards, without changing orientation",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleDesiredValues(drive_modules[0].name, 0.0,  1.0),
-    #             DriveModuleDesiredValues(drive_modules[1].name, 0.0,  1.0),
-    #             DriveModuleDesiredValues(drive_modules[2].name, 0.0,  1.0),
-    #             DriveModuleDesiredValues(drive_modules[3].name, 0.0,  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 1.0, 0.0),
-    #         ]
-    #     )
-    # )
+            data_initial_body_state = data_plan["start_state"]["body"]
+            initial_body_state: BodyState = BodyState(
+                body_x_in_meters=data_initial_body_state["position_in_meters_relative_to_world"]["x"],
+                body_y_in_meters=data_initial_body_state["position_in_meters_relative_to_world"]["y"],
+                body_orientation_in_radians=data_initial_body_state["orientation_in_radians_relative_to_world"]["z"],
+                body_angular_z_velocity_in_radians_per_second=data_initial_body_state["angular_velocity_in_radians_per_second"]["z"],
+                body_linear_x_velocity_in_meters_per_second=data_initial_body_state["linear_velocity_in_meters_per_second"]["x"],
+                body_linear_y_velocity_in_meters_per_second=data_initial_body_state["linear_velocity_in_meters_per_second"]["y"],
+            )
 
-    # result.append(
-    #     MotionPlan(
-    #         "45-degree forward from stand still",
-    #         BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, 0.0,  0.0),
-    #             DriveModuleProposedState(drive_modules[1].name, 0.0,  0.0),
-    #             DriveModuleProposedState(drive_modules[2].name, 0.0,  0.0),
-    #             DriveModuleProposedState(drive_modules[3].name, 0.0,  0.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(1.0, 1.0, 0.0),
-    #         ]
-    #     )
-    # )
+            data_initial_module_state = data_plan["start_state"]["modules"]
+            initial_module_state: List[DriveModuleDesiredValues] = []
+            for module_initial_state in data_initial_module_state:
+                state = DriveModuleDesiredValues(
+                    name=module_initial_state["name"],
+                    steering_angle_in_radians=module_initial_state["orientation_in_radians_relative_to_body"],
+                    drive_velocity_in_meters_per_second=module_initial_state["velocity_in_meters_per_second"],
+                )
 
-    # result.append(
-    #     MotionPlan(
-    #         "0-degree stop from moving",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, 0.0,  1.0),
-    #             DriveModuleProposedState(drive_modules[1].name, 0.0,  1.0),
-    #             DriveModuleProposedState(drive_modules[2].name, 0.0,  1.0),
-    #             DriveModuleProposedState(drive_modules[3].name, 0.0,  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 0.0, 0.0),
-    #         ]
-    #     )
-    # )
+                initial_module_state.append(state)
 
-    # result.append(
-    #     MotionPlan(
-    #         "90-degree stop from moving",
-    #         BodyState(0.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[1].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[2].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[3].name, radians(90),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 0.0, 0.0),
-    #         ]
-    #     )
-    # )
+            data_commands = data_plan["commands"]
+            commands: List[MotionCommand] = []
+            for data_command in data_commands:
 
-    # result.append(
-    #     MotionPlan(
-    #         "45-degree stop from moving",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 1.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, radians(45),  sqrt(2)),
-    #             DriveModuleProposedState(drive_modules[1].name, radians(45),  sqrt(2)),
-    #             DriveModuleProposedState(drive_modules[2].name, radians(45),  sqrt(2)),
-    #             DriveModuleProposedState(drive_modules[3].name, radians(45),  sqrt(2)),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 0.0, 0.0),
-    #         ]
-    #     )
-    # )
+                time_span = data_command["time_span"]
+                if "modules" in data_command:
+                    data_command_module = data_command["modules"]
 
-    # result.append(
-    #     MotionPlan(
-    #         "90-degree forwards to 0 degree forwards, without changing orientation",
-    #         BodyState(0.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[1].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[2].name, radians(90),  1.0),
-    #             DriveModuleProposedState(drive_modules[3].name, radians(90),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(1.0, 0.0, 0.0),
-    #         ]
-    #     )
-    # )
+                    command_module_state: List[DriveModuleDesiredValues] = []
+                    for module_command_state in data_command_module:
+                        state = DriveModuleDesiredValues(
+                            name=module_command_state["name"],
+                            steering_angle_in_radians=module_command_state["orientation_in_radians_relative_to_body"],
+                            drive_velocity_in_meters_per_second=module_command_state["velocity_in_meters_per_second"],
+                        )
 
-    result.append(
-        MotionPlan(
-            "in place rotation from stand still",
-            "inplace_rotation",
-            BodyState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  0.0),
-            ],
-            [
-                DriveModuleMotionCommand([
-                    DriveModuleDesiredValues(drive_modules[0].name, radians(135),  0.0),
-                    DriveModuleDesiredValues(drive_modules[1].name, radians(225),  0.0),
-                    DriveModuleDesiredValues(drive_modules[2].name, radians(315),  0.0),
-                    DriveModuleDesiredValues(drive_modules[3].name, radians(45),  0.0)
-                ]),
-                BodyMotionCommand(0.0, 0.0, 1.0),
-            ]
-        )
-    )
+                        command_module_state.append(state)
 
-    result.append(
-        MotionPlan(
-            "in place rotation from 45-degree forwards",
-            "inplace_rotation_from_45_fwd",
-            BodyState(0.0, 0.0, 0.0, sqrt(0.5), sqrt(0.5), 0.0),
-            [
-                DriveModuleDesiredValues(drive_modules[0].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[1].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[2].name, radians(0),  0.0),
-                DriveModuleDesiredValues(drive_modules[3].name, radians(0),  0.0),
-            ],
-            [
-                DriveModuleMotionCommand([
-                    DriveModuleDesiredValues(drive_modules[0].name, radians(45),  0.0),
-                    DriveModuleDesiredValues(drive_modules[1].name, radians(45),  0.0),
-                    DriveModuleDesiredValues(drive_modules[2].name, radians(45),  0.0),
-                    DriveModuleDesiredValues(drive_modules[3].name, radians(45),  0.0)
-                ]),
-                BodyMotionCommand(sqrt(0.5), sqrt(0.5), 0.0),
-                BodyMotionCommand(0.0, 0.0, 1.0),
-            ]
-        )
-    )
+                    command = DriveModuleMotionCommand(time_span, command_module_state)
 
-    # result.append(
-    #     MotionPlan(
-    #         "circle without changing orientation from moving forwards at 0 degrees",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 1.0, 0.0),
-    #             BodyMotionCommand(-1.0, 0.0, 0.0),
-    #             BodyMotionCommand(0.0, -1.0, 0.0),
-    #             BodyMotionCommand(1.0, 0.0, 0.0),
-    #         ]
-    #     )
-    # )
+                    commands.append(command)
+                else:
+                    if "body" in data_command:
+                        data_command_body = data_command["body"]
+                        command = BodyMotionCommand(
+                            time_span,
+                            data_command_body["linear_velocity_in_meters_per_second"]["x"],
+                            data_command_body["linear_velocity_in_meters_per_second"]["y"],
+                            data_command_body["angular_velocity_in_radians_per_second"]["z"],
+                        )
 
-    # result.append(
-    #     MotionPlan(
-    #         "circle while keeping the orientation tangentially to movement",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleDesiredValues(drive_modules[0].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[1].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[2].name, radians(0),  1.0),
-    #             DriveModuleDesiredValues(drive_modules[3].name, radians(0),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 1.0, 1.0),
-    #             BodyMotionCommand(-1.0, 0.0, 1.0),
-    #             BodyMotionCommand(0.0, -1.0, 1.0),
-    #             BodyMotionCommand(1.0, 0.0, 1.0),
-    #         ]
-    #     )
-    # )
+                        commands.append(command)
 
-    # # circle with orientation rotation counter circle
+            plan = MotionPlan(
+                description=data_plan["description"],
+                name=data_plan["name"],
+                body_state=initial_body_state,
+                initial_drive_module_states=initial_module_state,
+                motions=commands,
+            )
 
-    # result.append(
-    #     MotionPlan(
-    #         "0-degrees forwards while rotating around center",
-    #         BodyState(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-    #         [
-    #             DriveModuleProposedState(drive_modules[0].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[1].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[2].name, radians(0),  1.0),
-    #             DriveModuleProposedState(drive_modules[3].name, radians(0),  1.0),
-    #         ],
-    #         [
-    #             BodyMotionCommand(0.0, 1.0, 1.0),
-    #             BodyMotionCommand(-1.0, 0.0, 1.0),
-    #             BodyMotionCommand(0.0, -1.0, 1.0),
-    #             BodyMotionCommand(1.0, 0.0, 1.0),
-    #         ]
-    #     )
-    # )
-
-    # forward + rotation
-    # forward to in place rotation
-    # Diagnoal to in place rotation
-
+            result.append(plan)
 
     return result
 
@@ -709,10 +538,19 @@ def read_arguments() -> Mapping[str, any]:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
+        "-f",
+        "--file",
+        action="append",
+        required=True,
+        type=str,
+        help="The file path for the input file which contains the desired motions to be executed. Can be provided multiple times.")
+
+    parser.add_argument(
         "-o",
         "--output",
         action="store",
         required=True,
+        type=str,
         help="The directory path for the output files")
     args = parser.parse_args()
     return vars(args)
@@ -799,14 +637,19 @@ def simulation_orient_body(
     return sim_time_in_seconds
 
 def simulation_run_trajectories(arg_dict: Mapping[str, any]):
+    input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
     print("Running trajectory simulation")
+    print("Simulating motion for the following files:")
+    for input_file in input_files:
+        print("    {}".format(input_file))
+
     print("Outputting to {}".format(output_directory))
 
     drive_modules = get_drive_module_info()
-    motions = get_motions(drive_modules)
+    motions = get_motions(input_files)
     for motion_set in motions:
-        motion_directory = path.join(output_directory, motion_set.short_name)
+        motion_directory = path.join(output_directory, motion_set.name)
         simulation_run_trajectory(motion_directory, drive_modules, motion_set)
 
 def simulation_run_trajectory(
@@ -815,7 +658,7 @@ def simulation_run_trajectory(
     motion_set: MotionPlan,
     ):
 
-    state_file_path = path.join(output_directory, "{}.csv".format(motion_set.short_name))
+    state_file_path = path.join(output_directory, "{}.csv".format(motion_set.name))
     if not path.isdir(output_directory):
         print("Output directory {} does not exist. Creating directory ...".format(output_directory))
         makedirs(output_directory)
@@ -909,8 +752,8 @@ def simulation_run_trajectory(
 
     # Now draw all the graphs
     plot_trajectories(
+        motion_set.description,
         motion_set.name,
-        motion_set.short_name,
         output_directory,
         points_in_time,
         body_states,
