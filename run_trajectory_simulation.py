@@ -673,13 +673,14 @@ def simulation_run_trajectory(
     controller = (list(get_controller(drive_modules).values()))[0]
     controller.on_state_update(drive_module_states)
 
-    time_step_in_seconds = 0.01
+    simulation_rate_in_hz = 100
     current_sim_time_in_seconds = 0.0
+    time_step_in_seconds = 1.0 / simulation_rate_in_hz
 
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the
     # time span over which the command state should be achieved
 
-    points_in_time: List[float] = [ 0.0 ]
+    points_in_time: List[float] = [ current_sim_time_in_seconds ]
     body_states: List[BodyState] = []
     drive_states: List[List[DriveModuleMeasuredValues]] = []
     icr_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]] = []
@@ -689,7 +690,9 @@ def simulation_run_trajectory(
     for motion in motion_set.motions:
         controller.on_desired_state_update(motion)
 
-        for i in range(1, 101):
+        step_count = int(motion.time_for_motion() * simulation_rate_in_hz)
+
+        for i in range(1, step_count + 1):
             controller.on_tick(current_sim_time_in_seconds)
 
             current_sim_time_in_seconds += time_step_in_seconds
