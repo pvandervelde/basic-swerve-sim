@@ -242,8 +242,9 @@ def generate_plot_information(
             if not isinf(icr[2].x) and not isinf(icr[2].y):
 
                 if abs(icr[2].x) < 25 and abs(icr[2].y) < 25:
-                    x_values[index].append(icr[2].x)
-                    y_values[index].append(icr[2].y)
+                    if (not isclose(icr[0].drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7)) or (not isclose(icr[1].drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7)):
+                        x_values[index].append(icr[2].x)
+                        y_values[index].append(icr[2].y)
 
             index += 1
 

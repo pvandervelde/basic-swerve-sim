@@ -44,7 +44,7 @@ def get_intersect(a1: Point, a2: Point, b1: Point, b2: Point) -> Point:
     x, y, z = np.cross(l1, l2)
 
     # lines are parallel
-    if isclose(z, 0.0, abs_tol=1e-15, rel_tol=1e-15):
+    if isclose(z, 0.0, abs_tol=1e-5, rel_tol=1e-5):
         return Point(float('inf'), float('inf'), 0.0)
 
     return Point(x/z, y/z, 0.0)
