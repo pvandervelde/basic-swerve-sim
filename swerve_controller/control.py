@@ -8,6 +8,11 @@ from .states import BodyState, DriveModuleDesiredValues, BodyMotion
 
 class MotionCommand(ABC):
 
+    # The timespan over which the command should be executed
+    @abstractmethod
+    def time_for_motion(self) -> float:
+        pass
+
     # Determine what the body state would be if the robot would execute the current
     # motion command.
     @abstractmethod
@@ -25,12 +30,18 @@ class BodyMotionCommand(MotionCommand):
 
     def __init__(
         self,
+        time_span: float,
         linear_x_velocity_in_meters_per_second: float,
         linear_y_velocity_in_meters_per_second: float,
         angular_z_velocity_in_radians_per_second: float
         ):
+        self.time_span = time_span
         self.linear_velocity = Vector3(linear_x_velocity_in_meters_per_second, linear_y_velocity_in_meters_per_second, 0.0)
         self.angular_velocity = Vector3(0.0, 0.0, angular_z_velocity_in_radians_per_second)
+
+    # The timespan over which the command should be executed
+    def time_for_motion(self) -> float:
+        return self.time_span
 
     # Determine what the body state would be if the robot would execute the current
     # motion command.
@@ -56,8 +67,14 @@ class DriveModuleMotionCommand(MotionCommand):
 
     def __init__(
         self,
+        time_span: float,
         desired_states: List[DriveModuleDesiredValues]):
+        self.time_span = time_span
         self.desired_states = desired_states
+
+    # The timespan over which the command should be executed
+    def time_for_motion(self) -> float:
+        return self.time_span
 
     # Determine what the body state would be if the robot would execute the current
     # motion command.

@@ -21,10 +21,10 @@ class DriveModuleProfile(object):
 # A collection of position / velocity / acceleration profiles
 class BodyMotionTrajectory(object):
 
-    def __init__(self, current: BodyMotion, desired: BodyMotion, trajectory_time_in_seconds: float):
+    def __init__(self, current: BodyMotion, desired: BodyMotion, min_trajectory_time_in_seconds: float):
         self.start_state = current
         self.end_state = desired
-        self.trajectory_time_in_seconds = trajectory_time_in_seconds
+        self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
             LinearProfile(current.linear_velocity.x, desired.linear_velocity.x),
@@ -47,14 +47,15 @@ class BodyMotionTrajectory(object):
         )
 
     def time_span(self) -> float:
-        return self.trajectory_time_in_seconds
+        return self.min_trajectory_time_in_seconds
 
 class DriveModuleStateTrajectory(object):
 
-    def __init__(self, drive_modules: List[DriveModule]):
+    def __init__(self, drive_modules: List[DriveModule], min_trajectory_time_in_seconds: float):
         self.modules = drive_modules
         self.start_states: List[DriveModuleMeasuredValues] = []
         self.end_states: List[DriveModuleDesiredValues] = []
+        self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         # Kinda want a constant jerk profile
         self.profiles: Mapping[str, List[TransientValueProfile]] = {}
@@ -120,8 +121,7 @@ class DriveModuleStateTrajectory(object):
         self._create_profiles()
 
     def time_span(self) -> float:
-        # Return the time in seconds which the trajectory spans
-        return 1.0
+        return self.min_trajectory_time_in_seconds
 
     def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
         if len(self.start_states) == 0 or len(self.end_states) == 0:

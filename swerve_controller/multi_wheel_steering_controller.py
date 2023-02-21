@@ -109,6 +109,8 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.current_time_in_seconds = 0.0
         self.trajectory_was_started_at_time_in_seconds = 0.0
 
+        self.min_time_for_trajectory = 1.0
+
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
     def body_state_at_current_time(self) -> BodyState:
@@ -151,6 +153,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
     def on_desired_state_update(self, desired_motion: MotionCommand):
         desired_states = desired_motion.to_drive_module_state(self.control_model)
 
+        self.min_time_for_trajectory = desired_motion.time_for_motion()
         self.desired_motion = desired_states
         self.motion_command_changed_at_time_in_seconds = self.current_time_in_seconds
 
@@ -174,7 +177,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         #
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
-        drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
+        drive_module_trajectory = DriveModuleStateTrajectory(self.modules, self.min_time_for_trajectory)
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
