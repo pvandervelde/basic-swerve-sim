@@ -151,7 +151,30 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
-        desired_states = desired_motion.to_drive_module_state(self.control_model)
+        desired_potential_states = desired_motion.to_drive_module_state(self.control_model)
+
+        # Select which state to use, either the forward one or the reverse one.
+        # - If there are two directions we need to pick, otherwise pick the only one we have
+        # - If the wheels aren't moving then we can pick the one with the closer steering angle change
+        # - If the wheels are moving then we use
+
+        desired_states = desired_potential_states[0]
+        if len(desired_potential_states[1]) > 0:
+            is_stopped = [isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7) for state in self.module_states]
+            if all(is_stopped):
+                # wheels aren't moving. Can do any move we like. Limit steering movemement.
+                total_first_rotation = 0.0
+                total_second_rotation = 0.0
+                for i in range(len(self.modules)):
+                    current = self.module_states[i].orientation_in_body_coordinates.z
+                    total_first_rotation += abs(desired_potential_states[0][i].steering_angle_in_radians - current)
+                    total_second_rotation += abs(desired_potential_states[1][i].steering_angle_in_radians - current)
+
+                if total_second_rotation < total_first_rotation:
+                    desired_states = desired_potential_states[1]
+            else:
+                # Wheels are moving. Pick the first state for now. Not sure how to pick the correct one
+                pass
 
         self.min_time_for_trajectory = desired_motion.time_for_motion()
         self.desired_motion = desired_states

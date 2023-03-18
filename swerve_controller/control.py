@@ -22,7 +22,7 @@ class MotionCommand(ABC):
     # Determine what the state of the drive modules would be if the robot would execute
     # the current motion command.
     @abstractmethod
-    def to_drive_module_state(self, model: ControlModelBase) -> List[DriveModuleDesiredValues]:
+    def to_drive_module_state(self, model: ControlModelBase) -> Tuple[List[DriveModuleDesiredValues]]:
         pass
 
 # Defines a motion command that specifies a motion from the robot body perspective
@@ -50,17 +50,17 @@ class BodyMotionCommand(MotionCommand):
 
     # Determine what the state of the drive modules would be if the robot would execute
     # the current motion command.
-    def to_drive_module_state(self, model: ControlModelBase) -> List[DriveModuleDesiredValues]:
-
-        # We get both the forward and reverse options here. We should see which is the better one
-        # For now just use the forward one
+    def to_drive_module_state(self, model: ControlModelBase) -> Tuple[List[DriveModuleDesiredValues]]:
         drive_module_potential_states = model.state_of_wheel_modules_from_body_motion(
             BodyMotion(
                 self.linear_velocity.x,
                 self.linear_velocity.y,
                 self.angular_velocity.z,
             ))
-        return [x[0] for x in drive_module_potential_states]
+        return (
+            [x[0] for x in drive_module_potential_states],
+            [x[1] for x in drive_module_potential_states],
+        )
 
 # Defines a motion command from the robot drive module perspective
 class DriveModuleMotionCommand(MotionCommand):
@@ -83,5 +83,5 @@ class DriveModuleMotionCommand(MotionCommand):
 
     # Determine what the state of the drive modules would be if the robot would execute
     # the current motion command.
-    def to_drive_module_state(self, model: ControlModelBase) -> List[DriveModuleDesiredValues]:
-        return self.desired_states
+    def to_drive_module_state(self, model: ControlModelBase) -> Tuple[List[DriveModuleDesiredValues]]:
+        return ( self.desired_states, [] )

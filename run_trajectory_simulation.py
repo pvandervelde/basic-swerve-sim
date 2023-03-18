@@ -606,37 +606,6 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
 
         file_.write("\n")  # Next line.
 
-def simulation_align_drive_modules(
-    sim_time_in_seconds: float,
-    time_step_in_seconds: float,
-    drive_modules: List[DriveModule],
-    drive_module_states: List[DriveModuleMeasuredValues],
-    body_state: BodyState,
-    controller: MultiWheelSteeringController
-    ) -> float:
-
-    # Update this --> Incorrect desired state
-    drive_module_trajectory = controller.drive_module_trajectory_to_achieve_desired_drive_module_orientation(drive_module_states, drive_module_states)
-    are_modules_aligned = True
-    while not are_modules_aligned:
-
-
-        # DO STUFF HERE
-
-        pass
-    return sim_time_in_seconds
-
-def simulation_orient_body(
-    sim_time_in_seconds: float,
-    time_step_in_seconds: float,
-    ) -> float:
-
-
-    # DO STUFF HERE
-
-
-    return sim_time_in_seconds
-
 def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
