@@ -305,10 +305,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_left_front",
         steering_axis_xy_position=Point(0.5, 0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -320,10 +320,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_left_rear",
         steering_axis_xy_position=Point(-0.5, 0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -335,10 +335,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_right_rear",
         steering_axis_xy_position=Point(-0.5, -0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -350,10 +350,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_right_front",
         steering_axis_xy_position=Point(0.5, -0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
