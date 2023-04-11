@@ -1,7 +1,7 @@
 ---
 plan:
-  description: "90-degree forward from stand still with rotation first"
-  name: "90_deg_fwd_from_stop"
+  description: "body [Orientation: 0; Velocity: positive] - Modules [Orientation 90]"
+  name: "body_orientation_0_body_vel_positive_dm_direction_90"
   start_state:
     body:
       position_in_meters_relative_to_world:
