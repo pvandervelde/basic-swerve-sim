@@ -1,7 +1,7 @@
 ---
 plan:
-  description: "body [Orientation: 0; Velocity: negative] - Modules [Orientation 270]"
-  name: "body_orientation_0_body_vel_negative_dm_direction_270"
+  description: "body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 270]]"
+  name: "body_orientation_0_body_vel_linear_negative_dm_direction_linear_270"
   start_state:
     body:
       position_in_meters_relative_to_world:
