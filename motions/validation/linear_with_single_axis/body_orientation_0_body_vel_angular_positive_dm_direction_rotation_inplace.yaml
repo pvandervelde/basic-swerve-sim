@@ -1,7 +1,7 @@
 ---
 plan:
-  description: "in place rotation from stand still"
-  name: "inplace_rotation"
+  description: "body [Orientation: 0; Velocity: [angular, positive]] - Modules [Orientation [rotation, inplace]]"
+  name: "body_orientation_0_body_vel_angular_positive_dm_direction_rotation_inplace"
   start_state:
     body:
       position_in_meters_relative_to_world:
