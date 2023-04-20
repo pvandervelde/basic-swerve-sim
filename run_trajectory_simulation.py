@@ -495,6 +495,8 @@ def initialize_state_file(file_path: str, number_of_modules: int):
             file_.write(f"x-jerk-module-{i} [mc] (m/s^3), y-jerk-module-{i} [mc] (m/s^3), z-jerk-module-{i} [mc] (m/s^3),")
             file_.write(f"x-rotjerk-module-{i} [bc] (rad/s^3), y-rotjerk-module-{i} [bc] (rad/s^3), z-rotjerk-module-{i} [bc] (rad/s^3),")
 
+        file_.write("\n")  # Next line.
+
 def plot_trajectories(
     set_name: str,
     short_name: str,
