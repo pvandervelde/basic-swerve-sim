@@ -211,6 +211,10 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.drive_module_trajectory = drive_module_trajectory
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
+# Linear body first, or even any kind of body first might not be possible because not all module motions
+# result in a body motion, but all body motions result in a module motion. That means that for body
+# first there might be multiple module movements, e.g. when moving in y-direction the modules
+# either need to turn to the y-position during the movement or before the movent.
 class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
     def __init__(self, drive_modules: List[DriveModule]):

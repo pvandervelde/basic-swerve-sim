@@ -481,6 +481,12 @@ def initialize_state_file(file_path: str, number_of_modules: int):
         file_.write("x-vel-body [bc] (m/s), y-vel-body [bc] (m/s), z-vel-body [bc] (m/s),")
         file_.write("x-rotvel-body [bc] (rad/s), y-rotvel-body [bc] (rad/s), z-rotvel-body [bc] (rad/s),")
 
+        file_.write("x-acc-body [bc] (m/s^2), y-acc-body [bc] (m/s^2), z-acc-body [bc] (m/s^2),")
+        file_.write("x-rotacc-body [bc] (rad/s^2), y-rotacc-body [bc] (rad/s^2), z-rotacc-body [bc] (rad/s^2),")
+
+        file_.write("x-jerk-body [bc] (m/s^3), y-jerk-body [bc] (m/s^3), z-jerk-body [bc] (m/s^3),")
+        file_.write("x-rotjerk-body [bc] (rad/s^3), y-rotjerk-body [bc] (rad/s^3), z-rotjerk-body [bc] (rad/s^3),")
+
         file_.write("number of modules (-),")
         for i in range(number_of_modules):
             file_.write(f"x-module-{i} [bc] (m), y-module-{i} [bc] (m), z-module-{i} [bc] (m),")
@@ -555,7 +561,16 @@ def read_arguments() -> Mapping[str, any]:
         required=True,
         type=str,
         help="The directory path for the output files")
+
+    parser.add_argument(
+        "-ng",
+        "--no-graphs",
+        action="store_true",
+        required=False,
+        help="Indicates if graphs should be generated or not. If not specified graphs will be created."
+    )
     args = parser.parse_args()
+
     return vars(args)
 
 def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleMeasuredValues]):
@@ -580,6 +595,14 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
 
         body_angular_vel = body_state.motion_in_body_coordinates.angular_velocity
         file_.write("{},{},{},".format(body_angular_vel.x, body_angular_vel.y, body_angular_vel.z))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
 
         # Write the number of modules
         file_.write("{},".format(len(drive_module_states)))
@@ -611,6 +634,7 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
 def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
+    do_not_draw_graphs: bool = arg_dict["no_graphs"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -622,12 +646,13 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     motions = get_motions(input_files)
     for motion_set in motions:
         motion_directory = path.join(output_directory, motion_set.name)
-        simulation_run_trajectory(motion_directory, drive_modules, motion_set)
+        simulation_run_trajectory(motion_directory, drive_modules, motion_set, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
+    do_not_draw_graphs: bool,
     ):
 
     state_file_path = path.join(output_directory, "{}.csv".format(motion_set.name))
@@ -726,16 +751,17 @@ def simulation_run_trajectory(
             controller.on_state_update(current_drive_states)
 
     # Now draw all the graphs
-    plot_trajectories(
-        motion_set.description,
-        motion_set.name,
-        output_directory,
-        points_in_time,
-        body_states,
-        drive_modules,
-        drive_states,
-        icr_map,
-        "blue")
+    if not do_not_draw_graphs:
+        plot_trajectories(
+            motion_set.description,
+            motion_set.name,
+            output_directory,
+            points_in_time,
+            body_states,
+            drive_modules,
+            drive_states,
+            icr_map,
+            "blue")
 
 def main(args=None):
     arg_dict = read_arguments()
