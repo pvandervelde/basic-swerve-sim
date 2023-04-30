@@ -185,7 +185,15 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.current_time_in_seconds = current_time_in_seconds
 
         # Calculate the current body state
-        self.body_state = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        self.body_state = BodyState(
+            self.body_state.position_in_world_coordinates.x,
+            self.body_state.position_in_world_coordinates.y,
+            self.body_state.orientation_in_world_coordinates.z,
+            body_motion.linear_velocity.x,
+            body_motion.linear_velocity.y,
+            body_motion.angular_velocity.z,
+        )
 
         # If the desired body motion was updated after the trajectory was created, then we need to
         # update the trajectory.
