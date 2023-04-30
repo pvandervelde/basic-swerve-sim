@@ -655,7 +655,7 @@ def simulation_run_trajectory(
     do_not_draw_graphs: bool,
     ):
 
-    state_file_path = path.join(output_directory, "{}.csv".format(motion_set.name))
+    state_file_path = path.join(output_directory, "sim_results.csv")
     if not path.isdir(output_directory):
         print("Output directory {} does not exist. Creating directory ...".format(output_directory))
         makedirs(output_directory)
