@@ -711,9 +711,9 @@ def simulation_run_trajectory(
 
             body_motion = controller.get_control_model().body_motion_from_wheel_module_states(drive_module_states)
 
-            local_x_distance = time_step_in_seconds * body_motion.linear_velocity.x
-            local_y_distance = time_step_in_seconds * body_motion.linear_velocity.y
-            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * body_motion.angular_velocity.z
+            local_x_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
+            local_y_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
             body_state = BodyState(
                 body_state.position_in_world_coordinates.x + local_x_distance * cos(global_orientation) - local_y_distance * sin(global_orientation),
                 body_state.position_in_world_coordinates.y + local_x_distance * sin(global_orientation) + local_y_distance * cos(global_orientation),
