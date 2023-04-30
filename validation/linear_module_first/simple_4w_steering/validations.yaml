@@ -1,89 +1,91 @@
 ---
 validation:
   # The directory in which all of the simulation config files for the validations can be found
-  validation_base_directory: stuff
+  validation_base_directory: motions/validation
 
   # The list of validations to run
   validations:
     # From the directory called 'linear_with_single_axis' run the following simulations
     linear_with_single_axis:
-      # Validation description
+      - description: "Validate - body [Orientation: 0; Velocity: [angular, negative]] - Modules [Orientation [rotation, inplace]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_angular_negative_dm_direction_rotation_inplace
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_angular_negative_dm_direction_rotation_inplace.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [angular, positive]] - Modules [Orientation [rotation, inplace]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_angular_positive_dm_direction_rotation_inplace
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_angular_positive_dm_direction_rotation_inplace.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 90]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_90
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_90.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 180]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_180
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_180.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 270]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_270
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_270.yaml
+
+
       - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 0]]"
-        # The expected results for all the different things the simulation calculates. This assumes
-        # (at least for the moment) that the resulting trajectories can be approximated using polynomials
-        #
-        # There may be multiple time sections in one results section
-        expected_results:
-          # Time the section started
-          - time_start: 0.0
-            # Time the section ended
-            time_end: 1.0
-            # Results for the body
-            body:
-              # The polynomial coefficients for the x-position of the body
-              x_position_coefficients: [ 0.5, 0.0, 0.0]
-              # The polynomial coefficients for the x-velocity of the body
-              x_velocity_coefficients: [ 1.0, 0.0 ]
-              # The polynomial coefficients for the x-acceleration of the body
-              x_acceleration_coefficients: [0.0, 1.0]
-              # The polynomial coefficients for the x-jerk (velocity of the acceleration) of the body
-              x_jerk_coefficients: [0.0]
-              # The polynomial coefficients for the y-position of the body
-              y_position_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the y-velocity of the body
-              y_velocity_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the y-acceleration of the body
-              y_acceleration_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the y-jerk (velocity of the acceleration) of the body
-              y_jerk_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the rotational orientation of the body
-              orientation_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the rotational velocity of the body
-              orientation_velocity_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the rotational acceleration of the body
-              orientation_acceleration_coefficients: [ 0.0 ]
-              # The polynomial coefficients for the rotational jerk (velocity of the acceleration) of the body
-              orientation_jerk_coefficients: [ 0.0 ]
-            # The results for the drive modules
-            modules:
-              - name: "left-front"
-                drive_velocity_coefficients: [1.0, 0.0]
-                drive_acceleration_coefficients: [0.0, 1.0]
-                drive_jerk_coefficients: [ 0.0 ]
-                steering_angle_position_coefficients: [ 0.0 ]
-                steering_angle_velocity_coefficients: [ 0.0 ]
-                steering_angle_acceleration_coefficients: [ 0.0 ]
-                steering_angle_jerk_coefficients: [ 0.0 ]
-              - name: "left-rear"
-                drive_velocity_coefficients: [1.0, 0.0]
-                drive_acceleration_coefficients: [0.0, 1.0]
-                drive_jerk_coefficients: [ 0.0 ]
-                steering_angle_position_coefficients: [ 0.0 ]
-                steering_angle_velocity_coefficients: [ 0.0 ]
-                steering_angle_acceleration_coefficients: [ 0.0 ]
-                steering_angle_jerk_coefficients: [ 0.0 ]
-              - name: "right-rear"
-                drive_velocity_coefficients: [1.0, 0.0]
-                drive_acceleration_coefficients: [0.0, 1.0]
-                drive_jerk_coefficients: [ 0.0 ]
-                steering_angle_position_coefficients: [ 0.0 ]
-                steering_angle_velocity_coefficients: [ 0.0 ]
-                steering_angle_acceleration_coefficients: [ 0.0 ]
-                steering_angle_jerk_coefficients: [ 0.0 ]
-              - name: "right-front"
-                drive_velocity_coefficients: [1.0, 0.0]
-                drive_acceleration_coefficients: [0.0, 1.0]
-                drive_jerk_coefficients: [ 0.0 ]
-                steering_angle_position_coefficients: [ 0.0 ]
-                steering_angle_velocity_coefficients: [ 0.0 ]
-                steering_angle_acceleration_coefficients: [ 0.0 ]
-                steering_angle_jerk_coefficients: [ 0.0 ]
         # Indicates if this result set should be included in the validation
         include: true
         # The name of the validation set
         name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_0
-        # The directory in which the simulation and validation results should be placed
-        output_directory: stuff
         # The name of the simulation configuration file that should be executed for the current validation
         simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 90]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_90
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_90.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 180]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_180
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_180.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 270]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_270
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_270.yaml
 
+    rotation_with_single_axis:
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, negative]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0.yaml
