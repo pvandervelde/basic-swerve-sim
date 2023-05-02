@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from abc import ABC, abstractmethod
-from math import acos, cos, degrees, isclose, pow, radians, sin, sqrt, tan
+import math
 from turtle import forward
 
 import numpy as np
@@ -160,13 +160,20 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
 
         desired_states = desired_potential_states[0]
         if len(desired_potential_states[1]) > 0:
-            is_stopped = [isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7) for state in self.module_states]
+            is_stopped = [math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7) for state in self.module_states]
             if all(is_stopped):
                 # wheels aren't moving. Can do any move we like. Limit steering movemement.
                 total_first_rotation = 0.0
                 total_second_rotation = 0.0
                 for i in range(len(self.modules)):
                     current = self.module_states[i].orientation_in_body_coordinates.z
+                    # Normalize the steering angle to be between 0 and 2pi
+                    if current >= 2 * math.pi:
+                        current -= 2 * math.pi
+
+                    if current < 0:
+                        current += 2 * math.pi
+
                     total_first_rotation += abs(desired_potential_states[0][i].steering_angle_in_radians - current)
                     total_second_rotation += abs(desired_potential_states[1][i].steering_angle_in_radians - current)
 
