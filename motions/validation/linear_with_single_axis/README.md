@@ -2,8 +2,8 @@
 
 This folder contains configurations for simulations where the robot moves along a single axis,
 e.g. linear moves along the x- or y-axis, or rotations around the z-axis. These simulations are
-designed to validate that the simulation treats the positive and  negative directions of the
-different axis.
+designed to validate that the simulation treats the positive and negative directions of the
+different axis correctly.
 
 The different simulation configurations are:
 
