@@ -1,0 +1,37 @@
+---
+plan:
+  description: "body [Orientation: 90; Velocity: [linear, positive]] - Modules [Orientation [linear, 0]]"
+  name: "body_orientation_90_body_vel_linear_positive_dm_direction_linear_0"
+  start_state:
+    body:
+      position_in_meters_relative_to_world:
+        x: 0.0
+        y: 0.0
+      orientation_in_radians_relative_to_world:
+        z: 1.57079632679
+      angular_velocity_in_radians_per_second:
+        z: 0.0
+      linear_velocity_in_meters_per_second:
+        x: 0.0
+        y: 0.0
+    modules:
+      - name: "left-front"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "left_rear"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "right-rear"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "right-front"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+  commands:
+    - time_span: 1.0
+      body:
+        angular_velocity_in_radians_per_second:
+          z: 0.0
+        linear_velocity_in_meters_per_second:
+          x: 1.0
+          y: 0.0

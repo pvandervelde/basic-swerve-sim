@@ -89,3 +89,26 @@ validation:
         name: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0
         # The name of the simulation configuration file that should be executed for the current validation
         simulation_file: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, positive]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_90_body_vel_linear_positive_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_90_body_vel_linear_positive_dm_direction_linear_0.yaml
+
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, negative]] - Modules [Orientation [linear, -90]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_90_body_vel_linear_negative_dm_direction_linear_-90
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_90_body_vel_linear_negative_dm_direction_linear_-90.yaml
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, positive]] - Modules [Orientation [linear, -90]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_90_body_vel_linear_positive_dm_direction_linear_-90
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_90_body_vel_linear_positive_dm_direction_linear_-90.yaml
+
