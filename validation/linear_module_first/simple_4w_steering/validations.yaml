@@ -112,3 +112,71 @@ validation:
         # The name of the simulation configuration file that should be executed for the current validation
         simulation_file: body_orientation_90_body_vel_linear_positive_dm_direction_linear_-90.yaml
 
+    combined:
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 30]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_30
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_30.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 30]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_30
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_30.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 60]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_60
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_60.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 60]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_60
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_60.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 120]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_120
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_120.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 120]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_120
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_120.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 150]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_150
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_150.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 150]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_150
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_150.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive], [rotation, positive]]"
+        # Indicates if this result set should be included in the validation
+        include: true
+        # The name of the validation set
+        name: body_orientation_0_body_vel_linear_positive_rotation_positive
+        # The name of the simulation configuration file that should be executed for the current validation
+        simulation_file: body_orientation_0_body_vel_linear_positive_rotation_positive.yaml
