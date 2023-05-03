@@ -1,7 +1,7 @@
-# Validation of the Simple 4 wheel steering model using combined movements
+# Verification of the Simple 4 wheel steering model using combined movements
 
-The goal for this validation set are to validate that movements along multiple axis
-are correct. The validations consist of movements in at least two axis directions at any
+The goal for this verification set are to validate that movements along multiple axis
+are correct. The verifications consist of movements in at least two axis directions at any
 given time.
 
 ## Linear movements

@@ -18,14 +18,14 @@ from yaml.loader import SafeLoader
 
 csv_time_column_name = "Time (s)"
 
-class ValidationPlan(NamedTuple):
+class VerificationPlan(NamedTuple):
     description: str
     name: str
     simulation_config_dir: str
     input_file_path: str
 
-def get_validations(input_files: List[str]) -> List[ValidationPlan]:
-    result: List[ValidationPlan] = []
+def get_verifications(input_files: List[str]) -> List[VerificationPlan]:
+    result: List[VerificationPlan] = []
 
     for input_file in input_files:
         relative = Path(input_file)
@@ -33,21 +33,21 @@ def get_validations(input_files: List[str]) -> List[ValidationPlan]:
         with open(relative.absolute()) as f:
             print("Reading {} ...".format(f.name))
             data = yaml.load(f, Loader=SafeLoader)
-            validation_base_dir: str = data["validation"]["validation_base_directory"]
-            data_validations = data["validation"]["validations"]
+            verification_base_dir: str = data["verification"]["verification_base_directory"]
+            data_verifications = data["verification"]["verifications"]
 
-            for validation_dir_name, validation_info_list in data_validations.items():
-                for validation_info in validation_info_list:
-                    print(validation_info)
-                    include_simulation = validation_info["include"]
+            for verification_dir_name, verification_info_list in data_verifications.items():
+                for verification_info in verification_info_list:
+                    print(verification_info)
+                    include_simulation = verification_info["include"]
                     if not include_simulation:
                         continue
 
-                    plan = ValidationPlan(
-                        description=validation_info["description"],
-                        name=validation_info["name"],
-                        simulation_config_dir=validation_dir_name,
-                        input_file_path=path.abspath(path.join(validation_base_dir, validation_dir_name, validation_info["simulation_file"])),
+                    plan = VerificationPlan(
+                        description=verification_info["description"],
+                        name=verification_info["name"],
+                        simulation_config_dir=verification_dir_name,
+                        input_file_path=path.abspath(path.join(verification_base_dir, verification_dir_name, verification_info["simulation_file"])),
                     )
 
                     result.append(plan)
@@ -56,7 +56,7 @@ def get_validations(input_files: List[str]) -> List[ValidationPlan]:
 
 def read_arguments() -> Mapping[str, any]:
     parser = argparse.ArgumentParser(
-        description="Run validations on the swerve drive simulation code.",
+        description="Run verifications on the swerve drive simulation code.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
@@ -65,7 +65,7 @@ def read_arguments() -> Mapping[str, any]:
         action="append",
         required=True,
         type=str,
-        help="The file path for the input file which contains the desired validations to be executed. Can be provided multiple times.")
+        help="The file path for the input file which contains the desired verifications to be executed. Can be provided multiple times.")
 
     parser.add_argument(
         "-o",
@@ -79,10 +79,10 @@ def read_arguments() -> Mapping[str, any]:
     print(args)
     return vars(args)
 
-def run_validations(arg_dict: Mapping[str, any]):
+def run_verifications(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = path.abspath(arg_dict["output"])
-    print("Running validation ...")
+    print("Running verification ...")
     start = datetime.now()
 
     print("Validating simulation code using the following files:")
@@ -91,21 +91,21 @@ def run_validations(arg_dict: Mapping[str, any]):
 
     print("Outputting to {}".format(output_directory))
 
-    motions = get_validations(input_files)
-    for validation_set in motions:
-        validation_directory = path.join(output_directory, validation_set.simulation_config_dir)
-        validation_run_simulation(validation_directory, validation_set)
+    motions = get_verifications(input_files)
+    for verification_set in motions:
+        verification_directory = path.join(output_directory, verification_set.simulation_config_dir)
+        verification_run_simulation(verification_directory, verification_set)
 
     end = datetime.now()
     difference = (end - start).total_seconds()
 
     print("Total processing time: {} seconds".format(difference))
 
-def validation_run_simulation(validation_directory: str, plan: ValidationPlan):
+def verification_run_simulation(verification_directory: str, plan: VerificationPlan):
     simulation_file = plan.input_file_path
 
     # Run the simulation
-    command_str = "python run_trajectory_simulation.py --no-graphs --output {} --file {}".format(validation_directory, simulation_file)
+    command_str = "python run_trajectory_simulation.py --no-graphs --output {} --file {}".format(verification_directory, simulation_file)
     process_result = subprocess.run(command_str, shell=True)
     if process_result.returncode != 0:
         # Simulation failed for some reason
@@ -114,7 +114,7 @@ def validation_run_simulation(validation_directory: str, plan: ValidationPlan):
 def main(args=None):
     arg_dict = read_arguments()
 
-    run_validations(arg_dict)
+    run_verifications(arg_dict)
 
 if __name__ == '__main__':
     main()

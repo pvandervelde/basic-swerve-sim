@@ -1,6 +1,6 @@
-# Motion configurations for Validation of the code
+# Motion configurations for verification of the code
 
-This folder contains the simulation configuration files for the validation calculations. The validation
+This folder contains the simulation configuration files for the verification calculations. The
 calculations are divided into three groups:
 
 - [Single axis movements](linear_with_single_axis/README.md) - Configurations for simulations where

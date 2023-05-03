@@ -1,6 +1,6 @@
 # Motion configurations
 
-The `motions` folder contains the [sample](samples/readme.md) and [validation](validation/readme.md)
+The `motions` folder contains the [sample](samples/readme.md) and [verification](verification/readme.md)
 configuration files for the simulation code. The files in this folder are used to simulate a single
 set of movements for a swerve drive robot.
 

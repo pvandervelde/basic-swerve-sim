@@ -1,4 +1,4 @@
-# Combined axis motion validation configurations
+# Combined axis motion verification configurations
 
 This folder contains configurations for simulations where the robot moves along multiple axis
 at the same time. These simulations are designed to validate that the simulation treats combinations

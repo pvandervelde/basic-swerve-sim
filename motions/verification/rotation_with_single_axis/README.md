@@ -1,4 +1,4 @@
-# Rotation with single axis motion validation configurations
+# Rotation with single axis motion verification configurations
 
 This folder contains configurations for simulations where the robot rotates and then moves along
 a single axis, e.g. a rotation to face in the world y-direction followed by a linear move. These

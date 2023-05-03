@@ -1,7 +1,7 @@
-# Validation of the Simple 4 wheel steering model using single linear movements
+# Verification of the Simple 4 wheel steering model using single linear movements
 
-The goal for this validation set are to validate that movements in the robot axis directions
-are correct. The validations consist of movements in both the positive and negative direction
+The goal for this verification set are to validate that movements in the robot axis directions
+are correct. The verifications consist of movements in both the positive and negative direction
 of the robot axis to ensure that there are differences between these directions.
 
 ## Linear movements

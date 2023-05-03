@@ -1,4 +1,4 @@
-# Single axis motion validation configurations
+# Single axis motion verification configurations
 
 This folder contains configurations for simulations where the robot moves along a single axis,
 e.g. linear moves along the x- or y-axis, or rotations around the z-axis. These simulations are
