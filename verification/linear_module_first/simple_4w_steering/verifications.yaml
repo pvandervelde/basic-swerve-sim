@@ -1,0 +1,182 @@
+---
+verification:
+  # The directory in which all of the simulation config files for the verifications can be found
+  verification_base_directory: motions/verification
+
+  # The list of verifications to run
+  verifications:
+    # From the directory called 'linear_with_single_axis' run the following simulations
+    linear_with_single_axis:
+      - description: "Validate - body [Orientation: 0; Velocity: [angular, negative]] - Modules [Orientation [rotation, inplace]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_angular_negative_dm_direction_rotation_inplace
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_angular_negative_dm_direction_rotation_inplace.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [angular, positive]] - Modules [Orientation [rotation, inplace]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_angular_positive_dm_direction_rotation_inplace
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_angular_positive_dm_direction_rotation_inplace.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 90]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_90
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_90.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 180]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_180
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_180.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 270]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_270
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_270.yaml
+
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 90]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_90
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_90.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 180]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_180
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_180.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 270]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_270
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_270.yaml
+
+    rotation_with_single_axis:
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, negative]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_90_body_vel_linear_negative_dm_direction_linear_0.yaml
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, positive]] - Modules [Orientation [linear, 0]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_90_body_vel_linear_positive_dm_direction_linear_0
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_90_body_vel_linear_positive_dm_direction_linear_0.yaml
+
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, negative]] - Modules [Orientation [linear, -90]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_90_body_vel_linear_negative_dm_direction_linear_-90
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_90_body_vel_linear_negative_dm_direction_linear_-90.yaml
+      - description: "Validate - body [Orientation: 90; Velocity: [linear, positive]] - Modules [Orientation [linear, -90]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_90_body_vel_linear_positive_dm_direction_linear_-90
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_90_body_vel_linear_positive_dm_direction_linear_-90.yaml
+
+    combined:
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 30]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_30
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_30.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 30]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_30
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_30.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 60]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_60
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_60.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 60]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_60
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_60.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 120]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_120
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_120.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 120]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_120
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_120.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 150]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_negative_dm_direction_linear_150
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_negative_dm_direction_linear_150.yaml
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive]] - Modules [Orientation [linear, 150]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_dm_direction_linear_150
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_dm_direction_linear_150.yaml
+
+      - description: "Validate - body [Orientation: 0; Velocity: [linear, positive], [rotation, positive]]"
+        # Indicates if this result set should be included in the verification
+        include: true
+        # The name of the verification set
+        name: body_orientation_0_body_vel_linear_positive_rotation_positive
+        # The name of the simulation configuration file that should be executed for the current verification
+        simulation_file: body_orientation_0_body_vel_linear_positive_rotation_positive.yaml

@@ -1,7 +1,7 @@
 ---
 plan:
-  description: "0-degree forward from stand still"
-  name: "0_deg_fwd_from_stop"
+  description: "body [Orientation: 0; Velocity: [linear, negative]] - Modules [Orientation [linear, 0]]"
+  name: "body_orientation_0_body_vel_linear_negative_dm_direction_linear_0"
   start_state:
     body:
       position_in_meters_relative_to_world:
@@ -33,6 +33,6 @@ plan:
         angular_velocity_in_radians_per_second:
           z: 0.0
         linear_velocity_in_meters_per_second:
-          x: 1.0
+          x: -1.0
           y: 0.0
 

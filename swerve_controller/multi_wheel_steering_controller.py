@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from abc import ABC, abstractmethod
-from math import acos, cos, degrees, isclose, pow, radians, sin, sqrt, tan
+import math
 from turtle import forward
 
 import numpy as np
@@ -151,7 +151,37 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
-        desired_states = desired_motion.to_drive_module_state(self.control_model)
+        desired_potential_states = desired_motion.to_drive_module_state(self.control_model)
+
+        # Select which state to use, either the forward one or the reverse one.
+        # - If there are two directions we need to pick, otherwise pick the only one we have
+        # - If the wheels aren't moving then we can pick the one with the closer steering angle change
+        # - If the wheels are moving then we use
+
+        desired_states = desired_potential_states[0]
+        if len(desired_potential_states[1]) > 0:
+            is_stopped = [math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7) for state in self.module_states]
+            if all(is_stopped):
+                # wheels aren't moving. Can do any move we like. Limit steering movemement.
+                total_first_rotation = 0.0
+                total_second_rotation = 0.0
+                for i in range(len(self.modules)):
+                    current = self.module_states[i].orientation_in_body_coordinates.z
+                    # Normalize the steering angle to be between 0 and 2pi
+                    if current >= 2 * math.pi:
+                        current -= 2 * math.pi
+
+                    if current < 0:
+                        current += 2 * math.pi
+
+                    total_first_rotation += abs(desired_potential_states[0][i].steering_angle_in_radians - current)
+                    total_second_rotation += abs(desired_potential_states[1][i].steering_angle_in_radians - current)
+
+                if total_second_rotation < total_first_rotation:
+                    desired_states = desired_potential_states[1]
+            else:
+                # Wheels are moving. Pick the first state for now. Not sure how to pick the correct one
+                pass
 
         self.min_time_for_trajectory = desired_motion.time_for_motion()
         self.desired_motion = desired_states
@@ -162,7 +192,15 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.current_time_in_seconds = current_time_in_seconds
 
         # Calculate the current body state
-        self.body_state = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        self.body_state = BodyState(
+            self.body_state.position_in_world_coordinates.x,
+            self.body_state.position_in_world_coordinates.y,
+            self.body_state.orientation_in_world_coordinates.z,
+            body_motion.linear_velocity.x,
+            body_motion.linear_velocity.y,
+            body_motion.angular_velocity.z,
+        )
 
         # If the desired body motion was updated after the trajectory was created, then we need to
         # update the trajectory.
@@ -188,6 +226,10 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.drive_module_trajectory = drive_module_trajectory
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
+# Linear body first, or even any kind of body first might not be possible because not all module motions
+# result in a body motion, but all body motions result in a module motion. That means that for body
+# first there might be multiple module movements, e.g. when moving in y-direction the modules
+# either need to turn to the y-position during the movement or before the movent.
 class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
     def __init__(self, drive_modules: List[DriveModule]):

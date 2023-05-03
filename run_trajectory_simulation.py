@@ -305,10 +305,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_left_front",
         steering_axis_xy_position=Point(0.5, 0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -320,10 +320,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_left_rear",
         steering_axis_xy_position=Point(-0.5, 0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -335,10 +335,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_right_rear",
         steering_axis_xy_position=Point(-0.5, -0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -350,10 +350,10 @@ def get_drive_module_info() -> List[DriveModule]:
         drive_link="joint_drive_right_front",
         steering_axis_xy_position=Point(0.5, -0.5, 0.0),
         wheel_radius=0.1,
-        steering_motor_maximum_velocity=1.0,
+        steering_motor_maximum_velocity=10.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
+        drive_motor_maximum_velocity=10.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -481,6 +481,12 @@ def initialize_state_file(file_path: str, number_of_modules: int):
         file_.write("x-vel-body [bc] (m/s), y-vel-body [bc] (m/s), z-vel-body [bc] (m/s),")
         file_.write("x-rotvel-body [bc] (rad/s), y-rotvel-body [bc] (rad/s), z-rotvel-body [bc] (rad/s),")
 
+        file_.write("x-acc-body [bc] (m/s^2), y-acc-body [bc] (m/s^2), z-acc-body [bc] (m/s^2),")
+        file_.write("x-rotacc-body [bc] (rad/s^2), y-rotacc-body [bc] (rad/s^2), z-rotacc-body [bc] (rad/s^2),")
+
+        file_.write("x-jerk-body [bc] (m/s^3), y-jerk-body [bc] (m/s^3), z-jerk-body [bc] (m/s^3),")
+        file_.write("x-rotjerk-body [bc] (rad/s^3), y-rotjerk-body [bc] (rad/s^3), z-rotjerk-body [bc] (rad/s^3),")
+
         file_.write("number of modules (-),")
         for i in range(number_of_modules):
             file_.write(f"x-module-{i} [bc] (m), y-module-{i} [bc] (m), z-module-{i} [bc] (m),")
@@ -494,6 +500,8 @@ def initialize_state_file(file_path: str, number_of_modules: int):
 
             file_.write(f"x-jerk-module-{i} [mc] (m/s^3), y-jerk-module-{i} [mc] (m/s^3), z-jerk-module-{i} [mc] (m/s^3),")
             file_.write(f"x-rotjerk-module-{i} [bc] (rad/s^3), y-rotjerk-module-{i} [bc] (rad/s^3), z-rotjerk-module-{i} [bc] (rad/s^3),")
+
+        file_.write("\n")  # Next line.
 
 def plot_trajectories(
     set_name: str,
@@ -553,7 +561,16 @@ def read_arguments() -> Mapping[str, any]:
         required=True,
         type=str,
         help="The directory path for the output files")
+
+    parser.add_argument(
+        "-ng",
+        "--no-graphs",
+        action="store_true",
+        required=False,
+        help="Indicates if graphs should be generated or not. If not specified graphs will be created."
+    )
     args = parser.parse_args()
+
     return vars(args)
 
 def record_state_at_time(file_path: str, current_time_in_seconds: float, body_state: BodyState, drive_module_states: List[DriveModuleMeasuredValues]):
@@ -578,6 +595,14 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
 
         body_angular_vel = body_state.motion_in_body_coordinates.angular_velocity
         file_.write("{},{},{},".format(body_angular_vel.x, body_angular_vel.y, body_angular_vel.z))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
+
+        file_.write("{},{},{},".format(0.0, 0.0, 0.0))
 
         # Write the number of modules
         file_.write("{},".format(len(drive_module_states)))
@@ -606,40 +631,10 @@ def record_state_at_time(file_path: str, current_time_in_seconds: float, body_st
 
         file_.write("\n")  # Next line.
 
-def simulation_align_drive_modules(
-    sim_time_in_seconds: float,
-    time_step_in_seconds: float,
-    drive_modules: List[DriveModule],
-    drive_module_states: List[DriveModuleMeasuredValues],
-    body_state: BodyState,
-    controller: MultiWheelSteeringController
-    ) -> float:
-
-    # Update this --> Incorrect desired state
-    drive_module_trajectory = controller.drive_module_trajectory_to_achieve_desired_drive_module_orientation(drive_module_states, drive_module_states)
-    are_modules_aligned = True
-    while not are_modules_aligned:
-
-
-        # DO STUFF HERE
-
-        pass
-    return sim_time_in_seconds
-
-def simulation_orient_body(
-    sim_time_in_seconds: float,
-    time_step_in_seconds: float,
-    ) -> float:
-
-
-    # DO STUFF HERE
-
-
-    return sim_time_in_seconds
-
 def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
+    do_not_draw_graphs: bool = arg_dict["no_graphs"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -651,15 +646,16 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     motions = get_motions(input_files)
     for motion_set in motions:
         motion_directory = path.join(output_directory, motion_set.name)
-        simulation_run_trajectory(motion_directory, drive_modules, motion_set)
+        simulation_run_trajectory(motion_directory, drive_modules, motion_set, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
+    do_not_draw_graphs: bool,
     ):
 
-    state_file_path = path.join(output_directory, "{}.csv".format(motion_set.name))
+    state_file_path = path.join(output_directory, "sim_results.csv")
     if not path.isdir(output_directory):
         print("Output directory {} does not exist. Creating directory ...".format(output_directory))
         makedirs(output_directory)
@@ -715,9 +711,9 @@ def simulation_run_trajectory(
 
             body_motion = controller.get_control_model().body_motion_from_wheel_module_states(drive_module_states)
 
-            local_x_distance = time_step_in_seconds * body_motion.linear_velocity.x
-            local_y_distance = time_step_in_seconds * body_motion.linear_velocity.y
-            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * body_motion.angular_velocity.z
+            local_x_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
+            local_y_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
             body_state = BodyState(
                 body_state.position_in_world_coordinates.x + local_x_distance * cos(global_orientation) - local_y_distance * sin(global_orientation),
                 body_state.position_in_world_coordinates.y + local_x_distance * sin(global_orientation) + local_y_distance * cos(global_orientation),
@@ -755,16 +751,17 @@ def simulation_run_trajectory(
             controller.on_state_update(current_drive_states)
 
     # Now draw all the graphs
-    plot_trajectories(
-        motion_set.description,
-        motion_set.name,
-        output_directory,
-        points_in_time,
-        body_states,
-        drive_modules,
-        drive_states,
-        icr_map,
-        "blue")
+    if not do_not_draw_graphs:
+        plot_trajectories(
+            motion_set.description,
+            motion_set.name,
+            output_directory,
+            points_in_time,
+            body_states,
+            drive_modules,
+            drive_states,
+            icr_map,
+            "blue")
 
 def main(args=None):
     arg_dict = read_arguments()
