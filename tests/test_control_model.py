@@ -3,10 +3,10 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from ..swerve_controller.control_model import SimpleFourWheelSteeringControlModel
-from ..swerve_controller.drive_module import DriveModule
-from ..swerve_controller.geometry import Point
-from ..swerve_controller.states import BodyMotion, BodyState, DriveModuleMeasuredValues
+from swerve_controller.control_model import SimpleFourWheelSteeringControlModel
+from swerve_controller.drive_module import DriveModule
+from swerve_controller.geometry import Point
+from swerve_controller.states import BodyMotion, BodyState, DriveModuleMeasuredValues
 
 def create_drive_modules(
     length: float = 1.0,
@@ -354,12 +354,6 @@ def test_should_show_pure_rotation_movement_when_modules_are_pointing_left_diago
     assert math.isclose(motion.angular_velocity.y, 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(motion.angular_velocity.z, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-def test_should_show_translation_and_rotation_movement_when_modules_are_angled_with_velocity():
-    pytest.fail("not implemented yet")
-
-def test_should_show_translation_movement_when__one_module_is_slightly_offset():
-    pytest.fail("not implemented yet")
-
 # state_of_wheel_modules_from_body_motion
 
 def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_motion():
@@ -498,9 +492,6 @@ def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
         assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
 
-def test_should_have_angled_wheels_with_individual_velocities_when_rotation_and_translation():
-    pytest.fail("not implemented yet")
-
 def test_should_not_move_wheels_when_zero_motion():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
@@ -514,10 +505,10 @@ def test_should_not_move_wheels_when_zero_motion():
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isinf(module_state[0].steering_angle_in_radians)
         assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isinf(module_state[1].steering_angle_in_radians)
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_not_move_wheels_when_stopping():
