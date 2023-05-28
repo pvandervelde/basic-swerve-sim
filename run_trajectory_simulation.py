@@ -22,7 +22,7 @@ from swerve_controller.multi_wheel_steering_controller import (
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
 from swerve_controller.states import BodyState, BodyMotion
-from swerve_controller.trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
+from swerve_controller.trajectory import LinearBodyMotionTrajectory, LinearDriveModuleStateTrajectory
 
 class ProfilePlotValues(NamedTuple):
     name: str
@@ -294,7 +294,7 @@ def generate_plot_traces(plots: List[List[ProfilePlotValues]]) -> List[go.Figure
 def get_controller(drive_modules: List[DriveModule]) -> Mapping[str, MultiWheelSteeringController]:
     return {
         "LinearModuleFirstSteeringController": LinearModuleFirstSteeringController(drive_modules),
-        #"LinearBodyFirstSteeringController": LinearBodyFirstSteeringController(drive_modules),
+        "LinearBodyFirstSteeringController": LinearBodyFirstSteeringController(drive_modules),
     }
 
 def get_drive_module_info() -> List[DriveModule]:
@@ -569,6 +569,16 @@ def read_arguments() -> Mapping[str, any]:
         required=False,
         help="Indicates if graphs should be generated or not. If not specified graphs will be created."
     )
+
+    parser.add_argument(
+        "-c",
+        "--controller",
+        action="store",
+        choices=['LinearModuleFirstSteeringController', 'LinearBodyFirstSteeringController'],
+        default='LinearModuleFirstSteeringController',
+        required=False,
+        help="The name of the controller that should be used for the simulation. Current options are: 'LinearModuleFirstSteeringController', 'LinearBodyFirstSteeringController'"
+    )
     args = parser.parse_args()
 
     return vars(args)
@@ -635,6 +645,7 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
     do_not_draw_graphs: bool = arg_dict["no_graphs"]
+    controller_name : str = arg_dict["controller"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -646,12 +657,13 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     motions = get_motions(input_files)
     for motion_set in motions:
         motion_directory = path.join(output_directory, motion_set.name)
-        simulation_run_trajectory(motion_directory, drive_modules, motion_set, do_not_draw_graphs)
+        simulation_run_trajectory(motion_directory, drive_modules, motion_set, controller_name, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
+    controller_name: str,
     do_not_draw_graphs: bool,
     ):
 
@@ -667,7 +679,8 @@ def simulation_run_trajectory(
         drive_modules,
         motion_set.initial_drive_module_states)
 
-    controller = (list(get_controller(drive_modules).values()))[0]
+    controller = get_controller(drive_modules)[controller_name]
+
     controller.on_state_update(drive_module_states)
 
     simulation_rate_in_hz = 100
