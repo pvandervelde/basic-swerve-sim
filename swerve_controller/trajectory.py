@@ -19,9 +19,10 @@ class DriveModuleProfile(object):
         return self.drive_profile
 
 # A collection of position / velocity / acceleration profiles
-class BodyMotionTrajectory(object):
+class LinearBodyMotionTrajectory(object):
 
-    def __init__(self, current: BodyMotion, desired: BodyMotion, min_trajectory_time_in_seconds: float):
+    def __init__(self, drive_modules: List[DriveModule], current: BodyMotion, desired: BodyMotion, min_trajectory_time_in_seconds: float):
+        self.modules = drive_modules
         self.start_state = current
         self.end_state = desired
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
@@ -36,10 +37,7 @@ class BodyMotionTrajectory(object):
             LinearProfile(current.angular_velocity.z, desired.angular_velocity.z),
         ]
 
-    def inflection_points(self) -> List[List[ProfilePoint]]:
-        pass
-
-    def value_at(self, time_fraction: float) -> BodyMotion:
+    def body_motion_at(self, time_fraction: float) -> BodyMotion:
         return BodyMotion(
             self.profile[0].value_at(time_fraction),
             self.profile[1].value_at(time_fraction),
@@ -49,7 +47,7 @@ class BodyMotionTrajectory(object):
     def time_span(self) -> float:
         return self.min_trajectory_time_in_seconds
 
-class DriveModuleStateTrajectory(object):
+class LinearDriveModuleStateTrajectory(object):
 
     def __init__(self, drive_modules: List[DriveModule], min_trajectory_time_in_seconds: float):
         self.modules = drive_modules
@@ -91,21 +89,6 @@ class DriveModuleStateTrajectory(object):
 
             self.profiles[self.modules[i].name] = module_profiles
 
-    def inflection_points(self) -> Mapping[str, List[List[ProfilePoint]]]:
-        result = {}
-        for drive_module in self.modules:
-            profile_list = self.profiles[drive_module.name]
-
-            # GRAB THE POINTS FOR EACH MODULE
-            for profile in profile_list:
-                inflection_points = profile.inflection_points()
-
-                # EACH PROFILE MIGHT BE DIFFERENT. SO SHOULD WE UNIFY THE INFLECTION POINTS
-
-            pass
-
-        return result
-
     def set_current_state(self, states: List[DriveModuleMeasuredValues]):
         if len(states) != len(self.modules):
             raise ValueError(f"The length of the drive module states list ({ len(states) }) does not match the number of drive modules.")
@@ -129,6 +112,65 @@ class DriveModuleStateTrajectory(object):
 
         if not id in self.profiles:
             raise ValueError(f"There are no profiles for a drive module with name { id }")
+
+        steering_module: DriveModule = None
+        for x in self.modules:
+            if x.name == id:
+                steering_module = x
+                break
+
+        profiles = self.profiles[id]
+
+        return DriveModuleMeasuredValues(
+            steering_module.name,
+            steering_module.steering_axis_xy_position.x,
+            steering_module.steering_axis_xy_position.y,
+            profiles[0].value_at(time_fraction),
+            profiles[0].first_derivative_at(time_fraction),
+            profiles[0].second_derivative_at(time_fraction),
+            profiles[0].third_derivative_at(time_fraction),
+            profiles[1].value_at(time_fraction),
+            profiles[1].first_derivative_at(time_fraction),
+            profiles[1].second_derivative_at(time_fraction),
+        )
+
+
+# NOT USED
+class BodyControlledDriveModuleTrajectory(object):
+    def __init__(self, drive_modules: List[DriveModule], current: BodyMotion, desired: BodyMotion, min_trajectory_time_in_seconds: float):
+        self.modules = drive_modules
+        self.start_state = current
+        self.end_state = desired
+        self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
+
+        self.profile = [
+            LinearProfile(current.linear_velocity.x, desired.linear_velocity.x),
+            LinearProfile(current.linear_velocity.y, desired.linear_velocity.y),
+            LinearProfile(current.linear_velocity.z, desired.linear_velocity.z),
+
+            LinearProfile(current.angular_velocity.x, desired.angular_velocity.x),
+            LinearProfile(current.angular_velocity.y, desired.angular_velocity.y),
+            LinearProfile(current.angular_velocity.z, desired.angular_velocity.z),
+        ]
+
+    def align_module_profiles(self):
+        if len(self.start_states) == 0 or len(self.end_states) == 0:
+            raise IncompleteTrajectoryException()
+
+        # for each profile adjust it in time such that none of the velocities / accelerations are too high for the motors to handle
+        # Then scale the profiles to match in time.
+        pass
+
+    def time_span(self) -> float:
+        return self.min_trajectory_time_in_seconds
+
+    def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
+
+        self.profile[0].value_at(time_fraction),
+        self.profile[1].value_at(time_fraction),
+        self.profile[5].value_at(time_fraction)
+
+        # --> Translate to drive module states
 
         steering_module: DriveModule = None
         for x in self.modules:

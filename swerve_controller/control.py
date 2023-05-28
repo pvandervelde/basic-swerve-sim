@@ -6,6 +6,9 @@ from .control_model import ControlModelBase
 from .geometry import Vector3
 from .states import BodyState, DriveModuleDesiredValues, BodyMotion
 
+class InvalidMotionCommandException(Exception):
+    pass
+
 class MotionCommand(ABC):
 
     # The timespan over which the command should be executed

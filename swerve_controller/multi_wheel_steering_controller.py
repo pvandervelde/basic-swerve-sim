@@ -8,12 +8,12 @@ import numpy as np
 from typing import Mapping, List, Tuple
 
 # local
-from .control import MotionCommand
+from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
 from .control_model import ControlModelBase, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .geometry import Point
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
-from .trajectory import BodyMotionTrajectory, DriveModuleStateTrajectory
+from .trajectory import LinearBodyMotionTrajectory, LinearDriveModuleStateTrajectory
 
 class MultiWheelSteeringController(ABC):
 
@@ -96,7 +96,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         self.motion_command_changed_at_time_in_seconds = 0.0
 
         # Track the current trajectories and update them if necessary
-        self.drive_module_trajectory: DriveModuleStateTrajectory = None
+        self.drive_module_trajectory: LinearDriveModuleStateTrajectory = None
 
         # Track the time at which the trajectories were created
         self.trajectory_created_at_time_in_seconds = 0.0
@@ -215,7 +215,7 @@ class LinearModuleFirstSteeringController(MultiWheelSteeringController):
         #
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
-        drive_module_trajectory = DriveModuleStateTrajectory(self.modules, self.min_time_for_trajectory)
+        drive_module_trajectory = LinearDriveModuleStateTrajectory(self.modules, self.min_time_for_trajectory)
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
@@ -268,10 +268,17 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         # Store the desired body motion, and the last point in time where this value
         # was updated
         self.desired_body_motion: BodyMotion = BodyMotion(0.0, 0.0, 0.0)
-        self.body_motion_changed_at_time_in_seconds = 0.0
+
+        # All body motions can be translated into drive module motions, however the reverse isn't
+        # true, e.g. in the case of a rotation of all the modules without changing the body
+        # orientation or velocity.
+        # So we deal with that by tracking module motions.
+        self.desired_module_motion: List[DriveModuleDesiredValues] = []
+        self.desired_motion_changed_at_time_in_seconds = 0.0
 
         # Track the current trajectories and update them if necessary
-        self.drive_module_trajectory: DriveModuleStateTrajectory = None
+        self.body_trajectory: LinearBodyMotionTrajectory = None
+        self.module_trajectory: LinearDriveModuleStateTrajectory = None
 
         # Track the time at which the trajectories were created
         self.trajectory_created_at_time_in_seconds = 0.0
@@ -283,6 +290,8 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         # trajectory we should be
         self.current_time_in_seconds = 0.0
         self.trajectory_was_started_at_time_in_seconds = 0.0
+
+        self.min_time_for_trajectory = 1.0
 
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
@@ -297,14 +306,27 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
     # time.
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleMeasuredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
-        time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span()
 
         result: List[DriveModuleMeasuredValues] = []
-        for drive_module in self.modules:
-            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
-            result.append(state)
+        if self.body_trajectory is not None:
+            time_fraction = time_from_start_of_trajectory / self.body_trajectory.time_span()
+            body_motion = self.body_trajectory.body_motion_at(time_fraction)
+            drive_module_end_state = self.control_model.state_of_wheel_modules_from_body_motion(body_motion)
+            # We now know what steering angle and drive speed we need for the given body state at the given
+            # time. In order to get measured values we also need to know which acceleration / jerk we need
+            # for both the steering angle and the drive velocity
 
-        return result
+            for drive_module in self.modules:
+                state = self.module_trajectory.value_for_module_at(drive_module.name, time_fraction)
+                result.append(state)
+        else:
+            if self.module_trajectory is not None:
+                time_fraction = time_from_start_of_trajectory / self.module_trajectory.time_span()
+                for drive_module in self.modules:
+                    state = self.module_trajectory.value_for_module_at(drive_module.name, time_fraction)
+                    result.append(state)
+
+                return result
 
     # Gets the control model that is used to determine the state of the body and the drive modules.
     def get_control_model(self) -> ControlModelBase:
@@ -324,8 +346,18 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
-        self.desired_body_motion = desired_body_motion
-        self.body_motion_changed_at_time_in_seconds = self.current_time_in_seconds
+        if isinstance(desired_motion, BodyMotionCommand):
+            self.desired_body_motion = desired_motion.to_body_state(self.control_model)
+            self.desired_module_motion = []
+        else:
+            if isinstance(desired_motion, DriveModuleMotionCommand):
+                self.desired_module_motion = desired_motion.to_drive_module_state()
+                self.desired_body_motion = None
+            else:
+                raise InvalidMotionCommandException()
+
+        self.desired_motion_changed_at_time_in_seconds = self.current_time_in_seconds
+        self.min_time_for_trajectory = desired_motion.time_for_motion()
 
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
     def on_tick(self, current_time_in_seconds: float):
@@ -336,54 +368,28 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
         # If the desired body motion was updated after the trajectory was created, then we need to
         # update the trajectory.
-        if (self.body_motion_changed_at_time_in_seconds <= self.trajectory_was_started_at_time_in_seconds) and self.drive_module_trajectory is not None:
+        if (self.desired_motion_changed_at_time_in_seconds <= self.trajectory_was_started_at_time_in_seconds) and self.body_trajectory is not None:
             return
 
+        if self.desired_body_motion is not None:
+            self.body_trajectory = LinearBodyMotionTrajectory(self.body_state, self.desired_body_motion, self.min_time_for_trajectory)
+            self.module_trajectory = None
+        else:
+            if len(self.desired_module_motion) > 0:
+                drive_module_trajectory = LinearDriveModuleStateTrajectory(self.modules)
+                drive_module_trajectory.set_current_state(self.module_states)
+                drive_module_trajectory.set_desired_end_state(self.desired_module_motion)
 
-        # Allow for different methods of calculating the trajectory
-        # - Use current state as start, use desired end Motion as end state --> compute module states --> assume linear for module states
-        # - current state --> body state; desired end Motion --> body trajectory --> split up into points --> compute module states --> module trajectory
+                # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
+                # and make sure that the trajectories of the different modules all span the same time frame
+                drive_module_trajectory.align_module_profiles()
 
+                self.module_trajectory = drive_module_trajectory
+                self.body_trajectory = None
+            else:
+                # No desired body or module motion is
+                return
 
-
-
-
-
-
-        # use the twist trajectory to compute the state for the steering modules for the end state
-        # and several intermediate points, i.e. determine the vector [[v_i];[gamma_i]].
-        #    Use Seegmiller and Kelly to compute the desired velocities and angles
-        #
-        #    Keep in mind that our update rate determines the points in time where we can do something
-        #
-        #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
-        #    if we use a co-axial system
-        drive_module_trajectory = DriveModuleStateTrajectory(self.modules)
-        drive_module_trajectory.set_current_state(self.module_states)
-
-        # We may need a pre-trajectory section that aligns the wheel modules to the movement we want
-        # to make. This would only be the case if we're currently not moving. If we're moving all
-        # modules should be aligned.
-        #
-        # If we're moving and the modules are not aligned (given a certain tolerance) then we need to
-        # rectify that first!
-        #
-        # --> This almost feels like we need some kind of decision tree structure?
-        #
-        #
-
-        # We get both the forward and reverse options here. We should see which is the better one
-        # For now just use the forward one
-        drive_module_potential_states = self.control_model.state_of_wheel_modules_from_body_motion(self.module_states, self.desired_body_motion)
-        drive_module_desired_states = [x[0] for x in drive_module_potential_states]
-
-        drive_module_trajectory.set_desired_end_state(drive_module_desired_states)
-
-        # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
-        # and make sure that the trajectories of the different modules all span the same time frame
-        drive_module_trajectory.align_module_profiles()
-
-        self.drive_module_trajectory = drive_module_trajectory
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
 class SmoothSteeringController(MultiWheelSteeringController):
