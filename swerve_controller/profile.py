@@ -135,8 +135,6 @@ class MultiPointLinearProfile(TransientValueProfile):
                     continue
 
             if self.profiles[i].location > time_fraction:
-                # This case should never happen because we would have found that in the first
-                # if statement where the time_fraction should have matched 0.0
                 if i - 1 >= 0:
                     if self.profiles[i - 1].location < time_fraction:
                         self.profiles.insert(i, section)
@@ -163,7 +161,7 @@ class MultiPointLinearProfile(TransientValueProfile):
             raise InvalidTimeFractionException(f'Could not find any known time locations smaller and larger than { time_fraction }')
 
         if i == 0:
-            return (i, i)
+            return (i, i + 1)
         else:
             return ( i - 1, i)
 
@@ -193,10 +191,12 @@ class MultiPointLinearProfile(TransientValueProfile):
         smallest_index = smaller_index - past_points + 1
         if smallest_index < 0:
             future_points += int(abs(smallest_index))
+            smallest_index = 0
 
         largest_index = larger_index + future_points - 1
         if largest_index > len(self.profiles) - 1:
             smallest_index -= int(abs(len(self.profiles) - 1 - largest_index))
+            largest_index = len(self.profiles) - 1
 
         time_fractions = []
         values = []
@@ -204,7 +204,7 @@ class MultiPointLinearProfile(TransientValueProfile):
             time_fractions.append(self.profiles[i].location)
             values.append(self.profiles[i].value)
 
-        return Polynomial.fit(time_fractions, values, number_of_points - 1)
+        return Polynomial.fit(time_fractions, values, number_of_points - 1, domain=[time_fractions[0], time_fractions[len(time_fractions) - 1]])
 
     def polynomial_order(self) -> int:
         # For now we don't go beyond a 3rd order polynomial. A 3rd order polynomial should give us

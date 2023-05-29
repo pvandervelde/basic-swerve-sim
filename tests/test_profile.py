@@ -142,26 +142,26 @@ def test_should_show_first_derivative_at_with_second_order_multi_point_profile()
     profile.add_value(0.5, 3.0)
 
     assert math.isclose(profile.first_derivative_at(0.0), 7.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(1.0), -5.0 - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), -5.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.first_derivative_at(0.5), 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_first_derivative_at_with_third_order_multi_point_profile():
 
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
 
-    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.0), 0.25, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), 2.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.5), 0.9375, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_first_derivative_at_with_third_order_with_additional_points_multi_point_profile():
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -174,9 +174,9 @@ def test_should_show_first_derivative_at_with_third_order_with_additional_points
     profile.add_value(0.8, 1.648)
     profile.add_value(0.9, 1.81225)
 
-    assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.0), 0.25, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), 2.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(0.5), 0.9375, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_second_derivative_at_with_first_order_multi_point_profile():
     start = 1.0
@@ -196,14 +196,14 @@ def test_should_show_second_derivative_at_with_second_order_multi_point_profile(
     profile.add_value(0.5, 3.0)
 
     assert math.isclose(profile.second_derivative_at(0.0), -12.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.second_derivative_at(1.0), -12.0 - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(1.0), -12.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.second_derivative_at(0.5), -12.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_second_derivative_at_with_third_order_multi_point_profile():
 
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -214,8 +214,8 @@ def test_should_show_second_derivative_at_with_third_order_multi_point_profile()
 
 def test_should_show_second_derivative_at_with_third_order_with_additional_points_multi_point_profile():
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -250,14 +250,14 @@ def test_should_show_third_derivative_at_with_second_order_multi_point_profile()
     profile.add_value(0.5, 3.0)
 
     assert math.isclose(profile.third_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.third_derivative_at(1.0), 0.0 - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.third_derivative_at(0.5), 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_third_derivative_at_with_third_order_multi_point_profile():
 
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -268,8 +268,8 @@ def test_should_show_third_derivative_at_with_third_order_multi_point_profile():
 
 def test_should_show_third_derivative_at_with_third_order_with_additional_points_multi_point_profile():
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -303,8 +303,8 @@ def test_should_show_value_at_with_second_order_multi_point_profile():
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.5, 3.0)
 
-    assert math.isclose(profile.value_at(0.0), 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(profile.value_at(1.0), 2.0 - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(0.0), start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(1.0), end, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.value_at(0.5), 3.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.value_at(0.25), 2.375, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.value_at(0.75), 2.875, rel_tol=1e-6, abs_tol=1e-15)
@@ -312,8 +312,8 @@ def test_should_show_value_at_with_second_order_multi_point_profile():
 def test_should_show_value_at_with_third_order_multi_point_profile():
 
     # This gives: f(x) = 0.25 * x^3 + 0.5 * x^2 + 0.25 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     profile = MultiPointLinearProfile(start, end)
     profile.add_value(0.3, 1.12675)
     profile.add_value(0.6, 1.384)
@@ -578,12 +578,3 @@ def test_should_show_third_derivative_at_with_multiple_sub_profiles_in_compound_
     assert profile.third_derivative_at(0.7) == sub_profile_3.third_derivative_at(0.0)
     assert profile.third_derivative_at(0.85) == sub_profile_3.third_derivative_at(0.5)
     assert profile.third_derivative_at(1.0) == sub_profile_3.third_derivative_at(1.0)
-
-def test_should_show_inflection_points_with_single_profile():
-    pytest.fail("not implemented yet")
-
-def test_should_show_inflection_points_with_multiple_not_connected_profiles():
-    pytest.fail("not implemented yet")
-
-def test_should_show_inflection_points_with_multiple_connected_profiles():
-    pytest.fail("not implemented yet")
