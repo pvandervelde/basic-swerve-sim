@@ -1,19 +1,17 @@
-from abc import ABC, abstractmethod
 import argparse
-from math import cos, isclose, isinf, pi, radians, sin, sqrt
+from math import cos, isclose, isinf, sin
 from os import makedirs, path
 from pathlib import Path
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.offline as py
-from random import random
 from typing import List, Mapping, NamedTuple, Tuple
 import yaml
 from yaml.loader import SafeLoader
 
 # local
 from swerve_controller.control import BodyMotionCommand, DriveModuleMotionCommand, MotionCommand
-from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Orientation, Point
+from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
     LinearBodyFirstSteeringController,
@@ -21,8 +19,7 @@ from swerve_controller.multi_wheel_steering_controller import (
     MultiWheelSteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
-from swerve_controller.states import BodyState, BodyMotion
-from swerve_controller.trajectory import LinearBodyMotionTrajectory, LinearDriveModuleStateTrajectory
+from swerve_controller.states import BodyState
 
 class ProfilePlotValues(NamedTuple):
     name: str

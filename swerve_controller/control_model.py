@@ -163,7 +163,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                 # the asin value decides if the wheel orientation is between 90 - 0 degrees or 360 - 270 degrees, i.e. left and right
                 if cos_angle <= 0.5 * math.pi:
                     if sin_angle < 0:
-                        forward_steering_angle = sin_angle + 2 * math.pi
+                        forward_steering_angle = sin_angle #+ 2 * math.pi
                     else:
                         forward_steering_angle = sin_angle
                 else:

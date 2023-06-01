@@ -13,7 +13,7 @@ from .control_model import ControlModelBase, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .geometry import Point
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
-from .trajectory import LinearBodyMotionTrajectory, LinearDriveModuleStateTrajectory
+from .trajectory import BodyControlledDriveModuleTrajectory, LinearDriveModuleStateTrajectory, ModuleStateTrajectory
 
 class MultiWheelSteeringController(ABC):
 
@@ -277,8 +277,7 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         self.desired_motion_changed_at_time_in_seconds = 0.0
 
         # Track the current trajectories and update them if necessary
-        self.body_trajectory: LinearBodyMotionTrajectory = None
-        self.module_trajectory: LinearDriveModuleStateTrajectory = None
+        self.module_trajectory: ModuleStateTrajectory = None
 
         # Track the time at which the trajectories were created
         self.trajectory_created_at_time_in_seconds = 0.0
@@ -308,25 +307,12 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
         result: List[DriveModuleMeasuredValues] = []
-        if self.body_trajectory is not None:
-            time_fraction = time_from_start_of_trajectory / self.body_trajectory.time_span()
-            body_motion = self.body_trajectory.body_motion_at(time_fraction)
-            drive_module_end_state = self.control_model.state_of_wheel_modules_from_body_motion(body_motion)
-            # We now know what steering angle and drive speed we need for the given body state at the given
-            # time. In order to get measured values we also need to know which acceleration / jerk we need
-            # for both the steering angle and the drive velocity
+        time_fraction = time_from_start_of_trajectory / self.module_trajectory.time_span()
+        for drive_module in self.modules:
+            state = self.module_trajectory.value_for_module_at(drive_module.name, time_fraction)
+            result.append(state)
 
-            for drive_module in self.modules:
-                state = self.module_trajectory.value_for_module_at(drive_module.name, time_fraction)
-                result.append(state)
-        else:
-            if self.module_trajectory is not None:
-                time_fraction = time_from_start_of_trajectory / self.module_trajectory.time_span()
-                for drive_module in self.modules:
-                    state = self.module_trajectory.value_for_module_at(drive_module.name, time_fraction)
-                    result.append(state)
-
-                return result
+        return result
 
     # Gets the control model that is used to determine the state of the body and the drive modules.
     def get_control_model(self) -> ControlModelBase:
@@ -351,7 +337,7 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
             self.desired_module_motion = []
         else:
             if isinstance(desired_motion, DriveModuleMotionCommand):
-                self.desired_module_motion = desired_motion.to_drive_module_state()
+                self.desired_module_motion = desired_motion.to_drive_module_state(self.control_model)[0]
                 self.desired_body_motion = None
             else:
                 raise InvalidMotionCommandException()
@@ -368,15 +354,17 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
 
         # If the desired body motion was updated after the trajectory was created, then we need to
         # update the trajectory.
-        if (self.desired_motion_changed_at_time_in_seconds <= self.trajectory_was_started_at_time_in_seconds) and self.body_trajectory is not None:
+        if (self.desired_motion_changed_at_time_in_seconds <= self.trajectory_was_started_at_time_in_seconds) and self.module_trajectory is not None:
             return
 
         if self.desired_body_motion is not None:
-            self.body_trajectory = LinearBodyMotionTrajectory(self.body_state, self.desired_body_motion, self.min_time_for_trajectory)
-            self.module_trajectory = None
+            trajectory = BodyControlledDriveModuleTrajectory(self.modules, self.control_model, self.min_time_for_trajectory, 50.0)
+            trajectory.set_current_state(self.module_states)
+            trajectory.set_desired_end_state(self.desired_body_motion)
+            self.module_trajectory = trajectory
         else:
             if len(self.desired_module_motion) > 0:
-                drive_module_trajectory = LinearDriveModuleStateTrajectory(self.modules)
+                drive_module_trajectory = LinearDriveModuleStateTrajectory(self.modules, self.min_time_for_trajectory)
                 drive_module_trajectory.set_current_state(self.module_states)
                 drive_module_trajectory.set_desired_end_state(self.desired_module_motion)
 
@@ -385,7 +373,6 @@ class LinearBodyFirstSteeringController(MultiWheelSteeringController):
                 drive_module_trajectory.align_module_profiles()
 
                 self.module_trajectory = drive_module_trajectory
-                self.body_trajectory = None
             else:
                 # No desired body or module motion is
                 return
