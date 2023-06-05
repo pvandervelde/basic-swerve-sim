@@ -14,8 +14,6 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
-    LinearBodyFirstSteeringController,
-    LinearModuleFirstSteeringController,
     MultiWheelSteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
@@ -287,12 +285,6 @@ def generate_plot_traces(plots: List[List[ProfilePlotValues]]) -> List[go.Figure
             fig.update_yaxes(title_text=values.name)
 
     return figures
-
-def get_controller(drive_modules: List[DriveModule]) -> Mapping[str, MultiWheelSteeringController]:
-    return {
-        "LinearModuleFirstSteeringController": LinearModuleFirstSteeringController(drive_modules),
-        "LinearBodyFirstSteeringController": LinearBodyFirstSteeringController(drive_modules),
-    }
 
 def get_drive_module_info() -> List[DriveModule]:
     drive_modules: List[DriveModule] = []
@@ -642,7 +634,6 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
     do_not_draw_graphs: bool = arg_dict["no_graphs"]
-    controller_name : str = arg_dict["controller"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -654,13 +645,12 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     motions = get_motions(input_files)
     for motion_set in motions:
         motion_directory = path.join(output_directory, motion_set.name)
-        simulation_run_trajectory(motion_directory, drive_modules, motion_set, controller_name, do_not_draw_graphs)
+        simulation_run_trajectory(motion_directory, drive_modules, motion_set, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
-    controller_name: str,
     do_not_draw_graphs: bool,
     ):
 
@@ -672,22 +662,22 @@ def simulation_run_trajectory(
     print("Initializing state file at {}".format(state_file_path))
     initialize_state_file(state_file_path, len(drive_modules))
 
-    drive_module_states: List[DriveModuleMeasuredValues] = initialize_drive_modules(
+    initial_module_states: List[DriveModuleMeasuredValues] = initialize_drive_modules(
         drive_modules,
         motion_set.initial_drive_module_states)
 
-    controller = get_controller(drive_modules)[controller_name]
+    controller = MultiWheelSteeringController(drive_modules)
 
-    controller.on_state_update(drive_module_states)
+    controller.on_state_update(initial_module_states)
 
     simulation_rate_in_hz = 100
     current_sim_time_in_seconds = 0.0
-    time_step_in_seconds = 1.0 / simulation_rate_in_hz
+
 
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the
     # time span over which the command state should be achieved
 
-    points_in_time: List[float] = [ current_sim_time_in_seconds ]
+    points_in_time: List[float] = [ ]
     body_states: List[BodyState] = []
     drive_states: List[List[DriveModuleMeasuredValues]] = []
     icr_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]] = []
@@ -695,23 +685,20 @@ def simulation_run_trajectory(
     body_state = motion_set.body_state
 
     for motion in motion_set.motions:
+        controller.on_tick(current_sim_time_in_seconds)
         controller.on_desired_state_update(motion)
 
         step_count = int(motion.time_for_motion() * simulation_rate_in_hz)
+        time_step_in_seconds =  1.0 / float(simulation_rate_in_hz)
 
-        for i in range(1, step_count + 1):
+        for time_index in range(1, step_count + 1):
             controller.on_tick(current_sim_time_in_seconds)
-
-            current_sim_time_in_seconds += time_step_in_seconds
-
-            print("Processing step at {} ...".format(current_sim_time_in_seconds))
 
             points_in_time.append(current_sim_time_in_seconds)
 
-            drive_module_states = controller.drive_module_state_at_future_time(current_sim_time_in_seconds)
-            drive_states.append(drive_module_states)
-
-            icr_coordinate_map = instantaneous_center_of_rotation_at_current_time(drive_module_states)
+            # Record the current state of the system
+            current_drive_module_states = controller.drive_module_states_at_current_time()
+            icr_coordinate_map = instantaneous_center_of_rotation_at_current_time(current_drive_module_states)
             icr_map.append(
                     (
                         current_sim_time_in_seconds,
@@ -719,46 +706,50 @@ def simulation_run_trajectory(
                     )
                 )
 
-            body_motion = controller.get_control_model().body_motion_from_wheel_module_states(drive_module_states)
-
-            local_x_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
-            local_y_distance = time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
-            global_orientation = body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
-            body_state = BodyState(
-                body_state.position_in_world_coordinates.x + local_x_distance * cos(global_orientation) - local_y_distance * sin(global_orientation),
-                body_state.position_in_world_coordinates.y + local_x_distance * sin(global_orientation) + local_y_distance * cos(global_orientation),
-                global_orientation,
-                body_motion.linear_velocity.x,
-                body_motion.linear_velocity.y,
-                body_motion.angular_velocity.z,
-            )
-
+            body_state = controller.body_state_at_current_time()
             body_states.append(body_state)
+
+            drive_states.append(current_drive_module_states)
 
             record_state_at_time(
                 state_file_path,
                 current_sim_time_in_seconds,
                 body_state,
-                drive_module_states)
+                current_drive_module_states)
 
-            current_drive_states: List[DriveModuleMeasuredValues] = []
-            for desired_state in drive_module_states:
-                current_drive_states.append(
+            current_sim_time_in_seconds += time_step_in_seconds
+
+            print("Processing step at {} ...".format(current_sim_time_in_seconds))
+
+            # Predict what the next state is going to be
+            desired_drive_module_states = controller.drive_module_state_at_future_time(current_sim_time_in_seconds)
+            predicted_drive_states: List[DriveModuleMeasuredValues] = []
+            for module_index in range(len(drive_modules)):
+
+                orientation_velocity = (desired_drive_module_states[module_index].steering_angle_in_radians - current_drive_module_states[module_index].orientation_in_body_coordinates.z) / time_step_in_seconds
+                orientation_acceleration = (orientation_velocity - current_drive_module_states[module_index].orientation_velocity_in_body_coordinates.z) / time_step_in_seconds
+                orientation_jerk = (orientation_acceleration - current_drive_module_states[module_index].orientation_acceleration_in_body_coordinates.z) / time_step_in_seconds
+
+                drive_acceleration = (desired_drive_module_states[module_index].drive_velocity_in_meters_per_second - current_drive_module_states[module_index].drive_velocity_in_module_coordinates.x) / time_step_in_seconds
+                drive_jerk = (drive_acceleration - current_drive_module_states[module_index].drive_acceleration_in_module_coordinates.x) / time_step_in_seconds
+
+                predicted_drive_states.append(
                     DriveModuleMeasuredValues(
-                        desired_state.name,
-                        desired_state.position_in_body_coordinates.x,
-                        desired_state.position_in_body_coordinates.y,
-                        desired_state.orientation_in_body_coordinates.z,
-                        desired_state.orientation_velocity_in_body_coordinates.z,
-                        desired_state.orientation_acceleration_in_body_coordinates.z,
-                        desired_state.orientation_jerk_in_body_coordinates.z,
-                        desired_state.drive_velocity_in_module_coordinates.x,
-                        desired_state.drive_acceleration_in_module_coordinates.x,
-                        desired_state.drive_jerk_in_module_coordinates.x,
+                        drive_modules[module_index].name,
+                        drive_modules[module_index].steering_axis_xy_position.x,
+                        drive_modules[module_index].steering_axis_xy_position.y,
+                        desired_drive_module_states[module_index].steering_angle_in_radians,
+                        orientation_velocity,
+                        orientation_acceleration,
+                        orientation_jerk,
+                        desired_drive_module_states[module_index].drive_velocity_in_meters_per_second,
+                        drive_acceleration,
+                        drive_jerk,
                     )
                 )
 
-            controller.on_state_update(current_drive_states)
+            # Set the predicted state as the next state
+            controller.on_state_update(predicted_drive_states)
 
     # Now draw all the graphs
     if not do_not_draw_graphs:
