@@ -24,20 +24,19 @@ class DriveModuleProfile(object):
 # A collection of position / velocity / acceleration profiles
 class LinearBodyMotionTrajectory(object):
 
-    def __init__(self, drive_modules: List[DriveModule], current: BodyMotion, desired: BodyMotion, min_trajectory_time_in_seconds: float):
-        self.modules = drive_modules
+    def __init__(self, current: BodyState, desired: BodyMotion, min_trajectory_time_in_seconds: float):
         self.start_state = current
         self.end_state = desired
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
-            LinearProfile(current.linear_velocity.x, desired.linear_velocity.x),
-            LinearProfile(current.linear_velocity.y, desired.linear_velocity.y),
-            LinearProfile(current.linear_velocity.z, desired.linear_velocity.z),
+            LinearProfile(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
+            LinearProfile(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
+            LinearProfile(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
 
-            LinearProfile(current.angular_velocity.x, desired.angular_velocity.x),
-            LinearProfile(current.angular_velocity.y, desired.angular_velocity.y),
-            LinearProfile(current.angular_velocity.z, desired.angular_velocity.z),
+            LinearProfile(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
+            LinearProfile(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
+            LinearProfile(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
         ]
 
     def body_motion_at(self, time_fraction: float) -> BodyMotion:
