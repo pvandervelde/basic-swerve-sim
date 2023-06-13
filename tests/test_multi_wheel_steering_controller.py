@@ -3,13 +3,13 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from ..swerve_controller.control_model import DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
-from ..swerve_controller.drive_module import DriveModule
-from ..swerve_controller.errors import IncompleteTrajectoryException
-from ..swerve_controller.geometry import Point
-from ..swerve_controller.sim_utils import get_intersect
-from ..swerve_controller.states import BodyState
-from ..swerve_controller.trajectory import BodyMotionTrajectory, DriveModuleProfile, DriveModuleStateTrajectory
+from swerve_controller.control_model import DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
+from swerve_controller.drive_module import DriveModule
+from swerve_controller.errors import IncompleteTrajectoryException
+from swerve_controller.geometry import Point
+from swerve_controller.sim_utils import get_intersect
+from swerve_controller.states import BodyState
+from swerve_controller.trajectory import LinearBodyMotionTrajectory, DriveModuleProfile, LinearDriveModuleStateTrajectory
 
 def test_intersect_with_parallel_lines():
     intersection_point = get_intersect(

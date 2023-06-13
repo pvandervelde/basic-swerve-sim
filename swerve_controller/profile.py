@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List
+import math
+from numpy.polynomial.polynomial import Polynomial
+from typing import List, Tuple
 
 # local
 from .errors import InvalidTimeFractionException
@@ -84,6 +86,168 @@ class LinearProfile(TransientValueProfile):
             return self.end
 
         return (self.end - self.start) * time_fraction + self.start
+
+class CompoundProfileValue(object):
+
+    def __init__(
+        self,
+        location_fraction: float,
+        value: float
+    ):
+        self.location = location_fraction
+        self.value = value
+
+class MultiPointLinearProfile(TransientValueProfile):
+
+    def __init__(self, start: float, end: float):
+        self.profiles: List[CompoundProfileValue] = [
+            CompoundProfileValue(0.0, start),
+            CompoundProfileValue(1.0, end)
+        ]
+
+        # We have two points (begin and end) so at best we can do a linear approach
+        self.maximum_polynomial_order = 1
+
+    def add_value(self, time_fraction: float, value: float):
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        section = CompoundProfileValue(time_fraction,value)
+
+        for i in range(len(self.profiles)):
+            if math.isclose(time_fraction, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
+                # Matching location. Replace it
+                self.profiles[i] = section
+                # we're replacing an existing point so the minimum polynomial order doesn't change
+                break
+
+            if self.profiles[i].location < time_fraction:
+                if i + 1 >= len(self.profiles):
+                    # last profile
+                    self.profiles.append(section)
+                    self.maximum_polynomial_order += 1
+                    break
+                else:
+                    # not the last profile. Go around the loop and we'll get it then
+                    continue
+
+            if self.profiles[i].location > time_fraction:
+                if i - 1 >= 0:
+                    if self.profiles[i - 1].location < time_fraction:
+                        self.profiles.insert(i, section)
+                        self.maximum_polynomial_order += 1
+                        break
+
+    def find_time_indices_for_time_fraction(self, time_fraction: float) -> Tuple[int, int]:
+        # Assumption:
+        #  0.0 <= time_fraction <= 1.0
+
+        # Find the two time fractions that encompasses the given time_fraction. One value will be the closest
+        # smaller value and one will be the closest larger value
+        index = -1
+        for i in range(len(self.profiles)):
+            # If the i-th value is smaller and the (i+1)-th is bigger then we have found the correct location
+            if self.profiles[i].location >= time_fraction:
+                # Found the first location that is bigger than time_fraction
+                index = i
+                break
+
+        if index == -1:
+            # we didn't find anything. that's weird because there's a guaranteed beginning and ending
+            # throw a hissy
+            raise InvalidTimeFractionException(f'Could not find any known time locations smaller and larger than { time_fraction }')
+
+        if i == 0:
+            return (i, i + 1)
+        else:
+            return ( i - 1, i)
+
+    def first_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        poly = self.polynomial_at_time(time_fraction)
+        first_deriv = poly.deriv(1)
+        return first_deriv(time_fraction)
+
+    def inflection_points(self) -> List[ProfilePoint]:
+        pass
+
+    def polynomial_at_time(self, time_fraction: float) -> Polynomial:
+        # find the index for the points
+        number_of_points = self.polynomial_order() + 1
+        smaller_index, larger_index = self.find_time_indices_for_time_fraction(time_fraction)
+
+        # bias towards the 'future' because that's what we want to achieve
+        past_points = number_of_points // 2
+        future_points = number_of_points - past_points
+
+        smallest_index = smaller_index - past_points + 1
+        if smallest_index < 0:
+            future_points += int(abs(smallest_index))
+            smallest_index = 0
+
+        largest_index = larger_index + future_points - 1
+        if largest_index > len(self.profiles) - 1:
+            smallest_index -= int(abs(len(self.profiles) - 1 - largest_index))
+            largest_index = len(self.profiles) - 1
+
+        time_fractions = []
+        values = []
+        for i in range(smallest_index, largest_index + 1):
+            time_fractions.append(self.profiles[i].location)
+            values.append(self.profiles[i].value)
+
+        return Polynomial.fit(time_fractions, values, number_of_points - 1, domain=[time_fractions[0], time_fractions[len(time_fractions) - 1]])
+
+    def polynomial_order(self) -> int:
+        # For now we don't go beyond a 3rd order polynomial. A 3rd order polynomial should give us
+        # - 3rd order position
+        # - 2nd order velocity
+        # - 1st order acceration
+        # - 0th order jerk
+        if self.maximum_polynomial_order <= 3:
+            return self.maximum_polynomial_order
+        else:
+            return 3
+
+    def second_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        poly = self.polynomial_at_time(time_fraction)
+        first_deriv = poly.deriv(2)
+        return first_deriv(time_fraction)
+
+    def third_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        poly = self.polynomial_at_time(time_fraction)
+        first_deriv = poly.deriv(3)
+        return first_deriv(time_fraction)
+
+    def value_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            time_fraction = 0.0
+
+        if time_fraction > 1.0:
+            time_fraction = 1.0
+
+        poly = self.polynomial_at_time(time_fraction)
+        return poly(time_fraction)
 
 class CompoundProfileSection(object):
 
