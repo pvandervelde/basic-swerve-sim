@@ -3,7 +3,7 @@ import pytest
 from typing import Mapping, List, Tuple
 
 # locals
-from swerve_controller.control_model import SimpleFourWheelSteeringControlModel
+from swerve_controller.control_model import difference_between_angles, normalize_angle, SimpleFourWheelSteeringControlModel
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.geometry import Point
 from swerve_controller.states import BodyMotion, BodyState, DriveModuleMeasuredValues
@@ -81,6 +81,37 @@ def create_drive_modules(
     result.append(right_rear_drive)
 
     return result
+
+# normalize_angle
+
+def test_should_normalize_angle():
+    assert math.isclose(normalize_angle(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(0.5 * math.pi), 0.5 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(math.pi), math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(1.5 * math.pi), -0.5 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(2 * math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(2.5 * math.pi), 0.5 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+
+    assert math.isclose(normalize_angle(4.0 * math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(5.0 * math.pi), math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(100 * math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+
+    assert math.isclose(normalize_angle(-math.pi + 1e-6), -math.pi + 1e-6, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(normalize_angle(-1.5 * math.pi), 0.5 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+
+def test_should_calculate_difference_between_angles():
+    assert math.isclose(difference_between_angles(0.0, 0.0), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(difference_between_angles(0.0, 2 * math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(difference_between_angles(2 * math.pi, 0.0), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+
+    assert math.isclose(difference_between_angles(math.pi, -math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(difference_between_angles(-math.pi, math.pi), 0.0, rel_tol=1e-6, abs_tol=1e-6)
+
+    assert math.isclose(difference_between_angles(0.5 * math.pi, -0.5 * math.pi), -math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(difference_between_angles(0.5 * math.pi, -math.pi), 0.5 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+
+    assert math.isclose(difference_between_angles(179.0/360.0 * 2 * math.pi, 181.0/360.0 * 2 * math.pi), 2.0 / 360.0 * 2 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(difference_between_angles(1.0/360.0 * 2 * math.pi, 359.0/360.0 * 2 * math.pi), -2.0 / 360.0 * 2 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
 
 # body_motion_from_wheel_module_states
 
