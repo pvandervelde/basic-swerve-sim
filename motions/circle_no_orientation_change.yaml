@@ -17,16 +17,16 @@ plan:
     modules:
       - name: "left-front"
         orientation_in_radians_relative_to_body: 0.0
-        velocity_in_meters_per_second: 0.0
+        velocity_in_meters_per_second: 1.0
       - name: "left_rear"
         orientation_in_radians_relative_to_body: 0.0
-        velocity_in_meters_per_second: 0.0
+        velocity_in_meters_per_second: 1.0
       - name: "right-rear"
         orientation_in_radians_relative_to_body: 0.0
-        velocity_in_meters_per_second: 0.0
+        velocity_in_meters_per_second: 1.0
       - name: "right-front"
         orientation_in_radians_relative_to_body: 0.0
-        velocity_in_meters_per_second: 0.0
+        velocity_in_meters_per_second: 1.0
   commands:
     - time_span: 1.0
       body:

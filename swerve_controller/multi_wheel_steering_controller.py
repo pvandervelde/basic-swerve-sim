@@ -9,7 +9,7 @@ from typing import Callable, Mapping, List, Tuple
 
 # local
 from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
-from .control_model import ControlModelBase, SimpleFourWheelSteeringControlModel
+from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
 from .drive_module import DriveModule
 from .geometry import Point
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
@@ -117,17 +117,10 @@ class MultiWheelSteeringController(object):
                 #previous_rotation_difference = current_steering_angle - previous_state_for_module.orientation_in_body_coordinates.z
                 #previous_velocity_difference = current_velocity - previous_state_for_module.drive_velocity_in_module_coordinates.x
 
-                # Normalize the steering angle to be between 0 and 2pi
-                # if current_steering_angle >= 2 * math.pi:
-                #     current_steering_angle -= 2 * math.pi
-
-                # if current_steering_angle < 0:
-                #     current_steering_angle += 2 * math.pi
-
                 states_for_module = drive_module_desired_values[i]
 
-                first_state_rotation_difference = states_for_module[0].steering_angle_in_radians - current_steering_angle
-                second_state_rotation_difference = states_for_module[1].steering_angle_in_radians - current_steering_angle
+                first_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[0].steering_angle_in_radians)
+                second_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[1].steering_angle_in_radians)
 
                 first_state_velocity_difference = states_for_module[0].drive_velocity_in_meters_per_second - current_velocity
                 second_state_velocity_difference = states_for_module[1].drive_velocity_in_meters_per_second - current_velocity

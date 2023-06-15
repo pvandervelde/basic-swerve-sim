@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from __future__ import annotations
+
 import math
 import numpy as np
 from numpy.linalg import pinv
@@ -9,6 +11,33 @@ from typing import Mapping, List, Tuple
 from .drive_module import DriveModule
 from .geometry import Orientation, Point, Vector3
 from .states import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
+
+def normalize_angle(angle_in_radians: float) -> float:
+    # reduce the angle to [-2pi, 2pi]
+    angle = angle_in_radians % (2 * math.pi)
+
+    # Force the angle to the between 0 and 2pi
+    angle = (angle + 2 * math.pi) % (2 * math.pi)
+
+    if angle > math.pi:
+        angle -= 2 * math.pi
+
+    return angle
+
+def difference_between_angles(starting_angle_in_radians: float, ending_angle_in_radians: float) -> float:
+    normalized_start = normalize_angle(starting_angle_in_radians)
+    normalized_end = normalize_angle(ending_angle_in_radians)
+
+    diff_angle = normalized_end - normalized_start
+
+    # make sure we get the smallest angle
+    if diff_angle > math.pi:
+        diff_angle -= 2 * math.pi
+    else:
+        if diff_angle < -math.pi:
+            diff_angle += 2 * math.pi
+
+    return diff_angle
 
 # Abstract class for control models
 class ControlModelBase(object):
@@ -170,17 +199,14 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                     # cos_angle is larger than 1/2 * pi. In that case if the
                     if sin_angle < 0:
                         # In this case we want to mirror the current angle relative to Pi (or 180 degrees)
-                        forward_steering_angle = (math.pi - cos_angle) + math.pi
+                        forward_steering_angle = difference_between_angles(cos_angle, math.pi) + math.pi
                     else:
                         forward_steering_angle = cos_angle
 
-            if not math.isinf(forward_steering_angle):
-                if forward_steering_angle >= 2 * math.pi:
-                    forward_steering_angle -= 2 * math.pi
+                forward_steering_angle = normalize_angle(forward_steering_angle)
 
-                reverse_steering_angle = forward_steering_angle + math.pi
-                if reverse_steering_angle >= 2 * math.pi:
-                    reverse_steering_angle -= 2 * math.pi
+            if not math.isinf(forward_steering_angle):
+                reverse_steering_angle = normalize_angle(forward_steering_angle + math.pi)
             else:
                 reverse_steering_angle = float("-infinity")
 
