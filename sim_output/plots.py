@@ -10,9 +10,6 @@ from sim_output.animate import plot_movement_through_space
 # local
 from swerve_controller.control_model import DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
-from swerve_controller.multi_wheel_steering_controller import (
-    MultiWheelSteeringController,
-)
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
 from swerve_controller.states import BodyState
 
@@ -22,8 +19,6 @@ class ProfilePlotValues(NamedTuple):
     x_values: List[float]
     y_values: List[float]
     annotations: List[str] = []
-
-
 
 def generate_plot_information(
     points_in_time: List[float],
@@ -284,7 +279,7 @@ def plot_trajectories(
     figs = generate_plot_traces(plots)
 
     plot_file_path = path.join(output_directory, "{}-trajectory.gif".format(short_name))
-    plot_movement_through_space(points_in_time, drive_modules, body_states, drive_states, plot_file_path)
+    plot_movement_through_space(points_in_time, drive_modules, body_states, drive_states, icr_coordinate_map, plot_file_path)
 
     index = 0
     for fig in figs:

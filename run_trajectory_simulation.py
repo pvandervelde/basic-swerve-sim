@@ -13,6 +13,7 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
+    LinearModuleFirstSteeringController,
     MultiWheelSteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
@@ -274,6 +275,16 @@ def read_arguments() -> Mapping[str, any]:
         help="Indicates if graphs should be generated or not. If not specified graphs will be created."
     )
 
+    parser.add_argument(
+        "-c",
+        "--control-level",
+        action="store",
+        choices=['module', 'body'],
+        default='module',
+        required=False,
+        help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body'"
+    )
+
     args = parser.parse_args()
 
     return vars(args)
@@ -340,6 +351,7 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
     output_directory: str = arg_dict["output"]
     do_not_draw_graphs: bool = arg_dict["no_graphs"]
+    controller: str = arg_dict["control_level"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -350,20 +362,28 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     drive_modules = get_drive_module_info()
     motions = get_motions(input_files)
     for motion_set in motions:
-        motion_directory = path.join(output_directory, motion_set.name)
-        simulation_run_trajectory(motion_directory, drive_modules, motion_set, do_not_draw_graphs)
+        simulation_run_trajectory(output_directory, drive_modules, motion_set, controller, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
+    controller_name: str,
     do_not_draw_graphs: bool,
     ):
 
-    state_file_path = path.join(output_directory, "sim_results.csv")
-    if not path.isdir(output_directory):
-        print("Output directory {} does not exist. Creating directory ...".format(output_directory))
-        makedirs(output_directory)
+    if controller_name == 'module':
+        controller = LinearModuleFirstSteeringController(drive_modules)
+
+    if controller_name == 'body':
+        controller = MultiWheelSteeringController(drive_modules)
+
+    motion_directory = path.join(output_directory, motion_set.name, controller_name)
+
+    state_file_path = path.join(motion_directory, "sim_results.csv")
+    if not path.isdir(motion_directory):
+        print("Output directory {} does not exist. Creating directory ...".format(motion_directory))
+        makedirs(motion_directory)
 
     print("Initializing state file at {}".format(state_file_path))
     initialize_state_file(state_file_path, len(drive_modules))
@@ -372,13 +392,10 @@ def simulation_run_trajectory(
         drive_modules,
         motion_set.initial_drive_module_states)
 
-    controller = MultiWheelSteeringController(drive_modules)
-
     controller.on_state_update(initial_module_states)
 
     simulation_rate_in_hz = 100
     current_sim_time_in_seconds = 0.0
-
 
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the
     # time span over which the command state should be achieved
@@ -462,7 +479,7 @@ def simulation_run_trajectory(
         plot_trajectories(
             motion_set.description,
             motion_set.name,
-            output_directory,
+            motion_directory,
             points_in_time,
             body_states,
             drive_modules,
