@@ -68,16 +68,6 @@ def read_arguments() -> Mapping[str, any]:
         help="The file path for the input file which contains the desired verifications to be executed. Can be provided multiple times.")
 
     parser.add_argument(
-        "-c",
-        "--controller",
-        action="store",
-        choices=['LinearModuleFirstSteeringController', 'LinearBodyFirstSteeringController'],
-        default='LinearModuleFirstSteeringController',
-        required=False,
-        help="The name of the controller that should be used for the simulation. Current options are: 'LinearModuleFirstSteeringController', 'LinearBodyFirstSteeringController'"
-    )
-
-    parser.add_argument(
         "-o",
         "--output",
         action="store",
@@ -91,7 +81,6 @@ def read_arguments() -> Mapping[str, any]:
 
 def run_verifications(arg_dict: Mapping[str, any]):
     input_files: List[str] = arg_dict["file"]
-    controller_name: str = arg_dict["controller"]
     output_directory: str = path.abspath(arg_dict["output"])
     print("Running verification ...")
     start = datetime.now()
@@ -105,7 +94,7 @@ def run_verifications(arg_dict: Mapping[str, any]):
     motions = get_verifications(input_files)
     for verification_set in motions:
         verification_directory = path.join(output_directory, verification_set.simulation_config_dir)
-        verification_run_simulation(controller_name, verification_directory, verification_set)
+        verification_run_simulation(verification_directory, verification_set)
 
     end = datetime.now()
     difference = (end - start).total_seconds()
@@ -116,7 +105,7 @@ def verification_run_simulation(controller_name: str, verification_directory: st
     simulation_file = plan.input_file_path
 
     # Run the simulation
-    command_str = "python run_trajectory_simulation.py --no-graphs --controller {} --output {} --file {}".format(controller_name, verification_directory, simulation_file)
+    command_str = "python run_trajectory_simulation.py --no-graphs --output {} --file {}".format(verification_directory, simulation_file)
     process_result = subprocess.run(command_str, shell=True)
     if process_result.returncode != 0:
         # Simulation failed for some reason
