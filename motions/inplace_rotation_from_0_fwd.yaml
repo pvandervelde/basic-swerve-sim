@@ -35,14 +35,14 @@ plan:
         linear_velocity_in_meters_per_second:
           x: 1.0
           y: 0.0
-    - time_span: 3.0
+    - time_span: 2.0
       body:
         angular_velocity_in_radians_per_second:
           z: 1.0
         linear_velocity_in_meters_per_second:
           x: 0.0
           y: 0.0
-    - time_span: 3.0
+    - time_span: 2.0
       body:
         angular_velocity_in_radians_per_second:
           z: 1.0

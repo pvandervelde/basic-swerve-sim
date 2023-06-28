@@ -278,7 +278,7 @@ def plot_trajectories(
     plots = generate_plot_information(points_in_time, body_states, drive_modules, drive_states, icr_coordinate_map, color)
     figs = generate_plot_traces(plots)
 
-    plot_file_path = path.join(output_directory, "{}-trajectory.gif".format(short_name))
+    plot_file_path = path.join(output_directory, "{}-trajectory.html".format(short_name))
     plot_movement_through_space(points_in_time, drive_modules, body_states, drive_states, icr_coordinate_map, plot_file_path)
 
     index = 0
