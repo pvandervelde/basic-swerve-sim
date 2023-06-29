@@ -79,20 +79,30 @@ class AnimatedPlots(object):
             module_orientation: Axes,
             module_orientation_velocity: Axes,
             module_velocity: Axes,
-            module_acceleration: Axes):
-        self.body_velocity, = body_velocity.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.body_x_velocity, = body_velocity.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.body_y_velocity, = body_velocity.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
+            module_acceleration: Axes,
+            drive_modules: List[DriveModule],
+            ):
+        self.body_velocity, = body_velocity.plot([], [], lw=2.5, label="velocity")
+        self.body_x_velocity, = body_velocity.plot([], [], lw=2.5, label="x-velocity")
+        self.body_y_velocity, = body_velocity.plot([], [], lw=2.5, label="y-velocity")
 
-        self.body_acceleration, = body_acceleration.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.body_x_acceleration, = body_acceleration.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.body_y_acceleration, = body_acceleration.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
+        self.body_acceleration, = body_acceleration.plot([], [], lw=2.5, label="acceleration")
+        self.body_x_acceleration, = body_acceleration.plot([], [], lw=2.5, label="x-acceleration")
+        self.body_y_acceleration, = body_acceleration.plot([], [], lw=2.5, label="y-acceleration")
 
-        self.module_orientation, = module_orientation.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.module_orientation_velocity = module_orientation_velocity.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
+        self.module_orientation: List[Line2D] = []
+        self.module_orientation_velocity: List[Line2D] = []
+        self.module_velocity: List[Line2D] = []
+        self.module_acceleration: List[Line2D] = []
+        for drive_module in drive_modules:
+            name = drive_module.name
+            self.module_orientation.append(module_orientation.plot([0.0], [0.1], lw=2.5, label=name)[0])
+            self.module_orientation_velocity.append(module_orientation_velocity.plot([], [], lw=2.5, label=name)[0])
 
-        self.module_velocity, = module_velocity.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
-        self.module_acceleration = module_acceleration.plot([], [], marker="o", ls="", markersize=2) # set linestyle to none
+            self.module_velocity.append(module_velocity.plot([], [], lw=2.5, label=name)[0])
+            self.module_acceleration.append(module_acceleration.plot([], [], lw=2.5, label=name)[0])
+
+ANIMATION_FRAME_DIVIDER: int = 5
 
 animation_data: AnimationData = None
 animated_robot: AnimatedRobot = None
@@ -104,14 +114,21 @@ def animate(time_index: int):
     body_states = animation_data.body_states
     drive_module_states = animation_data.drive_module_states
     icr_coordinate_map = animation_data.icr_coordinate_map
-    current_time = animation_data.points_in_time[time_index]
+    current_time = animation_data.points_in_time[time_index * ANIMATION_FRAME_DIVIDER]
 
     frames: List[Line2D] = []
 
-    robot_frames = create_robot_movement_frame(drive_modules, body_states[time_index * 2], drive_module_states[time_index * 2], icr_coordinate_map[time_index * 2])
+    robot_frames = create_robot_movement_frame(
+        drive_modules,
+        body_states[time_index * ANIMATION_FRAME_DIVIDER],
+        drive_module_states[time_index * ANIMATION_FRAME_DIVIDER],
+        icr_coordinate_map[time_index * ANIMATION_FRAME_DIVIDER])
     frames.extend(robot_frames)
 
-    graph_frames = create_graph_frames(current_time, drive_modules, body_states[time_index * 2], drive_module_states[time_index * 2], icr_coordinate_map[time_index * 2])
+    graph_frames = create_graph_frames(
+        current_time,
+        drive_modules, body_states[time_index * ANIMATION_FRAME_DIVIDER],
+        drive_module_states[time_index * ANIMATION_FRAME_DIVIDER])
     frames.extend(graph_frames)
 
     return robot_frames
@@ -121,7 +138,7 @@ def create_body_acceleration_plot(
         fig: Figure,
         grid: GridSpec,
         time_max: float):
-    ax_body_acceleration = fig.add_subplot(grid[0, 3], title='Body acceleration')
+    ax = fig.add_subplot(grid[0, 3], title='Body acceleration')
 
     y_max: float = -100
     y_min: float = 100
@@ -132,16 +149,22 @@ def create_body_acceleration_plot(
         if state.motion_in_body_coordinates.linear_velocity.x > y_max:
             y_max = state.motion_in_body_coordinates.linear_velocity.x
 
-    ax_body_acceleration.set_ylim(y_min - 0.5, y_max + 0.5)
-    ax_body_acceleration.set_xlim(0.0, time_max)
-    return ax_body_acceleration
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Acceleration (m/s^2)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
 
 def create_body_velocity_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
         time_max: float):
-    ax_body_velocity = fig.add_subplot(grid[0, 2], title='Body velocity')
+    ax = fig.add_subplot(grid[0, 2], title='Body velocity')
 
     y_max: float = -100
     y_min: float = 100
@@ -152,16 +175,21 @@ def create_body_velocity_plot(
         if state.motion_in_body_coordinates.linear_velocity.x > y_max:
             y_max = state.motion_in_body_coordinates.linear_velocity.x
 
-    ax_body_velocity.set_ylim(y_min - 0.5, y_max + 0.5)
-    ax_body_velocity.set_xlim(0.0, time_max)
-    return ax_body_velocity
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Velocity (m/s)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
 
 def create_graph_frames(
         current_time: float,
         drive_modules: List[DriveModule],
         body_state: BodyState,
-        drive_module_states: List[DriveModuleMeasuredValues],
-        icr_coordinate_map: Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]) -> List[Line2D]:  # pragma: no cover
+        drive_module_states: List[DriveModuleMeasuredValues]) -> List[Line2D]:  # pragma: no cover
 
     plots: List[Line2D] = []
 
@@ -187,25 +215,167 @@ def create_graph_frames(
     animated_plots.body_y_velocity.set_data(times, velocities)
     plots.append(animated_plots.body_y_velocity)
 
-    # module orientation
-    #data = animated_plots.module_orientation.get_data()
-    #times: List[float] = list(data[0])
-    #times.append(current_time)
+    for i in range(len(drive_modules)):
+        state = drive_module_states[i]
 
-    #velocities: List[float] = list(data[1])
-    #velocities.append(body_state.motion_in_body_coordinates.linear_velocity.y)
+        # module orientation
+        data = animated_plots.module_orientation[i].get_data()
+        times: List[float] = list(data[0])
+        times.append(current_time)
 
-    #animated_plots.module_orientation.set_data(times, velocities)
-    #plots.append(animated_plots.module_orientation)
+        orientations: List[float] = list(data[1])
 
+        orientations.append(state.orientation_in_body_coordinates.z)
 
-    # module orientation velocity
+        animated_plots.module_orientation[i].set_data(times, orientations)
 
-    # module velocity
+        # module orientation velocity
+        data = animated_plots.module_orientation_velocity[i].get_data()
+        times: List[float] = list(data[0])
+        times.append(current_time)
 
-    # module acceleration
+        orientation_velocities: List[float] = list(data[1])
+
+        orientation_velocities.append(state.orientation_velocity_in_body_coordinates.z)
+
+        animated_plots.module_orientation_velocity[i].set_data(times, orientation_velocities)
+
+        # module velocity
+        data = animated_plots.module_velocity[i].get_data()
+        times: List[float] = list(data[0])
+        times.append(current_time)
+
+        velocities: List[float] = list(data[1])
+
+        velocities.append(state.drive_velocity_in_module_coordinates.x)
+
+        animated_plots.module_velocity[i].set_data(times, velocities)
+
+        # module acceleration
+        data = animated_plots.module_acceleration[i].get_data()
+        times: List[float] = list(data[0])
+        times.append(current_time)
+
+        accelerations: List[float] = list(data[1])
+
+        accelerations.append(state.drive_acceleration_in_module_coordinates.x)
+
+        animated_plots.module_acceleration[i].set_data(times, accelerations)
+
+    plots.extend(animated_plots.module_orientation)
+    plots.extend(animated_plots.module_orientation_velocity)
+    plots.extend(animated_plots.module_velocity)
+    plots.extend(animated_plots.module_acceleration)
 
     return plots
+
+def create_module_acceleration_plot(
+        drive_module_states: List[List[DriveModuleMeasuredValues]],
+        fig: Figure,
+        grid: GridSpec,
+        time_max: float):
+    ax = fig.add_subplot(grid[2, 3], title='Module acceleration')
+
+    y_max: float = -100
+    y_min: float = 100
+    for states in drive_module_states:
+        for state in states:
+            if state.drive_acceleration_in_module_coordinates.x < y_min:
+                y_min = state.drive_acceleration_in_module_coordinates.x
+
+            if state.drive_acceleration_in_module_coordinates.x > y_max:
+                y_max = state.drive_acceleration_in_module_coordinates.x
+
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Acceleration (m/s^2)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
+
+def create_module_orientation_plot(
+        drive_module_states: List[List[DriveModuleMeasuredValues]],
+        fig: Figure,
+        grid: GridSpec,
+        time_max: float):
+    ax = fig.add_subplot(grid[1, 2], title='Module orientation')
+
+    y_max: float = -100
+    y_min: float = 100
+    for states in drive_module_states:
+        for state in states:
+            if state.orientation_in_body_coordinates.z < y_min:
+                y_min = state.orientation_in_body_coordinates.z
+
+            if state.orientation_in_body_coordinates.z > y_max:
+                y_max = state.orientation_in_body_coordinates.z
+
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Orientation (rad)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
+
+def create_module_orientation_velocity_plot(
+        drive_module_states: List[List[DriveModuleMeasuredValues]],
+        fig: Figure,
+        grid: GridSpec,
+        time_max: float):
+    ax = fig.add_subplot(grid[1, 3], title='Module orientation velocity')
+
+    y_max: float = -100
+    y_min: float = 100
+    for states in drive_module_states:
+        for state in states:
+            if state.orientation_velocity_in_body_coordinates.z < y_min:
+                y_min = state.orientation_velocity_in_body_coordinates.z
+
+            if state.orientation_velocity_in_body_coordinates.z > y_max:
+                y_max = state.orientation_velocity_in_body_coordinates.z
+
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Orientation velocity (rad/s)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
+
+def create_module_velocity_plot(
+        drive_module_states: List[List[DriveModuleMeasuredValues]],
+        fig: Figure,
+        grid: GridSpec,
+        time_max: float):
+    ax = fig.add_subplot(grid[2, 2], title='Module velocity')
+
+    y_max: float = -100
+    y_min: float = 100
+    for states in drive_module_states:
+        for state in states:
+            if state.drive_velocity_in_module_coordinates.x < y_min:
+                y_min = state.drive_velocity_in_module_coordinates.x
+
+            if state.drive_velocity_in_module_coordinates.x > y_max:
+                y_max = state.drive_velocity_in_module_coordinates.x
+
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_xlim(0.0, time_max)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Velocity (m/s)")
+
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
 
 def create_robot_movement_frame(
         drive_modules: List[DriveModule],
@@ -363,7 +533,7 @@ def create_robot_movement_frame(
     return plots
 
 def create_robot_plot(body_states: List[BodyState], fig: Figure, grid: GridSpec):
-    ax_robot = fig.add_subplot(grid[:, :-2], title='Robot motion')
+    ax = fig.add_subplot(grid[:, :-2], title='Robot motion')
     x_max: float = -100
     x_min: float = 100
 
@@ -382,10 +552,12 @@ def create_robot_plot(body_states: List[BodyState], fig: Figure, grid: GridSpec)
         if state.position_in_world_coordinates.y > y_max:
             y_max = state.position_in_world_coordinates.y
 
-    ax_robot.set_ylim(y_min - 10, y_max + 10)
-    ax_robot.set_xlim(x_min - 10, x_max + 10)
+    ax.set_ylim(y_min - 5, y_max + 5)
+    ax.set_xlim(x_min - 5, x_max + 5)
 
-    return ax_robot
+    ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
+
+    return ax
 
 def plot_movement_through_space(
         points_in_time: List[float],
@@ -408,12 +580,12 @@ def plot_movement_through_space(
     ax_body_acceleration = create_body_acceleration_plot(body_states, fig, grid, time_max)
 
     # Module orientation and orientation velocity
-    ax_module_orientation = fig.add_subplot(grid[1, 2], title='Module orientation')
-    ax_module_angular_velocity = fig.add_subplot(grid[1, 3], title='Module orientation velocity')
+    ax_module_orientation = create_module_orientation_plot(drive_module_states, fig, grid, time_max)
+    ax_module_angular_velocity = create_module_orientation_velocity_plot(drive_module_states, fig, grid, time_max)
 
     # Module velocity and acceleration
-    ax_module_velocity = fig.add_subplot(grid[2, 2], title='Module velocity')
-    ax_module_acceleration = fig.add_subplot(grid[2, 3], title='Module acceleration')
+    ax_module_velocity = create_module_velocity_plot(drive_module_states, fig, grid, time_max)
+    ax_module_acceleration = create_module_acceleration_plot(drive_module_states, fig, grid, time_max)
 
     global animation_data
     animation_data = AnimationData(
@@ -440,9 +612,11 @@ def plot_movement_through_space(
         ax_module_orientation,
         ax_module_angular_velocity,
         ax_module_velocity,
-        ax_module_acceleration)
+        ax_module_acceleration,
+        drive_modules)
 
-    animation = FuncAnimation(fig, animate, frames=range(len(points_in_time)//2), interval=100, blit=True, repeat=True, repeat_delay=10)
+    fig.tight_layout(pad=5.0)
+    animation = FuncAnimation(fig, animate, frames=range(len(points_in_time)//ANIMATION_FRAME_DIVIDER), interval=100, blit=True, repeat=True, repeat_delay=10)
 
     #writer = FFMpegWriter()
     #writer = PillowWriter(fps=25)
