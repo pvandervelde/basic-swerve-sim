@@ -64,6 +64,12 @@ class LinearModuleFirstSteeringController(BaseSteeringController):
             0.0,
             0.0,
             0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
 
         # Store the current (measured) state of the drive modules
@@ -149,9 +155,20 @@ class LinearModuleFirstSteeringController(BaseSteeringController):
         # Calculate the current body state
         body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
         time_step_in_seconds = self.current_time_in_seconds - self.last_state_update_time
+        # Position
         local_x_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
         local_y_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+        # Orientation
         global_orientation = self.body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
+        # Acceleration
+        local_x_acceleration = (body_motion.linear_velocity.x - self.body_state.motion_in_body_coordinates.linear_velocity.x) / time_step_in_seconds
+        local_y_acceleration = (body_motion.linear_velocity.y - self.body_state.motion_in_body_coordinates.linear_velocity.y) / time_step_in_seconds
+        orientation_acceleration = (body_motion.angular_velocity.z - self.body_state.motion_in_body_coordinates.angular_velocity.z) / time_step_in_seconds
+        # Jerk
+        local_x_jerk = (local_x_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.x) / time_step_in_seconds
+        local_y_jerk = (local_y_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.y) / time_step_in_seconds
+        orientation_jerk = (orientation_acceleration - self.body_state.motion_in_body_coordinates.angular_acceleration.z) / time_step_in_seconds
+
         self.body_state = BodyState(
             self.body_state.position_in_world_coordinates.x + local_x_distance * math.cos(global_orientation) - local_y_distance * math.sin(global_orientation),
             self. body_state.position_in_world_coordinates.y + local_x_distance * math.sin(global_orientation) + local_y_distance * math.cos(global_orientation),
@@ -159,6 +176,12 @@ class LinearModuleFirstSteeringController(BaseSteeringController):
             body_motion.linear_velocity.x,
             body_motion.linear_velocity.y,
             body_motion.angular_velocity.z,
+            local_x_acceleration,
+            local_y_acceleration,
+            orientation_acceleration,
+            local_x_jerk,
+            local_y_jerk,
+            orientation_jerk
         )
 
         self.last_state_update_time = self.current_time_in_seconds
@@ -236,6 +259,12 @@ class MultiWheelSteeringController(BaseSteeringController):
 
         # Store the current (estimated) state of the body
         self.body_state: BodyState = BodyState(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
             0.0,
             0.0,
             0.0,
@@ -416,9 +445,20 @@ class MultiWheelSteeringController(BaseSteeringController):
         body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
 
         time_step_in_seconds = self.current_time_in_seconds - self.last_state_update_time
+        # Position
         local_x_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
         local_y_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+        # Orientation
         global_orientation = self.body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
+        # Acceleration
+        local_x_acceleration = (body_motion.linear_velocity.x - self.body_state.motion_in_body_coordinates.linear_velocity.x) / time_step_in_seconds
+        local_y_acceleration = (body_motion.linear_velocity.y - self.body_state.motion_in_body_coordinates.linear_velocity.y) / time_step_in_seconds
+        orientation_acceleration = (body_motion.angular_velocity.z - self.body_state.motion_in_body_coordinates.angular_velocity.z) / time_step_in_seconds
+        # Jerk
+        local_x_jerk = (local_x_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.x) / time_step_in_seconds
+        local_y_jerk = (local_y_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.y) / time_step_in_seconds
+        orientation_jerk = (orientation_acceleration - self.body_state.motion_in_body_coordinates.angular_acceleration.z) / time_step_in_seconds
+
         self.body_state = BodyState(
             self.body_state.position_in_world_coordinates.x + local_x_distance * math.cos(global_orientation) - local_y_distance * math.sin(global_orientation),
             self. body_state.position_in_world_coordinates.y + local_x_distance * math.sin(global_orientation) + local_y_distance * math.cos(global_orientation),
@@ -426,6 +466,12 @@ class MultiWheelSteeringController(BaseSteeringController):
             body_motion.linear_velocity.x,
             body_motion.linear_velocity.y,
             body_motion.angular_velocity.z,
+            local_x_acceleration,
+            local_y_acceleration,
+            orientation_acceleration,
+            local_x_jerk,
+            local_y_jerk,
+            orientation_jerk
         )
 
         self.last_state_update_time = self.current_time_in_seconds

@@ -10,9 +10,19 @@ class BodyMotion(object):
         self,
         linear_x_velocity_in_meters_per_second: float,
         linear_y_velocity_in_meters_per_second: float,
-        angular_z_velocity_in_radians_per_second: float):
+        angular_z_velocity_in_radians_per_second: float,
+        linear_x_acceleration_in_meters_per_second_quared: float,
+        linear_y_acceleration_in_meters_per_second_quared: float,
+        angular_z_acceleration_in_radians_per_second_quared: float,
+        linear_x_jerk_in_meters_per_second_cubed: float,
+        linear_y_jerk_in_meters_per_second_cubed: float,
+        angular_z_jerk_in_radians_per_second_cubed: float,):
         self.linear_velocity = Vector3(linear_x_velocity_in_meters_per_second, linear_y_velocity_in_meters_per_second, 0.0)
         self.angular_velocity = Vector3(0.0, 0.0, angular_z_velocity_in_radians_per_second)
+        self.linear_acceleration = Vector3(linear_x_acceleration_in_meters_per_second_quared, linear_y_acceleration_in_meters_per_second_quared, 0.0)
+        self.angular_acceleration = Vector3(0.0, 0.0, angular_z_acceleration_in_radians_per_second_quared)
+        self.linear_jerk = Vector3(linear_x_jerk_in_meters_per_second_cubed, linear_y_jerk_in_meters_per_second_cubed, 0.0)
+        self.angular_jerk = Vector3(0.0, 0.0, angular_z_jerk_in_radians_per_second_cubed)
 
 class BodyState(object):
 
@@ -24,14 +34,26 @@ class BodyState(object):
         body_orientation_in_radians: float,
         body_linear_x_velocity_in_meters_per_second: float,
         body_linear_y_velocity_in_meters_per_second: float,
-        body_angular_z_velocity_in_radians_per_second: float):
+        body_angular_z_velocity_in_radians_per_second: float,
+        body_linear_x_acceleration_in_meters_per_second_quared: float,
+        body_linear_y_acceleration_in_meters_per_second_quared: float,
+        body_angular_z_acceleration_in_radians_per_second_quared: float,
+        body_linear_x_jerk_in_meters_per_second_cubed: float,
+        body_linear_y_jerk_in_meters_per_second_cubed: float,
+        body_angular_z_jerk_in_radians_per_second_cubed: float,):
 
         self.position_in_world_coordinates = Point(body_x_in_meters, body_y_in_meters, 0.0)
         self.orientation_in_world_coordinates = Orientation(0.0, 0.0, body_orientation_in_radians)
         self.motion_in_body_coordinates = BodyMotion(
             body_linear_x_velocity_in_meters_per_second,
             body_linear_y_velocity_in_meters_per_second,
-            body_angular_z_velocity_in_radians_per_second)
+            body_angular_z_velocity_in_radians_per_second,
+            body_linear_x_acceleration_in_meters_per_second_quared,
+            body_linear_y_acceleration_in_meters_per_second_quared,
+            body_angular_z_acceleration_in_radians_per_second_quared,
+            body_linear_x_jerk_in_meters_per_second_cubed,
+            body_linear_y_jerk_in_meters_per_second_cubed,
+            body_angular_z_jerk_in_radians_per_second_cubed)
 
 # Defines the required combination of steering angle and drive velocity for a given drive module in order
 # to achieve a given Motion of the robot body.

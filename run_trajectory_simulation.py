@@ -133,6 +133,12 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
                 body_angular_z_velocity_in_radians_per_second=data_initial_body_state["angular_velocity_in_radians_per_second"]["z"],
                 body_linear_x_velocity_in_meters_per_second=data_initial_body_state["linear_velocity_in_meters_per_second"]["x"],
                 body_linear_y_velocity_in_meters_per_second=data_initial_body_state["linear_velocity_in_meters_per_second"]["y"],
+                body_angular_z_acceleration_in_radians_per_second_quared=0.0,
+                body_linear_x_acceleration_in_meters_per_second_quared=0.0,
+                body_linear_y_acceleration_in_meters_per_second_quared=0.0,
+                body_angular_z_jerk_in_radians_per_second_cubed=0.0,
+                body_linear_x_jerk_in_meters_per_second_cubed=0.0,
+                body_linear_y_jerk_in_meters_per_second_cubed=0.0
             )
 
             data_initial_module_state = data_plan["start_state"]["modules"]
