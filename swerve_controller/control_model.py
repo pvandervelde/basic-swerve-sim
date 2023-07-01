@@ -113,7 +113,16 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         drive_state_vector = np.array(drive_state_array)
         body_state_vector = np.matmul(self.forward_kinematics_matrix, drive_state_vector)
 
-        return BodyMotion(body_state_vector[0], body_state_vector[1], body_state_vector[2])
+        return BodyMotion(
+            body_state_vector[0],
+            body_state_vector[1],
+            body_state_vector[2],
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,)
 
     # Inverse kinematics
     def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues]]:

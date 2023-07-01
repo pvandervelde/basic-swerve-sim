@@ -49,7 +49,16 @@ class BodyMotionCommand(MotionCommand):
     # Determine what the body state would be if the robot would execute the current
     # motion command.
     def to_body_state(self, model: ControlModelBase) -> BodyMotion:
-        return BodyMotion(self.linear_velocity.x, self.linear_velocity.y, self.angular_velocity.z)
+        return BodyMotion(
+            self.linear_velocity.x,
+            self.linear_velocity.y,
+            self.angular_velocity.z,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,)
 
     # Determine what the state of the drive modules would be if the robot would execute
     # the current motion command.
@@ -59,6 +68,12 @@ class BodyMotionCommand(MotionCommand):
                 self.linear_velocity.x,
                 self.linear_velocity.y,
                 self.angular_velocity.z,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
             ))
         return (
             [x[0] for x in drive_module_potential_states],

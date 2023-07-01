@@ -43,7 +43,13 @@ class LinearBodyMotionTrajectory(object):
         return BodyMotion(
             self.profile[0].value_at(time_fraction),
             self.profile[1].value_at(time_fraction),
-            self.profile[5].value_at(time_fraction)
+            self.profile[5].value_at(time_fraction),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
 
     def time_span(self) -> float:
