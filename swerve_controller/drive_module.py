@@ -36,6 +36,7 @@ class DriveModule(object):
         drive_link: str,
         steering_axis_xy_position: Point,
         wheel_radius: float,
+        wheel_width: float,
         steering_motor_maximum_velocity: float,
         steering_motor_minimum_acceleration: float,
         steering_motor_maximum_acceleration: float,
@@ -51,6 +52,7 @@ class DriveModule(object):
         # Assume a vertical steering axis that goes through the center of the wheel (i.e. no steering offset)
         self.steering_axis_xy_position = steering_axis_xy_position
         self.wheel_radius = wheel_radius
+        self.wheel_width = wheel_width
 
         self.steering_motor_maximum_velocity = steering_motor_maximum_velocity
 

@@ -469,3 +469,27 @@ class CompoundProfile(TransientValueProfile):
 
         local_fraction = from_start / total
         return profile.profile.value_at(local_fraction)
+
+# Low jerk profile (S-profile)
+
+class LowJerkProfile(TransientValueProfile):
+
+    @abstractmethod
+    def first_derivative_at(self, time_fraction: float) -> float:
+        pass
+
+    @abstractmethod
+    def inflection_points(self) -> List[ProfilePoint]:
+        pass
+
+    @abstractmethod
+    def second_derivative_at(self, time_fraction: float) -> float:
+        pass
+
+    @abstractmethod
+    def third_derivative_at(self, time_fraction: float) -> float:
+        pass
+
+    @abstractmethod
+    def value_at(self, time_fraction: float) -> float:
+        pass
