@@ -276,30 +276,30 @@ def plot_trajectories(
     ):
 
     plots = generate_plot_information(points_in_time, body_states, drive_modules, drive_states, icr_coordinate_map, color)
-    figs = generate_plot_traces(plots)
+    #figs = generate_plot_traces(plots)
 
-    plot_file_path = path.join(output_directory, "{}-trajectory.html".format(short_name))
+    plot_file_path = path.join(output_directory, "{}-trajectory".format(short_name))
     plot_movement_through_space(points_in_time, drive_modules, body_states, drive_states, icr_coordinate_map, plot_file_path)
 
-    index = 0
-    for fig in figs:
-        # fig.update_traces(
-        #     marker=dict(
-        #         size=3,
-        #         line=dict(
-        #             width=1,
-        #             color='DarkSlateGrey')),
-        #     selector=dict(mode='markers'))
-        fig.update_layout(
-            template='ggplot2',
-            showlegend=True,
-            legend= {'itemsizing': 'constant'}
-            )
+    # index = 0
+    # for fig in figs:
+    #     # fig.update_traces(
+    #     #     marker=dict(
+    #     #         size=3,
+    #     #         line=dict(
+    #     #             width=1,
+    #     #             color='DarkSlateGrey')),
+    #     #     selector=dict(mode='markers'))
+    #     fig.update_layout(
+    #         template='ggplot2',
+    #         showlegend=True,
+    #         legend= {'itemsizing': 'constant'}
+    #         )
 
-        plot_file_path = path.join(output_directory, "{}-{}.html".format(short_name, index))
-        py.plot(fig, filename = plot_file_path)
+    #     plot_file_path = path.join(output_directory, "{}-{}.html".format(short_name, index))
+    #     py.plot(fig, filename = plot_file_path)
 
-        figure_file_path = path.join(output_directory, "{}-{}.png".format(short_name, index))
-        fig.write_image(figure_file_path, width=2100, height=1500)
+    #     figure_file_path = path.join(output_directory, "{}-{}.png".format(short_name, index))
+    #     fig.write_image(figure_file_path, width=2100, height=1500)
 
-        index += 1
+    #     index += 1
