@@ -59,10 +59,14 @@ class AnimatedRobot(object):
             ax.plot([], [], color=drive_module_colors[3])[0],
         ]
         self.icr_lines: List[Line2D] = [
-            ax.plot([], [], color=drive_module_colors[0], dashes=[10, 5, 10, 5])[0],
-            ax.plot([], [], color=drive_module_colors[1], dashes=[10, 5, 10, 5])[0],
-            ax.plot([], [], color=drive_module_colors[2], dashes=[10, 5, 10, 5])[0],
-            ax.plot([], [], color=drive_module_colors[3], dashes=[10, 5, 10, 5])[0],
+            ax.plot([], [], color=drive_module_colors[0], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[0], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[1], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[1], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[2], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[2], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[3], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
+            ax.plot([], [], color=drive_module_colors[3], dashes=[10, 5, 10, 5], linewidth=0.75)[0],
         ]
         self.icr_points: List[Line2D] = [
             ax.plot([], [], '-ro')[0],
@@ -89,15 +93,24 @@ class AnimatedPlots(object):
             module_jerk: Axes,
             drive_modules: List[DriveModule],
             ):
-        self.body_velocity, = body_velocity.plot([], [], lw=2.5, color=body_colors[0], label="velocity")
+
+        self.ax_body_velocity = body_velocity
+        self.ax_body_acceleration = body_acceleration
+        self.ax_body_jerk = body_jerk
+        self.ax_module_orientation = module_orientation
+        self.ax_module_orientation_velocity = module_orientation_velocity
+        self.ax_module_orientation_acceleration = module_orientation_acceleration
+        self.ax_module_orientation_jerk = module_orientation_jerk
+        self.ax_module_velocity = module_velocity
+        self.ax_module_acceleration = module_acceleration
+        self.ax_module_jerk = module_jerk
+
         self.body_x_velocity, = body_velocity.plot([], [], lw=2.5, color=body_colors[1], label="x-velocity")
         self.body_y_velocity, = body_velocity.plot([], [], lw=2.5, color=body_colors[2], label="y-velocity")
 
-        self.body_acceleration, = body_acceleration.plot([], [], lw=2.5, color=body_colors[0], label="acceleration")
         self.body_x_acceleration, = body_acceleration.plot([], [], lw=2.5, color=body_colors[1], label="x-acceleration")
         self.body_y_acceleration, = body_acceleration.plot([], [], lw=2.5, color=body_colors[2], label="y-acceleration")
 
-        self.body_jerk, = body_jerk.plot([], [], lw=2.5, color=body_colors[0], label="jerk")
         self.body_x_jerk, = body_jerk.plot([], [], lw=2.5, color=body_colors[1], label="x-jerk")
         self.body_y_jerk, = body_jerk.plot([], [], lw=2.5, color=body_colors[2], label="y-jerk")
 
@@ -125,6 +138,18 @@ class AnimatedPlots(object):
 
             i += 1
 
+    def legend_refresh(self):
+        self.ax_body_velocity.legend(loc="upper right")
+        self.ax_body_acceleration.legend(loc="upper right")
+        self.ax_body_jerk.legend(loc="upper right")
+        self.ax_module_orientation.legend(loc="upper right")
+        self.ax_module_orientation_velocity.legend(loc="upper right")
+        self.ax_module_orientation_acceleration.legend(loc="upper right")
+        self.ax_module_orientation_jerk.legend(loc="upper right")
+        self.ax_module_velocity.legend(loc="upper right")
+        self.ax_module_acceleration.legend(loc="upper right")
+        self.ax_module_jerk.legend(loc="upper right")
+
 ANIMATION_FRAME_DIVIDER: int = 1
 
 animation_data: AnimationData = None
@@ -133,16 +158,23 @@ animated_plots: AnimatedPlots = None
 
 body_colors: List[str] = [
     "orchid",
-    "steelblue",
-    "teal",
-    "orange",
+    "deepskyblue",
+    "yellowgreen",
+    "sandybrown",
 ]
 
 drive_module_colors: List[str] = [
-    "brown",
+    "darkorange",
     "green",
     "blue",
     "purple"
+]
+
+icr_colors: List[str] = [
+    "orange",
+    "lightgreen",
+    "lightblue",
+    "violet"
 ]
 
 def animate(time_index: int):
@@ -198,8 +230,6 @@ def create_body_acceleration_plot(
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Acceleration (m/s^2)")
 
-    ax.legend(loc="upper right")
-
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
     return ax
@@ -232,8 +262,6 @@ def create_body_jerk_plot(
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Jerk (m/s^3)")
 
-    ax.legend(loc="upper right")
-
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
     return ax
@@ -265,8 +293,6 @@ def create_body_velocity_plot(
 
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Velocity (m/s)")
-
-    ax.legend(loc="upper right")
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
@@ -434,6 +460,8 @@ def create_graph_frames(
     plots.extend(animated_plots.module_acceleration)
     plots.extend(animated_plots.module_jerk)
 
+    animated_plots.legend_refresh()
+
     return plots
 
 def create_module_acceleration_plot(
@@ -460,8 +488,6 @@ def create_module_acceleration_plot(
     ax.set_ylabel("Acceleration (m/s^2)")
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-
-    ax.legend(loc="upper right")
 
     return ax
 
@@ -490,8 +516,6 @@ def create_module_jerk_plot(
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
-    ax.legend(loc="upper right")
-
     return ax
 
 def create_module_orientation_acceleration_plot(
@@ -518,8 +542,6 @@ def create_module_orientation_acceleration_plot(
     ax.set_ylabel("Orientation acceleration (rad/s^2)")
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-
-    ax.legend(loc="upper right")
 
     return ax
 
@@ -548,8 +570,6 @@ def create_module_orientation_jerk_plot(
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
-    ax.legend(loc="upper right")
-
     return ax
 
 def create_module_orientation_plot(
@@ -576,8 +596,6 @@ def create_module_orientation_plot(
     ax.set_ylabel("Orientation (rad)")
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-
-    ax.legend(loc="upper right")
 
     return ax
 
@@ -606,8 +624,6 @@ def create_module_orientation_velocity_plot(
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
 
-    ax.legend(loc="upper right")
-
     return ax
 
 def create_module_velocity_plot(
@@ -634,8 +650,6 @@ def create_module_velocity_plot(
     ax.set_ylabel("Velocity (m/s)")
 
     ax.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-
-    ax.legend(loc="upper right")
 
     return ax
 
@@ -717,38 +731,54 @@ def create_robot_movement_frame(
             ]
         )
 
-        icr_line = np.array(
+        icr_line_1 = np.array(
             [
                 [0.0, 0.0],
                 [0.5 * drive_module.wheel_width, 25.0]
             ]
         )
 
+        icr_line_2 = np.array(
+            [
+                [0.0, 0.0],
+                [0.5 * drive_module.wheel_width, -25.0]
+            ]
+        )
+
         # Rotate the wheel to the drive module orientation
         wheel = (wheel.T.dot(drive_module_rotation_matrix)).T
-        icr_line = (icr_line.T.dot(drive_module_rotation_matrix)).T
+        icr_line_1 = (icr_line_1.T.dot(drive_module_rotation_matrix)).T
+        icr_line_2 = (icr_line_2.T.dot(drive_module_rotation_matrix)).T
 
         # Translate the wheel to the body, with the body at (0, 0)
         wheel[0, :] += drive_module.steering_axis_xy_position.x
         wheel[1, :] += drive_module.steering_axis_xy_position.y
 
-        icr_line[0, :] += drive_module.steering_axis_xy_position.x
-        icr_line[1, :] += drive_module.steering_axis_xy_position.y
+        icr_line_1[0, :] += drive_module.steering_axis_xy_position.x
+        icr_line_1[1, :] += drive_module.steering_axis_xy_position.y
+
+        icr_line_2[0, :] += drive_module.steering_axis_xy_position.x
+        icr_line_2[1, :] += drive_module.steering_axis_xy_position.y
 
         # Rotate the wheel to match the body orientation
         wheel = (wheel.T.dot(body_rotation_matrix)).T
-        icr_line = (icr_line.T.dot(body_rotation_matrix)).T
+        icr_line_1 = (icr_line_1.T.dot(body_rotation_matrix)).T
+        icr_line_2 = (icr_line_2.T.dot(body_rotation_matrix)).T
 
         # Translate the wheel to the actual body coordinates
         wheel[0, :] += body_state.position_in_world_coordinates.x
         wheel[1, :] += body_state.position_in_world_coordinates.y
 
-        icr_line[0, :] += body_state.position_in_world_coordinates.x
-        icr_line[1, :] += body_state.position_in_world_coordinates.y
+        icr_line_1[0, :] += body_state.position_in_world_coordinates.x
+        icr_line_1[1, :] += body_state.position_in_world_coordinates.y
+
+        icr_line_2[0, :] += body_state.position_in_world_coordinates.x
+        icr_line_2[1, :] += body_state.position_in_world_coordinates.y
 
         # Store the wheel outline information
         wheels.append(wheel)
-        icrs.append(icr_line)
+        icrs.append(icr_line_1)
+        icrs.append(icr_line_2)
 
     plots: List[Line2D] = []
     animated_robot.robot_body.set_data(np.array(body_outline[0, :]).flatten(), np.array(body_outline[1, :]).flatten())
@@ -827,7 +857,7 @@ def plot_movement_through_space(
         body_states: List[BodyState],
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         icr_coordinate_map: List[Tuple[float, List[Tuple[DriveModuleMeasuredValues, DriveModuleMeasuredValues, Point]]]],
-        output_file_name):
+        output_file_name_without_extension):
     fig = plt.figure(figsize=[25.0, 10.0], constrained_layout=True)
     main_grid = GridSpec(3, 20, figure=fig)
 
@@ -889,7 +919,12 @@ def plot_movement_through_space(
     #main_grid.tight_layout(fig)
     animation = FuncAnimation(fig, animate, frames=range(len(points_in_time)//ANIMATION_FRAME_DIVIDER), interval=100, blit=True, repeat=True, repeat_delay=10)
 
-    #writer = FFMpegWriter()
+    writer = FFMpegWriter()
+    output_file_name = output_file_name_without_extension + ".mp4"
+
     #writer = PillowWriter(fps=25)
-    writer = HTMLWriter(fps=10)
+
+    # writer = HTMLWriter(fps=10)
+    # output_file_name = output_file_name_without_extension + ".html"
+
     animation.save(output_file_name, writer=writer)
