@@ -6,23 +6,23 @@ from swerve_controller.control_model import ControlModelBase
 
 from .errors import IncompleteTrajectoryException
 from .drive_module import DriveModule
-from .profile import LinearProfile, MultiPointLinearProfile, ProfilePoint, TransientValueProfile
+from .profile import SingleVariableLinearProfile, SingleVariableMultiPointLinearProfile, ProfilePoint, SingleVariableTrapezoidalProfile, TransientVariableProfile
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 class DriveModuleProfile(object):
 
-    def __init__(self, steering_profile: TransientValueProfile, drive_profile: TransientValueProfile):
+    def __init__(self, steering_profile: TransientVariableProfile, drive_profile: TransientVariableProfile):
         self.steering_profile = steering_profile
         self.drive_profile = drive_profile
 
-    def profile_for_steering(self) -> TransientValueProfile:
+    def profile_for_steering(self) -> TransientVariableProfile:
         return self.steering_profile
 
-    def profile_for_drive(self) -> TransientValueProfile:
+    def profile_for_drive(self) -> TransientVariableProfile:
         return self.drive_profile
 
 # A collection of position / velocity / acceleration profiles
-class LinearBodyMotionTrajectory(object):
+class LinearBodyMotionProfile(object):
 
     def __init__(self, current: BodyState, desired: BodyMotion, min_trajectory_time_in_seconds: float):
         self.start_state = current
@@ -30,13 +30,13 @@ class LinearBodyMotionTrajectory(object):
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
-            LinearProfile(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
-            LinearProfile(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
-            LinearProfile(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
 
-            LinearProfile(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
-            LinearProfile(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
-            LinearProfile(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
+            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
         ]
 
     def body_motion_at(self, time_fraction: float) -> BodyMotion:
@@ -55,7 +55,7 @@ class LinearBodyMotionTrajectory(object):
     def time_span(self) -> float:
         return self.min_trajectory_time_in_seconds
 
-class ModuleStateTrajectory(ABC):
+class ModuleStateProfile(ABC):
 
     @abstractmethod
     def align_module_profiles(self):
@@ -69,7 +69,7 @@ class ModuleStateTrajectory(ABC):
     def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
         pass
 
-class LinearDriveModuleStateTrajectory(ModuleStateTrajectory):
+class LinearDriveModuleStateProfile(ModuleStateProfile):
 
     def __init__(self, drive_modules: List[DriveModule], min_trajectory_time_in_seconds: float):
         self.modules = drive_modules
@@ -78,7 +78,7 @@ class LinearDriveModuleStateTrajectory(ModuleStateTrajectory):
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         # Kinda want a constant jerk profile
-        self.profiles: Mapping[str, List[TransientValueProfile]] = {}
+        self.profiles: Mapping[str, List[TransientVariableProfile]] = {}
 
     def align_module_profiles(self):
         if len(self.start_states) == 0 or len(self.end_states) == 0:
@@ -103,10 +103,10 @@ class LinearDriveModuleStateTrajectory(ModuleStateTrajectory):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                LinearProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
+                SingleVariableTrapezoidalProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
 
                 # Drive velocity
-                LinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
+                SingleVariableTrapezoidalProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
             ]
 
             self.profiles[self.modules[i].name] = module_profiles
@@ -156,7 +156,7 @@ class LinearDriveModuleStateTrajectory(ModuleStateTrajectory):
             profiles[1].second_derivative_at(time_fraction),
         )
 
-class BodyControlledDriveModuleTrajectory(ModuleStateTrajectory):
+class BodyControlledDriveModuleProfile(ModuleStateProfile):
     def __init__(self, drive_modules: List[DriveModule], control_model: ControlModelBase, min_trajectory_time_in_seconds: float, min_body_to_module_resolution_per_second: float):
         self.modules = drive_modules
         self.control_model = control_model
@@ -168,7 +168,7 @@ class BodyControlledDriveModuleTrajectory(ModuleStateTrajectory):
         self.min_body_to_module_resolution_per_second = min_body_to_module_resolution_per_second
 
         # Kinda want a constant jerk profile
-        self.module_profiles: Mapping[str, List[MultiPointLinearProfile]] = {}
+        self.module_profiles: Mapping[str, List[SingleVariableMultiPointLinearProfile]] = {}
 
     def align_module_profiles(self):
         if len(self.start_state_modules) == 0 or len(self.end_state_body) == 0:
@@ -197,10 +197,10 @@ class BodyControlledDriveModuleTrajectory(ModuleStateTrajectory):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                MultiPointLinearProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
+                SingleVariableMultiPointLinearProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
 
                 # Drive velocity
-                MultiPointLinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
+                SingleVariableMultiPointLinearProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
             ]
 
             self.module_profiles[self.modules[i].name] = module_profiles
@@ -208,13 +208,13 @@ class BodyControlledDriveModuleTrajectory(ModuleStateTrajectory):
         # Compute the body profile
         start_state_body = self.control_model.body_motion_from_wheel_module_states(self.start_state_modules)
         body_profiles = [
-            LinearProfile(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x),
-            LinearProfile(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y),
-            LinearProfile(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z),
+            SingleVariableLinearProfile(start_state_body.linear_velocity.x, self.end_state_body.motion_in_body_coordinates.linear_velocity.x),
+            SingleVariableLinearProfile(start_state_body.linear_velocity.y, self.end_state_body.motion_in_body_coordinates.linear_velocity.y),
+            SingleVariableLinearProfile(start_state_body.linear_velocity.z, self.end_state_body.motion_in_body_coordinates.linear_velocity.z),
 
-            LinearProfile(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x),
-            LinearProfile(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y),
-            LinearProfile(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z),
+            SingleVariableLinearProfile(start_state_body.angular_velocity.x, self.end_state_body.motion_in_body_coordinates.angular_velocity.x),
+            SingleVariableLinearProfile(start_state_body.angular_velocity.y, self.end_state_body.motion_in_body_coordinates.angular_velocity.y),
+            SingleVariableLinearProfile(start_state_body.angular_velocity.z, self.end_state_body.motion_in_body_coordinates.angular_velocity.z),
         ]
 
         # Compute intermediate steps for the modules
@@ -284,3 +284,5 @@ class BodyControlledDriveModuleTrajectory(ModuleStateTrajectory):
             profiles[1].first_derivative_at(time_fraction),
             profiles[1].second_derivative_at(time_fraction),
         )
+
+

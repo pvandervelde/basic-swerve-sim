@@ -4,16 +4,17 @@ from typing import Mapping, List, Tuple
 
 # locals
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
+from swerve_controller.control_profile import LinearBodyMotionProfile, DriveModuleProfile, LinearDriveModuleStateProfile
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.errors import IncompleteTrajectoryException
 from swerve_controller.geometry import Point
 from swerve_controller.states import BodyState
-from swerve_controller.trajectory import LinearBodyMotionTrajectory, DriveModuleProfile, LinearDriveModuleStateTrajectory
 
 def create_drive_modules(
     length: float = 1.0,
     width: float = 1.0,
     wheel_radius: float = 0.1,
+    wheel_width: float = 0.05,
     steering_max_velocity: float = 1.0,
     steering_min_acceleration: float = 0.1,
     steering_max_acceleration: float = 1.0,
@@ -28,6 +29,7 @@ def create_drive_modules(
         drive_link="drive_link_1",
         steering_axis_xy_position=Point(0.5 * length, -0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -43,6 +45,7 @@ def create_drive_modules(
         drive_link="drive_link_2",
         steering_axis_xy_position=Point(0.5 * length, 0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -58,6 +61,7 @@ def create_drive_modules(
         drive_link="drive_link_3",
         steering_axis_xy_position=Point(-0.5 * length, 0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -73,6 +77,7 @@ def create_drive_modules(
         drive_link="drive_link_4",
         steering_axis_xy_position=Point(-0.5 * length, -0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -89,19 +94,33 @@ def create_drive_modules(
 def test_should_show_value_at_in_body_motion():
     time = 10.0
 
-    start_motion = BodyMotion(
+    start_motion = BodyState(
+        0.0,
+        0.0,
+        0.0,
         1.0,
         2.0,
-        3.0
+        3.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     )
     end_motion = BodyMotion(
         4.0,
         5.0,
-        6.0
+        6.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
     )
 
-    drive_modules = create_drive_modules()
-    trajectory = LinearBodyMotionTrajectory(drive_modules, start_motion, end_motion, time)
+    trajectory = LinearBodyMotionProfile(start_motion, end_motion, time)
 
     assert math.isclose(trajectory.body_motion_at(0.0).linear_velocity.x, 1.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(trajectory.body_motion_at(0.0).linear_velocity.y, 2.0, rel_tol=1e-6, abs_tol=1e-15)
@@ -116,7 +135,7 @@ def test_should_show_value_at_in_body_motion():
 def test_drive_module_trajectory_should_create_trajectory_with_start():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -141,7 +160,7 @@ def test_drive_module_trajectory_should_create_trajectory_with_start():
 def test_drive_module_trajectory_should_create_trajectory_with_end():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -166,7 +185,7 @@ def test_drive_module_trajectory_should_create_trajectory_with_end():
 def test_drive_module_trajectory_should_create_trajectory_for_forward_acceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -219,7 +238,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
 def test_drive_module_trajectory_should_create_trajectory_for_forward_deceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -272,7 +291,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_acceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -325,7 +344,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_deceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -378,7 +397,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
 def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -431,7 +450,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
 def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceleration():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -484,7 +503,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
 def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sideways_transition():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -537,7 +556,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwards_transition():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -590,7 +609,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
 def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotation_transition():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -645,7 +664,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
 def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotation_transition():
     drive_modules = create_drive_modules()
 
-    trajectory = LinearDriveModuleStateTrajectory(drive_modules, 1.0)
+    trajectory = LinearDriveModuleStateProfile(drive_modules, 1.0)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):

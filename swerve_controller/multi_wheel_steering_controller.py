@@ -10,10 +10,10 @@ from typing import Callable, Mapping, List, Tuple
 # local
 from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
 from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
+from .control_profile import LinearBodyMotionProfile, LinearDriveModuleStateProfile, ModuleStateProfile
 from .drive_module import DriveModule
 from .geometry import Point
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
-from .trajectory import BodyControlledDriveModuleTrajectory, LinearBodyMotionTrajectory, LinearDriveModuleStateTrajectory, ModuleStateTrajectory
 
 class BaseSteeringController(ABC):
 
@@ -97,7 +97,7 @@ class LinearModuleFirstSteeringController(BaseSteeringController):
         self.motion_command_changed_at_time_in_seconds = 0.0
 
         # Track the current trajectories and update them if necessary
-        self.drive_module_trajectory: LinearDriveModuleStateTrajectory = None
+        self.drive_module_trajectory: LinearDriveModuleStateProfile = None
 
         # Track the time at which the trajectories were created
         self.trajectory_created_at_time_in_seconds = 0.0
@@ -242,7 +242,7 @@ class LinearModuleFirstSteeringController(BaseSteeringController):
         #
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
-        drive_module_trajectory = LinearDriveModuleStateTrajectory(self.modules, self.min_time_for_trajectory)
+        drive_module_trajectory = LinearDriveModuleStateProfile(self.modules, self.min_time_for_trajectory)
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
@@ -314,8 +314,8 @@ class MultiWheelSteeringController(BaseSteeringController):
         ]
 
         # trajectories
-        self.body_trajectory: LinearBodyMotionTrajectory = None
-        self.module_trajectory_from_command: LinearDriveModuleStateTrajectory = None
+        self.body_trajectory: LinearBodyMotionProfile = None
+        self.module_trajectory_from_command: LinearDriveModuleStateProfile = None
 
          # Keep track of our position in time so that we can figure out where on the current
         # trajectory we should be
@@ -419,14 +419,14 @@ class MultiWheelSteeringController(BaseSteeringController):
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
         if isinstance(desired_motion, BodyMotionCommand):
-            trajectory = LinearBodyMotionTrajectory(self.body_state, desired_motion.to_body_state(self.control_model), desired_motion.time_for_motion())
+            trajectory = LinearBodyMotionProfile(self.body_state, desired_motion.to_body_state(self.control_model), desired_motion.time_for_motion())
             self.body_trajectory = trajectory
 
             self.is_executing_body_trajectory = True
             self.is_executing_module_trajectory = False
         else:
             if isinstance(desired_motion, DriveModuleMotionCommand):
-                trajectory = LinearDriveModuleStateTrajectory(self.modules, desired_motion.time_for_motion())
+                trajectory = LinearDriveModuleStateProfile(self.modules, desired_motion.time_for_motion())
                 trajectory.set_current_state(self.module_states)
                 trajectory.set_desired_end_state(desired_motion.to_drive_module_state(self.control_model)[0])
                 self.module_trajectory_from_command = trajectory
