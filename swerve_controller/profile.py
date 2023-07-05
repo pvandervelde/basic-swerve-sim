@@ -22,7 +22,7 @@ class ProfilePoint(object):
         self.second_derivative = second_derivative
         self.third_derivative = third_derivative
 
-class TransientValueProfile(ABC):
+class TransientVariableProfile(ABC):
 
     @abstractmethod
     def first_derivative_at(self, time_fraction: float) -> float:
@@ -44,7 +44,7 @@ class TransientValueProfile(ABC):
     def value_at(self, time_fraction: float) -> float:
         pass
 
-class LinearProfile(TransientValueProfile):
+class SingleVariableLinearProfile(TransientVariableProfile):
 
     def __init__(self, start: float, end: float):
         self.start = start
@@ -87,7 +87,7 @@ class LinearProfile(TransientValueProfile):
 
         return (self.end - self.start) * time_fraction + self.start
 
-class CompoundProfileValue(object):
+class SingleVariableCompoundProfileValue(object):
 
     def __init__(
         self,
@@ -97,12 +97,12 @@ class CompoundProfileValue(object):
         self.location = location_fraction
         self.value = value
 
-class MultiPointLinearProfile(TransientValueProfile):
+class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
     def __init__(self, start: float, end: float):
-        self.profiles: List[CompoundProfileValue] = [
-            CompoundProfileValue(0.0, start),
-            CompoundProfileValue(1.0, end)
+        self.profiles: List[SingleVariableCompoundProfileValue] = [
+            SingleVariableCompoundProfileValue(0.0, start),
+            SingleVariableCompoundProfileValue(1.0, end)
         ]
 
         # We have two points (begin and end) so at best we can do a linear approach
@@ -115,7 +115,7 @@ class MultiPointLinearProfile(TransientValueProfile):
         if time_fraction > 1.0:
             time_fraction = 1.0
 
-        section = CompoundProfileValue(time_fraction,value)
+        section = SingleVariableCompoundProfileValue(time_fraction,value)
 
         for i in range(len(self.profiles)):
             if math.isclose(time_fraction, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
@@ -255,18 +255,17 @@ class CompoundProfileSection(object):
         self,
         starting_location_fraction: float,
         ending_location_fraction: float,
-        profile: TransientValueProfile
+        profile: TransientVariableProfile
     ):
         self.starting_location = starting_location_fraction
         self.ending_location = ending_location_fraction
         self.profile = profile
 
-
-class CompoundProfile(TransientValueProfile):
+class SingleVariableCompoundProfile(TransientVariableProfile):
     def __init__(self):
         self.profiles: List[CompoundProfileSection] = []
 
-    def add_profile(self, starting_time_fraction: float, ending_time_fraction: float, profile: TransientValueProfile):
+    def add_profile(self, starting_time_fraction: float, ending_time_fraction: float, profile: TransientVariableProfile):
         if starting_time_fraction > ending_time_fraction:
             raise InvalidTimeFractionException()
 
@@ -343,7 +342,7 @@ class CompoundProfile(TransientValueProfile):
                                 return CompoundProfileSection(
                                     self.profiles[i].ending_location,
                                     1.0,
-                                    LinearProfile(
+                                    SingleVariableLinearProfile(
                                         value,
                                         value
                                     ))
@@ -357,7 +356,7 @@ class CompoundProfile(TransientValueProfile):
                             return CompoundProfileSection(
                                 self.profiles[i].ending_location,
                                 1.0,
-                                LinearProfile(
+                                SingleVariableLinearProfile(
                                     value,
                                     value
                                 ))
@@ -368,7 +367,7 @@ class CompoundProfile(TransientValueProfile):
                     return CompoundProfileSection(
                         self.profiles[i - 1].ending_location,
                         self.profiles[i].starting_location,
-                        LinearProfile(
+                        SingleVariableLinearProfile(
                             self.profiles[i - 1].profile.value_at(1.0),
                             self.profiles[i].profile.value_at(0.0)
                         ))
@@ -378,7 +377,7 @@ class CompoundProfile(TransientValueProfile):
                     return CompoundProfileSection(
                         0.0,
                         self.profiles[i].starting_location,
-                        LinearProfile(
+                        SingleVariableLinearProfile(
                             value,
                             value
                         ))
@@ -387,7 +386,7 @@ class CompoundProfile(TransientValueProfile):
         return CompoundProfileSection(
             0.0,
             1.0,
-            LinearProfile(
+            SingleVariableLinearProfile(
                 0.0,
                 0.0
             ))
@@ -470,26 +469,132 @@ class CompoundProfile(TransientValueProfile):
         local_fraction = from_start / total
         return profile.profile.value_at(local_fraction)
 
-# Low jerk profile (S-profile)
+# see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
+class SingleVariableTrapezoidalProfile(TransientVariableProfile):
+    def __init__(self, start: float, end: float):
+        self.start = start
+        self.end = end
 
-class LowJerkProfile(TransientValueProfile):
+        # For a trapezoidal motion profile the progress in the profile
+        # is based on the first derrivative, e.g. if the profile is
+        # for position then the progress from one position to another
+        # is based on the velocity profile
+        #
+        # The two extremes are:
+        # - Constant velocity over the entire time span
+        # - Constant acceleration over half the timespan and constant decleration over
+        #   the other half of the timespan
+        #
+        # In the first case the velocity is (endValue - startValue) / timeSpan
+        # In the second case the velocity_max is 2 * ((endValue - startValue) / timeSpan)
+        # The actual velocity should be in between these values
+        #
+        # Initially assume that all phases take 1/3 of the total time
+        #
+        # Profiles are always defined on a relative time span of 1.0, which makes
+        # it easy to alter the timespan.
+        #
+        # v_min = (end - start) / 1.0
+        # v_max = 2 * v_min
+        #
+        # Assume the profile is 1/3rd acceleration, 1/3 constant velocity and
+        # 1/3rd deceleration
+        #
+        # The total distance is equal to the integral of velocity over time. For
+        # a trapezoidal profile this means
+        #
+        # s = 0.5 * v * t_acc + v * t_const + 0.5 * v * t_dec
+        #
+        # where:
+        # - s = distance
+        # - v = maximum velocity in the profile
+        # - t_acc = time taken to accelerate
+        # - t_const = time taken at constant velocity
+        # - t_dec = time taken to decelerate
+        #
+        # s = v * (0.5 * t_acc + t_const + 0.5 * t_dec)
+        #
+        # Each segment is 1/3 of the total time
+        #
+        # s = v * 2/3 * t
+        #
+        # v = 1.5 * s / t
+        self.velocity = 1.5 * (end - start) / 1.0
 
-    @abstractmethod
+
     def first_derivative_at(self, time_fraction: float) -> float:
-        pass
+        if time_fraction < 0.0:
+            return 0.0
 
-    @abstractmethod
+        if time_fraction > 1.0:
+            return 0.0
+
+        if time_fraction < 1/3:
+            # Accelerating
+            return 0.0 + (self.velocity - 0.0) * 3 * time_fraction
+
+        if time_fraction > 2/3:
+            # deccelerating
+            return self.velocity + ((0.0 - self.velocity) * 3 * (time_fraction - 2/3))
+
+        return self.velocity
+
     def inflection_points(self) -> List[ProfilePoint]:
-        pass
+        return [
+            ProfilePoint(
+                0.0,
+                self.start,
+                self.first_derivative_at(0.0),
+                self.second_derivative_at(0.0),
+                self.third_derivative_at(0.0)
+            ),
+            ProfilePoint(
+                1.0,
+                self.end,
+                self.first_derivative_at(1.0),
+                self.second_derivative_at(1.0),
+                self.third_derivative_at(1.0)
+            )
+        ]
 
-    @abstractmethod
     def second_derivative_at(self, time_fraction: float) -> float:
-        pass
+        if time_fraction < 0.0:
+            return 0.0
 
-    @abstractmethod
+        if time_fraction > 1.0:
+            return 0.0
+
+        if time_fraction < 1/3:
+            # Accelerating
+            return (self.velocity - 0.0) * 3
+
+        if time_fraction > 2/3:
+            # deccelerating
+            return (0.0 - self.velocity) * 3
+
+        return 0.0
+
     def third_derivative_at(self, time_fraction: float) -> float:
-        pass
+        return 0.0
 
-    @abstractmethod
     def value_at(self, time_fraction: float) -> float:
-        pass
+        if time_fraction < 0.0:
+            return self.start
+
+        if time_fraction > 1.0:
+            return self.end
+
+        if time_fraction < 1/3:
+            # Accelerating
+            return self.start + 0.0 * time_fraction + 0.5 * (self.velocity - 0.0) * 3 * time_fraction * time_fraction
+
+        if time_fraction > 2/3:
+            # deccelerating
+            return self.start + 0.5 * self.velocity * 1/3 + 1/3 * self.velocity + (self.velocity + 0.5 * (0.0 - self.velocity) * 3 * (time_fraction - 2/3)) * (time_fraction - 2/3)
+
+        return self.start + 0.5 * self.velocity * 1/3 + (time_fraction - 1/3) * self.velocity
+
+# S-Curve profile
+# --> controlled by the second derivative being linear
+
+# other jerk limited profile
