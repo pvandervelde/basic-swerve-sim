@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import math
-from typing import Mapping, List
+from typing import Callable, Mapping, List
 
 from swerve_controller.control_model import ControlModelBase
 
@@ -12,19 +12,24 @@ from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValu
 # A collection of position / velocity / acceleration profiles
 class BodyMotionProfile(object):
 
-    def __init__(self, current: BodyState, desired: BodyMotion, min_trajectory_time_in_seconds: float):
+    def __init__(
+            self,
+            current: BodyState,
+            desired: BodyMotion,
+            min_trajectory_time_in_seconds: float,
+            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
         self.start_state = current
         self.end_state = desired
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
 
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
-            SingleVariableTrapezoidalProfile(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
         ]
 
     def body_motion_at(self, time_fraction: float) -> BodyMotion:
@@ -59,8 +64,13 @@ class ModuleStateProfile(ABC):
 
 class DriveModuleStateProfile(ModuleStateProfile):
 
-    def __init__(self, drive_modules: List[DriveModule], min_trajectory_time_in_seconds: float):
+    def __init__(
+            self,
+            drive_modules: List[DriveModule],
+            min_trajectory_time_in_seconds: float,
+            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
         self.modules = drive_modules
+        self.motion_profile_func = motion_profile_func
         self.start_states: List[DriveModuleMeasuredValues] = []
         self.end_states: List[DriveModuleDesiredValues] = []
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
@@ -91,10 +101,10 @@ class DriveModuleStateProfile(ModuleStateProfile):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                SingleVariableTrapezoidalProfile(start.orientation_in_body_coordinates.z, end_steering_angle),
+                self.motion_profile_func(start.orientation_in_body_coordinates.z, end_steering_angle),
 
                 # Drive velocity
-                SingleVariableTrapezoidalProfile(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
+                self.motion_profile_func(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
             ]
 
             self.profiles[self.modules[i].name] = module_profiles
