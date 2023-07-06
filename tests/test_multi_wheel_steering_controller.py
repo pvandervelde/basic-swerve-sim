@@ -9,7 +9,7 @@ from swerve_controller.errors import IncompleteTrajectoryException
 from swerve_controller.geometry import Point
 from swerve_controller.sim_utils import get_intersect
 from swerve_controller.states import BodyState
-from swerve_controller.control_profile import LinearBodyMotionProfile, DriveModuleProfile, LinearDriveModuleStateProfile
+from swerve_controller.control_profile import BodyMotionProfile, DriveModuleStateProfile
 
 def test_intersect_with_parallel_lines():
     intersection_point = get_intersect(

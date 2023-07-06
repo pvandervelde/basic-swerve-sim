@@ -4,7 +4,7 @@ from typing import Mapping, List, Tuple
 
 # locals
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion, SimpleFourWheelSteeringControlModel
-from swerve_controller.control_profile import LinearBodyMotionProfile, DriveModuleProfile, LinearDriveModuleStateProfile
+from swerve_controller.control_profile import BodyMotionProfile, DriveModuleStateProfile
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.errors import IncompleteTrajectoryException
 from swerve_controller.geometry import Point
