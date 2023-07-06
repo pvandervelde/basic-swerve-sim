@@ -471,6 +471,8 @@ class SingleVariableCompoundProfile(TransientVariableProfile):
 
 # see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
 class SingleVariableTrapezoidalProfile(TransientVariableProfile):
+
+
     def __init__(self, start: float, end: float):
         self.start = start
         self.end = end
@@ -521,6 +523,9 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         # v = 1.5 * s / t
         self.velocity = 1.5 * (end - start) / 1.0
 
+        self.acceleration_phase_ratio = 1/3
+        self.constant_phase_ratio = 1/3
+        self.deceleration_phase_ratio = 1/3
 
     def first_derivative_at(self, time_fraction: float) -> float:
         if time_fraction < 0.0:
@@ -529,13 +534,18 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         if time_fraction > 1.0:
             return 0.0
 
-        if time_fraction < 1/3:
+        if time_fraction < self.acceleration_phase_ratio:
             # Accelerating
-            return 0.0 + (self.velocity - 0.0) * 3 * time_fraction
+            starting_velocity = 0.0
+            velocity_due_to_acceleration = ((self.velocity - starting_velocity) / self.acceleration_phase_ratio) * time_fraction
+            return starting_velocity + velocity_due_to_acceleration
 
-        if time_fraction > 2/3:
+        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
-            return self.velocity + ((0.0 - self.velocity) * 3 * (time_fraction - 2/3))
+            starting_velocity = self.velocity
+            ending_velocity = 0.0
+            velocity_due_to_acceleration = ((ending_velocity - self.velocity) / self.deceleration_phase_ratio) * (time_fraction - (self.acceleration_phase_ratio + self.constant_phase_ratio))
+            return starting_velocity + velocity_due_to_acceleration
 
         return self.velocity
 
@@ -547,6 +557,20 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
                 self.first_derivative_at(0.0),
                 self.second_derivative_at(0.0),
                 self.third_derivative_at(0.0)
+            ),
+            ProfilePoint(
+                self.acceleration_phase_ratio,
+                self.value_at(self.acceleration_phase_ratio),
+                self.first_derivative_at(self.acceleration_phase_ratio),
+                self.second_derivative_at(self.acceleration_phase_ratio),
+                self.third_derivative_at(self.acceleration_phase_ratio)
+            ),
+            ProfilePoint(
+                self.acceleration_phase_ratio + self.constant_phase_ratio,
+                self.value_at(self.acceleration_phase_ratio + self.constant_phase_ratio),
+                self.first_derivative_at(self.acceleration_phase_ratio + self.constant_phase_ratio),
+                self.second_derivative_at(self.acceleration_phase_ratio + self.constant_phase_ratio),
+                self.third_derivative_at(self.acceleration_phase_ratio + self.constant_phase_ratio)
             ),
             ProfilePoint(
                 1.0,
@@ -564,13 +588,15 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         if time_fraction > 1.0:
             return 0.0
 
-        if time_fraction < 1/3:
+        if time_fraction < self.acceleration_phase_ratio:
             # Accelerating
-            return (self.velocity - 0.0) * 3
+            starting_velocity = 0.0
+            return (self.velocity - starting_velocity) / self.acceleration_phase_ratio
 
-        if time_fraction > 2/3:
+        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
-            return (0.0 - self.velocity) * 3
+            ending_velocity = 0.0
+            return (ending_velocity - self.velocity) / self.deceleration_phase_ratio
 
         return 0.0
 
@@ -584,15 +610,24 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         if time_fraction > 1.0:
             return self.end
 
-        if time_fraction < 1/3:
+        if time_fraction < self.acceleration_phase_ratio:
             # Accelerating
-            return self.start + 0.0 * time_fraction + 0.5 * (self.velocity - 0.0) * 3 * time_fraction * time_fraction
+            starting_velocity = 0.0
+            distance_change_from_velocity = starting_velocity * time_fraction
+            distance_change_from_acceleration = 0.5 * ((self.velocity - starting_velocity) / self.acceleration_phase_ratio) * time_fraction * time_fraction
+            return self.start + distance_change_from_velocity + distance_change_from_acceleration
 
-        if time_fraction > 2/3:
+        distance_due_to_inital_acceleration = 0.5 * self.velocity * self.acceleration_phase_ratio
+        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
-            return self.start + 0.5 * self.velocity * 1/3 + 1/3 * self.velocity + (self.velocity + 0.5 * (0.0 - self.velocity) * 3 * (time_fraction - 2/3)) * (time_fraction - 2/3)
+            distance_due_to_constant_velocity = self.velocity * self.constant_phase_ratio
 
-        return self.start + 0.5 * self.velocity * 1/3 + (time_fraction - 1/3) * self.velocity
+            deceleration_time = time_fraction - (self.acceleration_phase_ratio + self.constant_phase_ratio)
+            ending_velocity = 0.0
+            distance_due_to_deceleration = self.velocity * deceleration_time + 0.5 * ((ending_velocity - self.velocity) / self.deceleration_phase_ratio) * deceleration_time * deceleration_time
+            return self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+
+        return self.start + distance_due_to_inital_acceleration + (time_fraction - self.acceleration_phase_ratio) * self.velocity
 
 # S-Curve profile
 # --> controlled by the second derivative being linear
