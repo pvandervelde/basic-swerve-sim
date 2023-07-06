@@ -13,7 +13,7 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
-    LinearModuleFirstSteeringController,
+    ModuleFirstSteeringController,
     MultiWheelSteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time

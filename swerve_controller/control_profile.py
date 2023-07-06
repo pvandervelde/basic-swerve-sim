@@ -10,7 +10,7 @@ from .profile import SingleVariableLinearProfile, SingleVariableMultiPointLinear
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 # A collection of position / velocity / acceleration profiles
-class LinearBodyMotionProfile(object):
+class BodyMotionProfile(object):
 
     def __init__(self, current: BodyState, desired: BodyMotion, min_trajectory_time_in_seconds: float):
         self.start_state = current
@@ -57,7 +57,7 @@ class ModuleStateProfile(ABC):
     def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
         pass
 
-class LinearDriveModuleStateProfile(ModuleStateProfile):
+class DriveModuleStateProfile(ModuleStateProfile):
 
     def __init__(self, drive_modules: List[DriveModule], min_trajectory_time_in_seconds: float):
         self.modules = drive_modules

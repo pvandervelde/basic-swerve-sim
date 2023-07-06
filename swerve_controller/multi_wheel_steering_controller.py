@@ -10,7 +10,7 @@ from typing import Callable, Mapping, List, Tuple
 # local
 from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
 from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
-from .control_profile import LinearBodyMotionProfile, LinearDriveModuleStateProfile, ModuleStateProfile
+from .control_profile import BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
 from .drive_module import DriveModule
 from .geometry import Point
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
