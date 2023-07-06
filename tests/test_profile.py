@@ -618,21 +618,32 @@ def test_should_show_inflection_points_with_increasing_trapezoidal_profile():
 
     points = profile.inflection_points()
 
-    assert len(points) == 2
+    assert len(points) == 4
 
     assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].second_derivative, 1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].time_fraction, 1/3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].value, start + 0.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-    assert False
+    assert math.isclose(points[2].time_fraction, 2/3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].value, start + 1.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(points[3].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].value, end, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].second_derivative, -1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
 
 def test_should_show_inflection_points_with_decreasing_trapezoidal_profile():
     start = 2.0
@@ -641,21 +652,31 @@ def test_should_show_inflection_points_with_decreasing_trapezoidal_profile():
 
     points = profile.inflection_points()
 
-    assert len(points) == 2
+    assert len(points) == 4
 
     assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[0].second_derivative, 1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].time_fraction, 1/3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].value, start + 0.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[1].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
-    assert False
+    assert math.isclose(points[2].time_fraction, 2/3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].value, start + 1.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[2].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(points[3].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].value, end, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].second_derivative, -1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(points[3].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_second_derivative_at_with_increasing_trapezoidal_profile():
     start = 1.0
