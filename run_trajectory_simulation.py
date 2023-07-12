@@ -3,7 +3,7 @@ from os import makedirs, path
 from pathlib import Path
 
 from typing import Callable, List, Mapping, NamedTuple, Tuple
-from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
+from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 import yaml
 from yaml.loader import SafeLoader
 
@@ -181,6 +181,9 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
 
     return result
 
+def get_scurve_profile(start: float, end: float) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end)
+
 def get_trapezoidal_profile(start: float, end: float) -> TransientVariableProfile:
     return SingleVariableTrapezoidalProfile(start, end)
 
@@ -282,10 +285,10 @@ def read_arguments() -> Mapping[str, any]:
         "-mp",
         "--motion-profile",
         action="store",
-        choices=['linear', 'trapezoidal'],
+        choices=['linear', 'trapezoidal', 'scurve'],
         default='module',
         required=False,
-        help="The name of the motion profile that controls the velocity and acceleration profiles for the drive module motors. Current options are: 'linear', 'trapezoidal'"
+        help="The name of the motion profile that controls the velocity and acceleration profiles for the drive module motors. Current options are: 'linear', 'trapezoidal', 'scurve'"
     )
 
     args = parser.parse_args()
@@ -382,6 +385,9 @@ def simulation_run_trajectory(
 
     if motion_profile == 'trapezoidal':
         motion_profile_func = get_trapezoidal_profile
+
+    if motion_profile == 'scurve':
+        motion_profile_func = get_scurve_profile
 
     if controller_name == 'module':
         controller = ModuleFirstSteeringController(drive_modules, motion_profile_func)

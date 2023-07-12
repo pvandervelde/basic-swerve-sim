@@ -4,7 +4,7 @@ from typing import Mapping, List, Tuple
 
 # locals
 from swerve_controller.errors import InvalidTimeFractionException
-from swerve_controller.profile import SingleVariableCompoundProfile, InvalidTimeFractionException, SingleVariableLinearProfile, SingleVariableMultiPointLinearProfile, SingleVariableTrapezoidalProfile
+from swerve_controller.profile import SingleVariableCompoundProfile, InvalidTimeFractionException, SingleVariableLinearProfile, SingleVariableMultiPointLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile
 
 # SingleVariableLinearProfile
 
@@ -25,48 +25,6 @@ def test_should_show_first_derivative_at_with_decreasing_linear_profile():
     assert math.isclose(profile.first_derivative_at(0.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.first_derivative_at(1.0), end - start, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.first_derivative_at(0.5), end - start, rel_tol=1e-6, abs_tol=1e-15)
-
-def test_should_show_inflection_points_with_increasing_linear_profile():
-    start = 1.0
-    end = 2.0
-    profile = SingleVariableLinearProfile(start, end)
-
-    points = profile.inflection_points()
-
-    assert len(points) == 2
-
-    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-def test_should_show_inflection_points_with_decreasing_linear_profile():
-    start = 2.0
-    end = 1.0
-    profile = SingleVariableLinearProfile(start, end)
-
-    points = profile.inflection_points()
-
-    assert len(points) == 2
-
-    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[1].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, end - start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_show_second_derivative_at_with_increasing_linear_profile():
     start = 1.0
@@ -611,73 +569,6 @@ def test_should_show_first_derivative_at_with_decreasing_trapezoidal_profile():
     assert math.isclose(profile.first_derivative_at(0.5), 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.first_derivative_at(5/6), 0.75 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
 
-def test_should_show_inflection_points_with_increasing_trapezoidal_profile():
-    start = 1.0
-    end = 2.0
-    profile = SingleVariableTrapezoidalProfile(start, end)
-
-    points = profile.inflection_points()
-
-    assert len(points) == 4
-
-    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[1].time_fraction, 1/3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, start + 0.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[2].time_fraction, 2/3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].value, start + 1.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[3].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].second_derivative, -1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-
-def test_should_show_inflection_points_with_decreasing_trapezoidal_profile():
-    start = 2.0
-    end = 1.0
-    profile = SingleVariableTrapezoidalProfile(start, end)
-
-    points = profile.inflection_points()
-
-    assert len(points) == 4
-
-    assert math.isclose(points[0].time_fraction, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].value, start, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].second_derivative, 1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[0].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[1].time_fraction, 1/3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].value, start + 0.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[1].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[2].time_fraction, 2/3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].value, start + 1.5 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].first_derivative, 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].second_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[2].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
-    assert math.isclose(points[3].time_fraction, 1.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].value, end, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].first_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].second_derivative, -1.5 * (end - start) * 3, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(points[3].third_derivative, 0.0, rel_tol=1e-6, abs_tol=1e-15)
-
 def test_should_show_second_derivative_at_with_increasing_trapezoidal_profile():
     start = 1.0
     end = 2.0
@@ -767,3 +658,195 @@ def test_should_show_value_at_with_decreasing_trapezoidal_profile():
     assert math.isclose(profile.value_at(1/6), start + 0.5 * 4.5 * (end - start) * 1/6 * 1/6, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.value_at(0.5), start + 1.0 * 1/3 * 1.5 * (end - start), rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(profile.value_at(5/6), start + 1.5 * 1/3 * 1.5 * (end - start) + (1.5 * (end - start) * 1/6 - 0.5 * 4.5 * (end - start) * 1/6 * 1/6), rel_tol=1e-6, abs_tol=1e-15)
+
+# SingleVariableSCurveProfile
+
+def test_should_show_first_derivative_at_with_increasing_scurve_profile():
+    start = 1.0
+    end = 2.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.first_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.first_derivative_at(1/8), 0.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(2/8), 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(3/8), 2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(4/8), 2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(5/8), 2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(6/8), 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(7/8), 0.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(8/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.first_derivative_at(1/16), 0.5 * 51.2 * 1/256, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(3/16), 1.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(5/16), 51.2 * 1/128 - 0.5 * 51.2 * 1/256 + 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(7/16), 2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(9/16), 2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(11/16), 51.2 * 1/128 - 0.5 * 51.2 * 1/256 + 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(13/16), 1.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(15/16), 0.5 * 51.2 * 1/256, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_first_derivative_at_with_decreasing_scurve_profile():
+    start = 2.0
+    end = 1.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.first_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.first_derivative_at(1/8), -0.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(2/8), -1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(3/8), -2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(4/8), -2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(5/8), -2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(6/8), -1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(7/8), -0.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(8/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.first_derivative_at(1/16), -0.5 * 51.2 * 1/256, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(3/16), -1.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(5/16), -51.2 * 1/128 + 0.5 * 51.2 * 1/256 - 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(7/16), -2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(9/16), -2.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(11/16), -51.2 * 1/128 + 0.5 * 51.2 * 1/256 - 1.5 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(13/16), -1.0 * 51.2 * 1/64, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.first_derivative_at(15/16), -0.5 * 51.2 * 1/256, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_second_derivative_at_with_increasing_scurve_profile():
+    start = 1.0
+    end = 2.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.second_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.second_derivative_at(1/8), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(2/8), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(3/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(4/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(5/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(6/8), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(7/8), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(8/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.second_derivative_at(1/16), 51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(3/16), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(5/16), 51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(7/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(9/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(11/16), -51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(13/16), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(15/16), -51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_second_derivative_at_with_decreasing_scurve_profile():
+    start = 2.0
+    end = 1.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.second_derivative_at(0.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(1.0), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.second_derivative_at(1/8), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(2/8), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(3/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(4/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(5/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(6/8), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(7/8), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(8/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.second_derivative_at(1/16), -51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(3/16), -51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(5/16), -51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(7/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(9/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(11/16), 51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(13/16), 51.2 * 1/8, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.second_derivative_at(15/16), 51.2 * 1/16, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_third_derivative_at_with_increasing_scurve_profile():
+    start = 1.0
+    end = 2.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.third_derivative_at(0.0), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(1.0), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.third_derivative_at(1/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(2/8), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(3/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(4/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(5/8), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(6/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(7/8), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(8/8), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.third_derivative_at(1/16), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(3/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(5/16), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(7/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(9/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(11/16), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(13/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(15/16), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_third_derivative_at_with_decreasing_scurve_profile():
+    start = 2.0
+    end = 1.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.third_derivative_at(0.0), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(1.0), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.third_derivative_at(1/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(2/8), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(3/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(4/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(5/8), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(6/8), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(7/8), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(8/8), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.third_derivative_at(1/16), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(3/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(5/16), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(7/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(9/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(11/16), 51.2, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(13/16), 0.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.third_derivative_at(15/16), -51.2, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_value_at_with_increasing_scurve_profile():
+    start = 1.0
+    end = 2.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.value_at(0.0), start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(1.0), end, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.value_at(1/8), 1/6 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(2/8), 1.0 * 51.2 * 1/512 + 1/6 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(3/8), 3.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(4/8), 5.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(5/8), 7.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(6/8), (8 + 5/6) * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(7/8), (9 + 5/6) * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(8/8), end, rel_tol=1e-6, abs_tol=1e-15)
+
+def test_should_show_value_at_with_decreasing_scurve_profile():
+    start = 2.0
+    end = 1.0
+    profile = SingleVariableSCurveProfile(start, end)
+
+    assert math.isclose(profile.value_at(0.0), start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(1.0), end, rel_tol=1e-6, abs_tol=1e-15)
+
+    assert math.isclose(profile.value_at(1/8), -1/6 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(2/8), -1.0 * 51.2 * 1/512 - 1/6 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(3/8), -3.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(4/8), -5.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(5/8), -7.0 * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(6/8), -(8 + 5/6) * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(7/8), -(9 + 5/6) * 51.2 * 1/512 + start, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(profile.value_at(8/8), end, rel_tol=1e-6, abs_tol=1e-15)
