@@ -15,7 +15,7 @@ from swerve_controller.control_model import DriveModuleDesiredValues, DriveModul
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
     ModuleFirstSteeringController,
-    MultiWheelSteeringController,
+    ModuleFollowsBodySteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
 from swerve_controller.states import BodyState
@@ -387,7 +387,7 @@ def simulation_run_trajectory(
         controller = ModuleFirstSteeringController(drive_modules, motion_profile_func)
 
     if controller_name == 'body':
-        controller = MultiWheelSteeringController(drive_modules, motion_profile_func)
+        controller = ModuleFollowsBodySteeringController(drive_modules, motion_profile_func)
 
     motion_directory = path.join(output_directory, motion_set.name, controller_name, motion_profile)
 

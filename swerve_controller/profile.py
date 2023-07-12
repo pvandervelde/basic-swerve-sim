@@ -631,5 +631,11 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
 
 # S-Curve profile
 # --> controlled by the second derivative being linear
+class SingleVariableSCurveProfile(TransientVariableProfile):
+
+
+    def __init__(self, start: float, end: float):
+        self.start = start
+        self.end = end
 
 # other jerk limited profile
