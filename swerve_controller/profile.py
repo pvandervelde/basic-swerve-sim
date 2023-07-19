@@ -50,10 +50,33 @@ class SingleVariableLinearProfile(TransientVariableProfile):
         return self.end - self.start
 
     def second_derivative_at(self, time_fraction: float) -> float:
-        # Linear profile. There should never be an acceleration
+        if time_fraction < 0.0:
+            return 0.0
+
+        if time_fraction > 1.0:
+            return 0.0
+
+        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            return (self.end - self.start) / 0.01
+
+        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            return -(self.end - self.start) / 0.01
+
         return 0.0
 
     def third_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            return 0.0
+
+        if time_fraction > 1.0:
+            return 0.0
+
+        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            return (self.end - self.start) / 0.01 / 0.01
+
+        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            return -(self.end - self.start) / 0.01 / 0.01
+
         return 0.0
 
     def value_at(self, time_fraction: float) -> float:
@@ -522,6 +545,28 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         return 0.0
 
     def third_derivative_at(self, time_fraction: float) -> float:
+        if time_fraction < 0.0:
+            return 0.0
+
+        if time_fraction > 1.0:
+            return 0.0
+
+        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            starting_velocity = 0.0
+            return (((self.velocity - starting_velocity) / self.acceleration_phase_ratio) - 0.0) / 0.01
+
+        if math.isclose(time_fraction, self.acceleration_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
+            starting_velocity = 0.0
+            return (0.0 - ((self.velocity - starting_velocity) / self.acceleration_phase_ratio)) / 0.01
+
+        if math.isclose(time_fraction, self.acceleration_phase_ratio + self.constant_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
+            ending_velocity = 0.0
+            return (((ending_velocity - self.velocity) / self.deceleration_phase_ratio) - 0.0) / 0.01
+
+        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+            ending_velocity = 0.0
+            return (0.0 - ((ending_velocity - self.velocity) / self.acceleration_phase_ratio)) / 0.01
+
         return 0.0
 
     def value_at(self, time_fraction: float) -> float:
