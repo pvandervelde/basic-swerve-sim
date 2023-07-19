@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import plotly.offline as py
 from plotly.subplots import make_subplots
 from typing import List, Mapping, NamedTuple, Tuple
-from sim_output.animate import plot_movement_through_space
+from sim_output.animate_robot import plot_movement_through_space
 
 # local
 from swerve_controller.control_model import DriveModuleMeasuredValues, Point

@@ -200,7 +200,7 @@ icr_colors: List[str] = [
     "violet"
 ]
 
-def animate(time_index: int):
+def animate(time_index: int) -> List[Line2D]:
     ax_robot = animation_data.ax_robot
     drive_modules = animation_data.drive_modules
     body_states = animation_data.body_states
@@ -223,13 +223,13 @@ def animate(time_index: int):
         drive_module_states[time_index * ANIMATION_FRAME_DIVIDER])
     frames.extend(graph_frames)
 
-    return robot_frames
+    return frames
 
 def create_body_acceleration_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 12:16]) ####
 
     y_max: float = -100
@@ -262,7 +262,7 @@ def create_body_jerk_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 16:20]) ####
 
     y_max: float = -100
@@ -295,7 +295,7 @@ def create_body_angular_acceleration_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[1, 12:16])
 
     y_max: float = -100
@@ -322,7 +322,7 @@ def create_body_angular_jerk_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[1, 16:20]) ####
 
     y_max: float = -100
@@ -349,7 +349,7 @@ def create_body_angular_velocity_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[1, 8:12])
 
     y_max: float = -100
@@ -376,7 +376,7 @@ def create_body_velocity_plot(
         body_states: List[BodyState],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 8:12])
 
     y_max: float = -100
@@ -608,7 +608,7 @@ def create_module_acceleration_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[2, 12:16])
 
     y_max: float = -100
@@ -636,7 +636,7 @@ def create_module_jerk_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[2, 16:20])
 
     y_max: float = -100
@@ -664,7 +664,7 @@ def create_module_orientation_acceleration_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 2])
 
     y_max: float = -100
@@ -692,7 +692,7 @@ def create_module_orientation_jerk_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 3])
 
     y_max: float = -100
@@ -720,7 +720,7 @@ def create_module_orientation_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 0])
 
     y_max: float = -100
@@ -748,7 +748,7 @@ def create_module_orientation_velocity_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[0, 1])
 
     y_max: float = -100
@@ -776,7 +776,7 @@ def create_module_velocity_plot(
         drive_module_states: List[List[DriveModuleMeasuredValues]],
         fig: Figure,
         grid: GridSpec,
-        time_max: float):
+        time_max: float) -> Axes:
     ax = fig.add_subplot(grid[2, 8:12])
 
     y_max: float = -100
@@ -971,7 +971,7 @@ def create_robot_movement_frame(
 
     return plots
 
-def create_robot_plot(body_states: List[BodyState], fig: Figure, grid: GridSpec):
+def create_robot_plot(body_states: List[BodyState], fig: Figure, grid: GridSpec) -> Axes:
     ax = fig.add_subplot(grid[0:3, 0:8])
     x_max: float = -100
     x_min: float = 100
