@@ -12,6 +12,7 @@ def create_drive_modules(
     length: float = 1.0,
     width: float = 1.0,
     wheel_radius: float = 0.1,
+    wheel_width: float = 0.05,
     steering_max_velocity: float = 1.0,
     steering_min_acceleration: float = 0.1,
     steering_max_acceleration: float = 1.0,
@@ -26,6 +27,7 @@ def create_drive_modules(
         drive_link="drive_link_1",
         steering_axis_xy_position=Point(0.5 * length, -0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -41,6 +43,7 @@ def create_drive_modules(
         drive_link="drive_link_2",
         steering_axis_xy_position=Point(0.5 * length, 0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -56,6 +59,7 @@ def create_drive_modules(
         drive_link="drive_link_3",
         steering_axis_xy_position=Point(-0.5 * length, 0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -71,6 +75,7 @@ def create_drive_modules(
         drive_link="drive_link_4",
         steering_axis_xy_position=Point(-0.5 * length, -0.5 * width, 0.0),
         wheel_radius=wheel_radius,
+        wheel_width=wheel_width,
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
@@ -391,7 +396,16 @@ def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(1.0, 0.0, 0.0)
+    motion = BodyMotion(
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -410,7 +424,16 @@ def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_ex
     drive_modules = create_drive_modules(drive_max_velocity=1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(2.0, 0.0, 0.0)
+    motion = BodyMotion(
+        2.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -429,7 +452,16 @@ def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(-1.0, 0.0, 0.0)
+    motion = BodyMotion(
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -448,7 +480,16 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(0.0, 1.0, 0.0)
+    motion = BodyMotion(
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -460,14 +501,23 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
         assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(-90), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_sideways_motion():
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(0.0, -1.0, 0.0)
+    motion = BodyMotion(
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -476,7 +526,7 @@ def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_s
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(270), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(-90), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
         assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(90), rel_tol=1e-6, abs_tol=1e-15)
@@ -486,7 +536,16 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(1.0, 1.0, 0.0)
+    motion = BodyMotion(
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -498,14 +557,23 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
         assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, 1.0, rel_tol=1e-6, abs_tol=1e-15)
 
-        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(225), rel_tol=1e-6, abs_tol=1e-15)
+        assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(-135), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
     drive_modules = create_drive_modules(1.0, 1.0)
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(0.0, 0.0, 1.0)
+    motion = BodyMotion(
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -514,11 +582,14 @@ def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
     for i in range(len(proposed_states)):
         module_state = proposed_states[i]
 
-        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(45 + i * 90), rel_tol=1e-6, abs_tol=1e-15)
+        forward_angle = 45 + i * 90
+        if forward_angle >= 180:
+            forward_angle -= 360
+        assert math.isclose(module_state[0].steering_angle_in_radians, math.radians(forward_angle), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[0].drive_velocity_in_meters_per_second, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
 
         reversing_angle = 45 + i * 90 + 180
-        if reversing_angle >= 360:
+        if reversing_angle >= 180:
             reversing_angle -= 360
         assert math.isclose(module_state[1].steering_angle_in_radians, math.radians(reversing_angle), rel_tol=1e-6, abs_tol=1e-15)
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-15)
@@ -527,7 +598,16 @@ def test_should_not_move_wheels_when_zero_motion():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(0.0, 0.0, 0.0)
+    motion = BodyMotion(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
 
@@ -546,7 +626,16 @@ def test_should_not_move_wheels_when_stopping():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
-    motion = BodyMotion(0.0, 0.0, 0.0)
+    motion = BodyMotion(
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,)
 
     states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):

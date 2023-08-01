@@ -2,7 +2,8 @@ import argparse
 from os import makedirs, path
 from pathlib import Path
 
-from typing import List, Mapping, NamedTuple, Tuple
+from typing import Callable, List, Mapping, NamedTuple, Tuple
+from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 import yaml
 from yaml.loader import SafeLoader
 
@@ -13,8 +14,8 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
-    LinearModuleFirstSteeringController,
-    MultiWheelSteeringController,
+    ModuleFirstSteeringController,
+    ModuleFollowsBodySteeringController,
 )
 from swerve_controller.sim_utils import instantaneous_center_of_rotation_at_current_time
 from swerve_controller.states import BodyState
@@ -25,26 +26,6 @@ class MotionPlan(NamedTuple):
     body_state: BodyState
     initial_drive_module_states: List[DriveModuleDesiredValues]
     motions: List[MotionCommand]
-
-# Different simulator tracks
-#
-# 1. Straight line
-#       x(t) = a * t; 0 < t < 1.0
-#       y(t) = b * t; 0 < t < 1.0
-#   a. facing forwards
-#   b. facing backwards
-#   c. facing left
-#   d. facing right
-#   e. facing at an angle
-#   f. rotating
-#
-# 2. Square - facing forward
-#
-# 3. Circle
-#
-# 3. Flower (aka hypotrochoid)
-#       x(t) = (R - r) * cos(t) + rho * cos( ((R - r) / r) * t )
-#       y(t) = (R - r) * sin(t) - rho * sin( ((R - r) / r) * t )
 
 def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, wheel_radius: float = 0.1, wheel_width=0.1) -> List[DriveModule]:
     drive_modules: List[DriveModule] = []
@@ -113,6 +94,9 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
     drive_modules.append(right_front)
 
     return drive_modules
+
+def get_linear_motion_profile(start: float, end: float) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end)
 
 def get_motions(input_files: List[str]) -> List[MotionPlan]:
     result: List[MotionPlan] = []
@@ -196,6 +180,12 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
             result.append(plan)
 
     return result
+
+def get_scurve_profile(start: float, end: float) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end)
+
+def get_trapezoidal_profile(start: float, end: float) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end)
 
 def initialize_drive_modules(drive_modules: List[DriveModule], module_states: List[DriveModuleDesiredValues]) -> List[DriveModuleMeasuredValues]:
     states: List[DriveModuleMeasuredValues] = []
@@ -291,6 +281,16 @@ def read_arguments() -> Mapping[str, any]:
         help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body'"
     )
 
+    parser.add_argument(
+        "-mp",
+        "--motion-profile",
+        action="store",
+        choices=['linear', 'trapezoidal', 'scurve'],
+        default='module',
+        required=False,
+        help="The name of the motion profile that controls the velocity and acceleration profiles for the drive module motors. Current options are: 'linear', 'trapezoidal', 'scurve'"
+    )
+
     args = parser.parse_args()
 
     return vars(args)
@@ -358,6 +358,7 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     output_directory: str = arg_dict["output"]
     do_not_draw_graphs: bool = arg_dict["no_graphs"]
     controller: str = arg_dict["control_level"]
+    motion_profile: str = arg_dict["motion_profile"]
     print("Running trajectory simulation")
     print("Simulating motion for the following files:")
     for input_file in input_files:
@@ -368,23 +369,33 @@ def simulation_run_trajectories(arg_dict: Mapping[str, any]):
     drive_modules = get_drive_module_info()
     motions = get_motions(input_files)
     for motion_set in motions:
-        simulation_run_trajectory(output_directory, drive_modules, motion_set, controller, do_not_draw_graphs)
+        simulation_run_trajectory(output_directory, drive_modules, motion_set, controller, motion_profile, do_not_draw_graphs)
 
 def simulation_run_trajectory(
     output_directory: str,
     drive_modules: List[DriveModule],
     motion_set: MotionPlan,
     controller_name: str,
+    motion_profile:str,
     do_not_draw_graphs: bool,
     ):
 
+    if motion_profile == 'linear':
+        motion_profile_func = get_linear_motion_profile
+
+    if motion_profile == 'trapezoidal':
+        motion_profile_func = get_trapezoidal_profile
+
+    if motion_profile == 'scurve':
+        motion_profile_func = get_scurve_profile
+
     if controller_name == 'module':
-        controller = LinearModuleFirstSteeringController(drive_modules)
+        controller = ModuleFirstSteeringController(drive_modules, motion_profile_func)
 
     if controller_name == 'body':
-        controller = MultiWheelSteeringController(drive_modules)
+        controller = ModuleFollowsBodySteeringController(drive_modules, motion_profile_func)
 
-    motion_directory = path.join(output_directory, motion_set.name, controller_name)
+    motion_directory = path.join(output_directory, motion_set.name, controller_name, motion_profile)
 
     state_file_path = path.join(motion_directory, "sim_results.csv")
     if not path.isdir(motion_directory):
