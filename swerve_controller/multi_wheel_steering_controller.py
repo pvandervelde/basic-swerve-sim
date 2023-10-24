@@ -252,10 +252,6 @@ class ModuleFirstSteeringController(BaseSteeringController):
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
-        # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
-        # and make sure that the trajectories of the different modules all span the same time frame
-        drive_module_trajectory.align_module_profiles()
-
         self.drive_module_trajectory = drive_module_trajectory
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
@@ -513,7 +509,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
 
-class TimeShiftedModuleSteeringController(BaseSteeringController):
+class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
@@ -573,6 +569,7 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
         ]
 
         # trajectories
+        self.active_trajectory: ModuleStateProfile = None
         self.body_trajectory: BodyMotionProfile = None
         self.module_trajectory_from_command: DriveModuleStateProfile = None
 
@@ -598,7 +595,7 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
-        trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
+        trajectory_time = self.active_trajectory.time_span()
         time_fraction = time_from_start_of_trajectory / trajectory_time
 
         result: List[DriveModuleDesiredValues] = []
@@ -677,6 +674,9 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
+        # Translate the motion profiles into a set of module motion profiles
+        # Then handle the limiting
+
         if isinstance(desired_motion, BodyMotionCommand):
             trajectory = BodyMotionProfile(
                 self.body_state,
@@ -698,6 +698,10 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
                 self.is_executing_module_trajectory = True
             else:
                 raise InvalidMotionCommandException()
+
+
+
+        # Check that if a large jump in steering angle is required that we actually do something about that
 
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
         self.min_time_for_trajectory = desired_motion.time_for_motion()

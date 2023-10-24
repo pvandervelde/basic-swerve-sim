@@ -51,10 +51,6 @@ class BodyMotionProfile(object):
 class ModuleStateProfile(ABC):
 
     @abstractmethod
-    def align_module_profiles(self):
-        pass
-
-    @abstractmethod
     def time_span(self) -> float:
         pass
 
@@ -77,14 +73,6 @@ class DriveModuleStateProfile(ModuleStateProfile):
 
         # Kinda want a constant jerk profile
         self.profiles: Mapping[str, List[TransientVariableProfile]] = {}
-
-    def align_module_profiles(self):
-        if len(self.start_states) == 0 or len(self.end_states) == 0:
-            raise IncompleteTrajectoryException()
-
-        # for each profile adjust it in time such that none of the velocities / accelerations are too high for the motors to handle
-        # Then scale the profiles to match in time.
-        pass
 
     def _create_profiles(self):
         if len(self.start_states) == 0:

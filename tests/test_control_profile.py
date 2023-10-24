@@ -155,7 +155,7 @@ def test_drive_module_trajectory_should_create_trajectory_with_start():
     trajectory.set_current_state(current_states)
 
     with pytest.raises(IncompleteTrajectoryException):
-        trajectory.align_module_profiles()
+        trajectory.value_for_module_at(0.5)
 
 def test_drive_module_trajectory_should_create_trajectory_with_end():
     drive_modules = create_drive_modules()
@@ -180,7 +180,7 @@ def test_drive_module_trajectory_should_create_trajectory_with_end():
     trajectory.set_desired_end_state(states)
 
     with pytest.raises(IncompleteTrajectoryException):
-        trajectory.align_module_profiles()
+        trajectory.value_for_module_at(0.5)
 
 def test_drive_module_trajectory_should_create_trajectory_for_forward_acceleration():
     drive_modules = create_drive_modules()
@@ -213,7 +213,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_accelerati
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -266,7 +265,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_forward_decelerati
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -319,7 +317,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_accelerat
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -372,7 +369,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_decelerat
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -425,7 +421,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_acceler
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -478,7 +473,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_rotational_deceler
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -531,7 +525,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_sidewa
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -584,7 +577,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_forwar
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for drive_module in drive_modules:
 
@@ -637,7 +629,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_forwards_to_rotati
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for i in range(len(drive_modules)):
 
@@ -692,7 +683,6 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
         )
         desired_states.append(module_state)
     trajectory.set_desired_end_state(desired_states)
-    trajectory.align_module_profiles()
 
     for i in range(len(drive_modules)):
 
