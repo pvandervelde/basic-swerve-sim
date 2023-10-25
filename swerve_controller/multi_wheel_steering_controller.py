@@ -595,16 +595,13 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
         time_fraction = time_from_start_of_trajectory / trajectory_time
 
         result: List[DriveModuleDesiredValues] = []
-        if self.is_executing_body_trajectory:
-            # TODO
-        else:
-            for drive_module in self.modules:
-                state = self.module_trajectory_from_command.value_for_module_at(drive_module.name, time_fraction)
-                result.append(DriveModuleDesiredValues(
-                    state.name,
-                    state.orientation_in_body_coordinates.z,
-                    state.drive_velocity_in_module_coordinates.x
-                ))
+        for drive_module in self.modules:
+            state = self.active_trajectory.value_for_module_at(drive_module.name, time_fraction)
+            result.append(DriveModuleDesiredValues(
+                state.name,
+                state.orientation_in_body_coordinates.z,
+                state.drive_velocity_in_module_coordinates.x
+            ))
 
         return result
 
@@ -618,6 +615,7 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
             trajectory = BodyControlledDriveModuleProfile(
                 self.modules,
                 self.control_model,
+                min_trajectory_time_in_seconds=desired_motion.time_for_motion(),
                 min_body_to_module_resolution_per_second=100,
                 motion_profile_func=self.motion_profile_func,
             )
@@ -629,18 +627,11 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
                 trajectory = DriveModuleStateProfile(self.modules, desired_motion.time_for_motion(), self.motion_profile_func)
                 trajectory.set_current_state(self.module_states)
                 trajectory.set_desired_end_state(desired_motion.to_drive_module_state(self.control_model)[0])
-                self.module_trajectory_from_command = trajectory
-
-                # TODO
-
-                self.is_executing_body_trajectory = False
-                self.is_executing_module_trajectory = True
+                self.active_trajectory = trajectory
             else:
                 raise InvalidMotionCommandException()
 
-
-
-        # Check that if a large jump in steering angle is required that we actually do something about that
+        # TODO Check that if a large jump in steering angle is required that we actually do something about that
 
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
         self.min_time_for_trajectory = desired_motion.time_for_motion()

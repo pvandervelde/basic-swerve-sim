@@ -147,14 +147,16 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             self,
             drive_modules: List[DriveModule],
             control_model: ControlModelBase,
+            min_trajectory_time_in_seconds: float,
             min_body_to_module_resolution_per_second: float,
             motion_profile_func: Callable[[float, float], TransientVariableProfile]):
         self.modules = drive_modules
         self.control_model = control_model
+        self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
         self.motion_profile_func = motion_profile_func
 
         self.start_state_modules: List[DriveModuleMeasuredValues] = []
-        self.end_state_body: BodyState = None
+        self.end_state_body: BodyMotion = None
 
         self.min_body_to_module_resolution_per_second = min_body_to_module_resolution_per_second
 
@@ -175,12 +177,12 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         # iterate through the body profile
 
         module_profiles: Mapping[str, List[List[float]]] = {}
-        for frame_index in range(len(self.modules)):
-            start = self.start_state_modules[frame_index]
-            end = drive_module_end_states[frame_index][0]
+        for module_index in range(len(self.modules)):
+            start = self.start_state_modules[module_index]
+            end = drive_module_end_states[module_index][0]
 
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
-            module_profiles[self.modules[frame_index].name] = [
+            module_profiles[self.modules[module_index].name] = [
                 # Steering angle
                 [ start.orientation_in_body_coordinates.z, end_steering_angle ],
 
@@ -191,13 +193,13 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         # Compute the body profile
         start_state_body = self.control_model.body_motion_from_wheel_module_states(self.start_state_modules)
         body_profiles = [
-            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.motion_in_body_coordinates.linear_velocity.x),
-            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.motion_in_body_coordinates.linear_velocity.y),
-            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.motion_in_body_coordinates.linear_velocity.z),
+            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x),
+            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y),
+            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z),
 
-            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.motion_in_body_coordinates.angular_velocity.x),
-            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.motion_in_body_coordinates.angular_velocity.y),
-            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.motion_in_body_coordinates.angular_velocity.z),
+            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x),
+            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y),
+            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z),
         ]
 
         # Compute intermediate steps for the modules. Assume that the whole profile is 1 second long
@@ -211,7 +213,13 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             body_motion_at_time = BodyMotion(
                 body_profiles[0].value_at(time_fraction),
                 body_profiles[1].value_at(time_fraction),
-                body_profiles[5].value_at(time_fraction)
+                body_profiles[5].value_at(time_fraction),
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
             )
 
             drive_module_states = self.control_model.state_of_wheel_modules_from_body_motion(body_motion_at_time)
@@ -220,7 +228,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                 # Grab the previous steering angle and velocity as the profile has calculated it. From there we
                 # can determine differences, steering velocities/accelerations and drive accelerations.
                 previous_steering_angle = module_profiles[self.modules[module_index].name][0][frame_index - 1]
-                previous_velocity = self.module_profiles[self.modules[module_index].name][1][frame_index - 1]
+                previous_velocity = module_profiles[self.modules[module_index].name][1][frame_index - 1]
 
                 next_states_for_module = drive_module_states[module_index]
 
@@ -272,8 +280,6 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                             # second rotation is the smallest but first velocity is the smallest
                             desired_state = next_states_for_module[1]
 
-                # TODO
-
                 # Steering angle
                 module_profiles[self.modules[module_index].name][0].insert(frame_index, desired_state.steering_angle_in_radians)
 
@@ -309,12 +315,12 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         self.start_state_modules = module_states
         self._create_profiles()
 
-    def set_desired_end_state(self, body_state: BodyState):
+    def set_desired_end_state(self, body_state: BodyMotion):
         self.end_state_body = body_state
         self._create_profiles()
 
     def time_span(self) -> float:
-        return self.trajectory_time_in_seconds # TODO
+        return self.min_trajectory_time_in_seconds
 
     def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
         if len(self.start_state_modules) == 0 or self.end_state_body is None:

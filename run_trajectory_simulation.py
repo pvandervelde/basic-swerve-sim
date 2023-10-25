@@ -14,6 +14,7 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
+    LimitedModuleFollowsBodySteeringController,
     ModuleFirstSteeringController,
     ModuleFollowsBodySteeringController,
 )
@@ -275,10 +276,10 @@ def read_arguments() -> Mapping[str, any]:
         "-c",
         "--control-level",
         action="store",
-        choices=['module', 'body'],
+        choices=['module', 'body', 'limited'],
         default='module',
         required=False,
-        help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body'"
+        help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body', 'limited'"
     )
 
     parser.add_argument(
@@ -394,6 +395,9 @@ def simulation_run_trajectory(
 
     if controller_name == 'body':
         controller = ModuleFollowsBodySteeringController(drive_modules, motion_profile_func)
+
+    if controller_name == 'limited':
+        controller = LimitedModuleFollowsBodySteeringController(drive_modules, motion_profile_func, 100)
 
     motion_directory = path.join(output_directory, motion_set.name, controller_name, motion_profile)
 
