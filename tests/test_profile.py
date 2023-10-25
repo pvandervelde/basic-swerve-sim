@@ -537,6 +537,8 @@ def test_should_show_third_derivative_at_with_multiple_sub_profiles_in_compound_
     assert profile.third_derivative_at(0.85) == sub_profile_3.third_derivative_at(0.5)
     assert profile.third_derivative_at(1.0) == sub_profile_3.third_derivative_at(1.0)
 
+# SingleVariableMultiPointLinearProfile
+
 # SingleVariableTrapezoidalProfile
 
 def test_should_show_first_derivative_at_with_increasing_trapezoidal_profile():
