@@ -299,10 +299,10 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                 # Drive velocity
                 SingleVariableMultiPointLinearProfile(tuple[1][0], tuple[1][-1])
             ]
-            for i in range(1, len(tuple[0])):
-                time_fraction = float(frame_index) / float(number_of_frames)
+            for i in range(1, len(tuple[0]) - 1):
+                time_fraction = float(i) / float(number_of_frames)
                 completed_profiles[0].add_value(time_fraction, tuple[0][i])
-                completed_profiles[0].add_value(time_fraction, tuple[1][i])
+                completed_profiles[1].add_value(time_fraction, tuple[1][i])
 
             profiles[self.modules[module_index].name] = completed_profiles
 
