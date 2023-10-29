@@ -1,7 +1,5 @@
-from math import inf
 import math
-from matplotlib.pylab import normal
-import pytest
+from pytest import approx
 
 from swerve_controller.geometry import CircularSpace, LinearSpace
 
@@ -65,17 +63,25 @@ def test_circular_space_smallest_distance_between_values():
     assert math.isclose(space.smallest_distance_between_values(0, 4 * math.pi), 0, rel_tol=1e-6, abs_tol=1e-6)
 
     assert math.isclose(space.smallest_distance_between_values(math.pi, 3 * math.pi), 0, rel_tol=1e-6, abs_tol=1e-6)
-    assert math.isclose(space.smallest_distance_between_values(11 * math.pi, 20 * math.pi), math.pi, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(space.smallest_distance_between_values(11 * math.pi, 20 * math.pi), -math.pi, rel_tol=1e-6, abs_tol=1e-6)
 
     assert math.isclose(space.smallest_distance_between_values(0.25 * math.pi, 0.5 * math.pi), 0.25 * math.pi, rel_tol=1e-6, abs_tol=1e-6)
 
 def test_circular_space_distances_between_values():
     space = CircularSpace()
-    assert space.distances_between_values(0, 0) == [0, 2 * math.pi]
+    assert space.distances_between_values(0, 0) == [0, -2 * math.pi]
     assert space.distances_between_values(0, math.pi) == [math.pi, -math.pi]
-    assert space.distances_between_values(math.pi, 0) == [-math.pi, math.pi]
-    assert space.distances_between_values(-math.pi, math.pi) == [0, 2 * math.pi]
-    assert space.distances_between_values(math.pi, -math.pi) == [0, 2 * math.pi]
+    assert space.distances_between_values(math.pi, 0) == [math.pi, -math.pi]
+    assert space.distances_between_values(-math.pi, math.pi) == [0, -2 * math.pi]
+    assert space.distances_between_values(math.pi, -math.pi) == [0, -2 * math.pi]
+
+    assert space.distances_between_values(0, 2 * math.pi) == [0, -2 * math.pi]
+    assert space.distances_between_values(0, 4 * math.pi) == [0, -2 * math.pi]
+
+    assert space.distances_between_values(math.pi, 3 * math.pi) == [0, -2 * math.pi]
+    assert space.distances_between_values(11 * math.pi, 20 * math.pi) == approx([-math.pi, math.pi], abs=1e-6, rel=1e-6)
+
+    assert space.distances_between_values(0.25 * math.pi, 0.5 * math.pi) == [0.25 * math.pi, -1.75 * math.pi ]
 
 def test_circular_space_normalize_value():
     space = CircularSpace()
