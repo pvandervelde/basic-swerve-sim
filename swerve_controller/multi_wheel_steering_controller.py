@@ -14,7 +14,7 @@ from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionC
 from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
 from .control_profile import BodyControlledDriveModuleProfile, BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
 from .drive_module import DriveModule
-from .geometry import Point
+from .geometry import Point, RealNumberValueSpace
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 class BaseSteeringController(ABC):
@@ -57,7 +57,7 @@ class ModuleFirstSteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -264,7 +264,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -513,7 +513,7 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile],
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile],
             interpolation_frequency_in_hz: int):
         # Get the geometry for the robot
         self.modules = drive_modules

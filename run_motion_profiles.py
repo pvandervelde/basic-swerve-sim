@@ -3,16 +3,17 @@ from os import makedirs, path
 
 from typing import List, Mapping, Tuple
 from sim_output.animate_motion_profile import plot_profile
+from swerve_controller.geometry import LinearUnboundedSpace, PeriodicBoundedCircularSpace, RealNumberValueSpace
 from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 
-def get_linear_motion_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end)
+def get_linear_motion_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, value_space)
 
-def get_scurve_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableSCurveProfile(start, end)
+def get_scurve_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end, value_space)
 
-def get_trapezoidal_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableTrapezoidalProfile(start, end)
+def get_trapezoidal_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end, value_space)
 
 def read_arguments() -> Mapping[str, any]:
     parser = argparse.ArgumentParser(
@@ -41,9 +42,12 @@ def simulation_run_motion_profiles(arg_dict: Mapping[str, any]):
     end = 10.0
 
     profiles: List[Tuple[str, TransientVariableProfile]] = [
-        ('linear', get_linear_motion_profile(start, end)),
-        ('trapezoidal', get_trapezoidal_profile(start, end)),
-        ('s-curve', get_scurve_profile(start, end)),
+        ('linear-unbounded', get_linear_motion_profile(start, end, LinearUnboundedSpace())),
+        ('linear-periodic', get_linear_motion_profile(start, end, PeriodicBoundedCircularSpace())),
+        ('trapezoidal-unbounded', get_trapezoidal_profile(start, end, LinearUnboundedSpace())),
+        ('trapezoidal-periodic', get_trapezoidal_profile(start, end, PeriodicBoundedCircularSpace())),
+        ('s-curve-unbounded', get_scurve_profile(start, end, LinearUnboundedSpace())),
+        ('s-curve-periodic', get_scurve_profile(start, end, PeriodicBoundedCircularSpace())),
     ]
 
     motion_directory = path.join(output_directory, 'motion_profiles')

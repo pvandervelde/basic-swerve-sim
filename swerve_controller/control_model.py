@@ -9,9 +9,11 @@ from typing import Mapping, List, Tuple
 
 # local
 from .drive_module import DriveModule
-from .geometry import Orientation, Point, Vector3
+from .geometry import LinearUnboundedSpace, Orientation, PeriodicBoundedCircularSpace, Point, Vector3
 from .states import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
+# TODO replace normalize_angle and difference_between_angles with the PeriodicBoundedCircularSpace
+#      functions so that we have all of that in one location.
 def normalize_angle(angle_in_radians: float) -> float:
     # reduce the angle to [-2pi, 2pi]
     angle = angle_in_radians % (2 * math.pi)
@@ -58,6 +60,8 @@ class ControlModelBase(object):
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
 
     def __init__(self, drive_modules: List[DriveModule]):
+        self.steering_value_space = PeriodicBoundedCircularSpace()
+        self.drive_value_space = LinearUnboundedSpace()
         self.modules = drive_modules
 
         # The state of the drive modules can be found with the following equation:
@@ -208,14 +212,14 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
                     # cos_angle is larger than 1/2 * pi. In that case if the
                     if sin_angle < 0:
                         # In this case we want to mirror the current angle relative to Pi (or 180 degrees)
-                        forward_steering_angle = difference_between_angles(cos_angle, math.pi) + math.pi
+                        forward_steering_angle = self.steering_value_space.smallest_distance_between_values(cos_angle, math.pi) + math.pi
                     else:
                         forward_steering_angle = cos_angle
 
-                forward_steering_angle = normalize_angle(forward_steering_angle)
+                forward_steering_angle = self.steering_value_space.normalize_value(forward_steering_angle)
 
             if not math.isinf(forward_steering_angle):
-                reverse_steering_angle = normalize_angle(forward_steering_angle + math.pi)
+                reverse_steering_angle = self.steering_value_space.normalize_value(forward_steering_angle + math.pi)
             else:
                 reverse_steering_angle = float("-infinity")
 

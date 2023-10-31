@@ -3,6 +3,7 @@ from os import makedirs, path
 from pathlib import Path
 
 from typing import Callable, List, Mapping, NamedTuple, Tuple
+from swerve_controller.geometry import RealNumberValueSpace
 from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 import yaml
 from yaml.loader import SafeLoader
@@ -96,8 +97,8 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
 
     return drive_modules
 
-def get_linear_motion_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end)
+def get_linear_motion_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, number_space)
 
 def get_motions(input_files: List[str]) -> List[MotionPlan]:
     result: List[MotionPlan] = []
@@ -182,11 +183,11 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
 
     return result
 
-def get_scurve_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableSCurveProfile(start, end)
+def get_scurve_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end, number_space)
 
-def get_trapezoidal_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableTrapezoidalProfile(start, end)
+def get_trapezoidal_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end, number_space)
 
 def initialize_drive_modules(drive_modules: List[DriveModule], module_states: List[DriveModuleDesiredValues]) -> List[DriveModuleMeasuredValues]:
     states: List[DriveModuleMeasuredValues] = []

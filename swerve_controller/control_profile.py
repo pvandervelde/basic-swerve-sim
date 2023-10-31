@@ -3,6 +3,7 @@ import math
 from typing import Callable, Mapping, List
 
 from swerve_controller.control_model import difference_between_angles, ControlModelBase
+from swerve_controller.geometry import LinearUnboundedSpace, PeriodicBoundedCircularSpace, RealNumberValueSpace
 
 from .errors import IncompleteTrajectoryException
 from .drive_module import DriveModule
@@ -17,19 +18,19 @@ class BodyMotionProfile(object):
             current: BodyState,
             desired: BodyMotion,
             min_trajectory_time_in_seconds: float,
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.start_state = current
         self.end_state = desired
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x),
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y),
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z, LinearUnboundedSpace()),
 
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x),
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y),
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z, LinearUnboundedSpace()),
         ]
 
     def body_motion_at(self, time_fraction: float) -> BodyMotion:
@@ -64,7 +65,7 @@ class DriveModuleStateProfile(ModuleStateProfile):
             self,
             drive_modules: List[DriveModule],
             min_trajectory_time_in_seconds: float,
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
         self.start_states: List[DriveModuleMeasuredValues] = []
@@ -89,10 +90,10 @@ class DriveModuleStateProfile(ModuleStateProfile):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                self.motion_profile_func(start.orientation_in_body_coordinates.z, end_steering_angle),
+                self.motion_profile_func(start.orientation_in_body_coordinates.z, end_steering_angle, PeriodicBoundedCircularSpace()),
 
                 # Drive velocity
-                self.motion_profile_func(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second),
+                self.motion_profile_func(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second, LinearUnboundedSpace()),
             ]
 
             self.profiles[self.modules[i].name] = module_profiles
@@ -149,7 +150,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             control_model: ControlModelBase,
             min_trajectory_time_in_seconds: float,
             min_body_to_module_resolution_per_second: float,
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.modules = drive_modules
         self.control_model = control_model
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
@@ -159,6 +160,9 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         self.end_state_body: BodyMotion = None
 
         self.min_body_to_module_resolution_per_second = min_body_to_module_resolution_per_second
+
+        self.unbounded_number_space = LinearUnboundedSpace()
+        self.steering_number_space = PeriodicBoundedCircularSpace()
 
         # Kinda want a constant jerk profile
         self.module_profiles: Mapping[str, List[SingleVariableMultiPointLinearProfile]] = {}
@@ -184,7 +188,10 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles[self.modules[module_index].name] = [
                 # Steering angle
-                [ start.orientation_in_body_coordinates.z, end_steering_angle ],
+                [
+                    self.steering_number_space.normalize_value(start.orientation_in_body_coordinates.z),
+                    self.steering_number_space.normalize_value(end_steering_angle)
+                ],
 
                 # Drive velocity
                 [ start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second ],
@@ -193,13 +200,13 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         # Compute the body profile
         start_state_body = self.control_model.body_motion_from_wheel_module_states(self.start_state_modules)
         body_profiles = [
-            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x),
-            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y),
-            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z),
+            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z, self.unbounded_number_space),
 
-            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x),
-            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y),
-            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z),
+            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z, self.unbounded_number_space),
         ]
 
         # Compute intermediate steps for the modules. Assume that the whole profile is 1 second long
@@ -227,13 +234,13 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             for module_index in range(len(self.modules)):
                 # Grab the previous steering angle and velocity as the profile has calculated it. From there we
                 # can determine differences, steering velocities/accelerations and drive accelerations.
-                previous_steering_angle = module_profiles[self.modules[module_index].name][0][frame_index - 1]
+                previous_steering_angle = self.steering_number_space.normalize_value(module_profiles[self.modules[module_index].name][0][frame_index - 1])
                 previous_velocity = module_profiles[self.modules[module_index].name][1][frame_index - 1]
 
                 next_states_for_module = drive_module_states[module_index]
 
-                first_state_rotation_difference = difference_between_angles(previous_steering_angle, next_states_for_module[0].steering_angle_in_radians)
-                second_state_rotation_difference = difference_between_angles(previous_steering_angle, next_states_for_module[1].steering_angle_in_radians)
+                first_state_rotation_difference = self.steering_number_space.smallest_distance_between_values(previous_steering_angle, next_states_for_module[0].steering_angle_in_radians)
+                second_state_rotation_difference = self.steering_number_space.smallest_distance_between_values(previous_steering_angle, next_states_for_module[1].steering_angle_in_radians)
 
                 first_state_velocity_difference = next_states_for_module[0].drive_velocity_in_meters_per_second - previous_velocity
                 second_state_velocity_difference = next_states_for_module[1].drive_velocity_in_meters_per_second - previous_velocity
@@ -281,7 +288,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                             desired_state = next_states_for_module[1]
 
                 # Steering angle
-                module_profiles[self.modules[module_index].name][0].insert(frame_index, desired_state.steering_angle_in_radians)
+                module_profiles[self.modules[module_index].name][0].insert(frame_index, self.steering_number_space.normalize_value(desired_state.steering_angle_in_radians))
 
                 # Drive velocity
                 module_profiles[self.modules[module_index].name][1].insert(frame_index, desired_state.drive_velocity_in_meters_per_second)
@@ -294,7 +301,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
 
             completed_profiles: List[SingleVariableMultiPointLinearProfile] = [
                 # Steering angle
-                SingleVariableMultiPointLinearProfile(tuple[0][0], tuple[0][-1]),
+                SingleVariableMultiPointLinearProfile(tuple[0][0], tuple[0][-1], PeriodicBoundedCircularSpace()),
 
                 # Drive velocity
                 SingleVariableMultiPointLinearProfile(tuple[1][0], tuple[1][-1])
