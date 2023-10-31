@@ -3,6 +3,8 @@ import math
 from numpy.polynomial.polynomial import Polynomial
 from typing import List, Tuple
 
+from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace
+
 # local
 from .errors import InvalidTimeFractionException
 
@@ -42,12 +44,13 @@ class TransientVariableProfile(ABC):
 
 class SingleVariableLinearProfile(TransientVariableProfile):
 
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.coordinate_space = coordinate_space
+        self.start = coordinate_space.normalize_value(start)
+        self.end = coordinate_space.normalize_value(end)
 
     def first_derivative_at(self, time_fraction: float) -> float:
-        return self.end - self.start
+        return self.coordinate_space.smallest_distance_between_values(self.start, self.end)
 
     def second_derivative_at(self, time_fraction: float) -> float:
         if time_fraction < 0.0:
@@ -57,10 +60,10 @@ class SingleVariableLinearProfile(TransientVariableProfile):
             return 0.0
 
         if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return (self.end - self.start) / 0.01
+            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
 
         if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return -(self.end - self.start) / 0.01
+            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
 
         return 0.0
 
@@ -72,10 +75,10 @@ class SingleVariableLinearProfile(TransientVariableProfile):
             return 0.0
 
         if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return (self.end - self.start) / 0.01 / 0.01
+            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
 
         if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return -(self.end - self.start) / 0.01 / 0.01
+            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
 
         return 0.0
 
@@ -86,7 +89,8 @@ class SingleVariableLinearProfile(TransientVariableProfile):
         if time_fraction > 1.0:
             return self.end
 
-        return (self.end - self.start) * time_fraction + self.start
+        distance = self.coordinate_space.smallest_distance_between_values(self.start, self.end)
+        return self.coordinate_space.normalize_value(distance * time_fraction + self.start)
 
 class SingleVariableCompoundProfileValue(object):
 
@@ -100,7 +104,8 @@ class SingleVariableCompoundProfileValue(object):
 
 class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
-    def __init__(self, start: float, end: float):
+    def __init__(self, start: float, end: float, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.coordinate_space = coordinate_space
         self.profiles: List[SingleVariableCompoundProfileValue] = [
             SingleVariableCompoundProfileValue(0.0, start),
             SingleVariableCompoundProfileValue(1.0, end)
@@ -116,7 +121,9 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction > 1.0:
             time_fraction = 1.0
 
-        section = SingleVariableCompoundProfileValue(time_fraction,value)
+        section = SingleVariableCompoundProfileValue(
+            time_fraction,
+            self.coordinate_space.normalize_value(value))
 
         for i in range(len(self.profiles)):
             if math.isclose(time_fraction, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
@@ -245,7 +252,7 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
             time_fraction = 1.0
 
         poly = self.polynomial_at_time(time_fraction)
-        return poly(time_fraction)
+        return self.coordinate_space.normalize_value(poly(time_fraction))
 
 class CompoundProfileSection(object):
 
@@ -448,10 +455,10 @@ class SingleVariableCompoundProfile(TransientVariableProfile):
 # see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
 class SingleVariableTrapezoidalProfile(TransientVariableProfile):
 
-
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.value_space = value_space
+        self.start = value_space.normalize_value(start)
+        self.end = value_space.normalize_value(end)
 
         # For a trapezoidal motion profile the progress in the profile
         # is based on the first derrivative, e.g. if the profile is
@@ -497,7 +504,7 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         # s = v * 2/3 * t
         #
         # v = 1.5 * s / t
-        self.velocity = 1.5 * (end - start) / 1.0
+        self.velocity = 1.5 * (self.end - self.start) / 1.0
 
         self.acceleration_phase_ratio = 1/3
         self.constant_phase_ratio = 1/3
@@ -581,7 +588,8 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
             starting_velocity = 0.0
             distance_change_from_velocity = starting_velocity * time_fraction
             distance_change_from_acceleration = 0.5 * ((self.velocity - starting_velocity) / self.acceleration_phase_ratio) * time_fraction * time_fraction
-            return self.start + distance_change_from_velocity + distance_change_from_acceleration
+            result = self.start + distance_change_from_velocity + distance_change_from_acceleration
+            return self.value_space.normalize_value(result)
 
         distance_due_to_inital_acceleration = 0.5 * self.velocity * self.acceleration_phase_ratio
         if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
@@ -591,18 +599,21 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
             deceleration_time = time_fraction - (self.acceleration_phase_ratio + self.constant_phase_ratio)
             ending_velocity = 0.0
             distance_due_to_deceleration = self.velocity * deceleration_time + 0.5 * ((ending_velocity - self.velocity) / self.deceleration_phase_ratio) * deceleration_time * deceleration_time
-            return self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+            result = self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+            return self.value_space.normalize_value(result)
 
-        return self.start + distance_due_to_inital_acceleration + (time_fraction - self.acceleration_phase_ratio) * self.velocity
+        result = self.start + distance_due_to_inital_acceleration + (time_fraction - self.acceleration_phase_ratio) * self.velocity
+        return self.value_space.normalize_value(result)
 
 # S-Curve profile
 # --> controlled by the second derivative being linear
 class SingleVariableSCurveProfile(TransientVariableProfile):
 
 
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.value_space = value_space
+        self.start = value_space.normalize_value(start)
+        self.end = value_space.normalize_value(end)
 
         #      t_1     t_2  t_3     t_4  t_5       t_6  t_7
         #  |    *______*
@@ -655,7 +666,7 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
         # s = j * 10 / 512 * t
         #
         # j =  (s * 512) / (10 * t)
-        self.jerk = 512 / 10 * (end - start) / 1.0
+        self.jerk = 512 / 10 * (self.end - self.start) / 1.0
 
         self.positive_acceleration_phase_ratio = 1/8
         self.constant_acceleration_phase_ratio = 1/8
@@ -768,38 +779,45 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
             return self.end
 
         if time_fraction < self.t1:
-            return 1/6 * self.jerk * math.pow(time_fraction, 3.0) + self.start
+            result = 1/6 * self.jerk * math.pow(time_fraction, 3.0) + self.start
+            return self.value_space.normalize_value(result)
 
         a1 = self.jerk * self.t1
         v1 = 0.5 * a1 * self.t1
         s1 = 1/6 * self.jerk * math.pow(self.t1, 3.0) + self.start
         if time_fraction < self.t2:
-            return  v1 * (time_fraction - self.t1) + 0.5 * a1 * (time_fraction - self.t1) * (time_fraction - self.t1) + s1
+            result =  v1 * (time_fraction - self.t1) + 0.5 * a1 * (time_fraction - self.t1) * (time_fraction - self.t1) + s1
+            return self.value_space.normalize_value(result)
 
         a2 = a1
         v2 = v1 + a1 * (self.t2 - self.t1)
         s2 = v1 * (self.t2 - self.t1) + 0.5 * a1 * (self.t2 - self.t1) * (self.t2 - self.t1) + s1
         if time_fraction < self.t3:
-            return -1/6 * self.jerk * math.pow(time_fraction - self.t2, 3.0) + 0.5 * a2 * math.pow(time_fraction - self.t2, 2.0) + v2 * (time_fraction - self.t2) + s2
+            result = -1/6 * self.jerk * math.pow(time_fraction - self.t2, 3.0) + 0.5 * a2 * math.pow(time_fraction - self.t2, 2.0) + v2 * (time_fraction - self.t2) + s2
+            return self.value_space.normalize_value(result)
 
         v3 = -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2) + a1 * (self.t3 - self.t2) + v2
         s3 = -1/6 * self.jerk * math.pow(self.t3 - self.t2, 3.0) + 0.5 * a2 * math.pow(self.t3 - self.t2, 2.0) + v2 * (self.t3 - self.t2) + s2
         if time_fraction < self.t4:
-            return v3 * (time_fraction - self.t3) + s3
+            result = v3 * (time_fraction - self.t3) + s3
+            return self.value_space.normalize_value(result)
 
         s4 = v3 * (self.t4 - self.t3) + s3
         if time_fraction < self.t5:
-            return -1/6 * self.jerk * math.pow(time_fraction - self.t4, 3.0) + v3 * (time_fraction - self.t4) + s4
+            result = -1/6 * self.jerk * math.pow(time_fraction - self.t4, 3.0) + v3 * (time_fraction - self.t4) + s4
+            return self.value_space.normalize_value(result)
 
         a5 = -self.jerk * (self.t5 - self.t4)
         v5 = -0.5 * self.jerk * (self.t5 - self.t4) * (self.t5 - self.t4) + v3
         s5 = -1/6 * self.jerk * math.pow(self.t5 - self.t4, 3.0) + v3 * (self.t5 - self.t4) + s4
         if time_fraction < self.t6:
-            return 0.5 * a5 * math.pow(time_fraction - self.t5, 2.0) + v5 * (time_fraction - self.t5) + s5
+            result = 0.5 * a5 * math.pow(time_fraction - self.t5, 2.0) + v5 * (time_fraction - self.t5) + s5
+            return self.value_space.normalize_value(result)
 
         a6 = a5
         v6 = a5 * (self.t6 - self.t5) + v5
         s6 = 0.5 * a5 * math.pow(self.t6 - self.t5, 2.0) + v5 * (self.t6 - self.t5) + s5
-        return 1/6 * self.jerk * math.pow(time_fraction - self.t6, 3.0) + 0.5 * a6 * math.pow(time_fraction - self.t6, 2.0) + v6 * (time_fraction - self.t6) + s6
+        result = 1/6 * self.jerk * math.pow(time_fraction - self.t6, 3.0) + 0.5 * a6 * math.pow(time_fraction - self.t6, 2.0) + v6 * (time_fraction - self.t6) + s6
+        return self.value_space.normalize_value(result)
 
 # 4th and 5th order s-curve

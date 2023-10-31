@@ -61,7 +61,7 @@ class RealNumberValueSpace(ABC):
 
 
 # Defines a 1D linear space running from -infinity to +infinity
-class LinearSpace(RealNumberValueSpace):
+class LinearUnboundedSpace(RealNumberValueSpace):
     # Returns the distance between two values in the space
     #
     # @param value1 The first value in the space
@@ -91,7 +91,7 @@ class LinearSpace(RealNumberValueSpace):
         return value
 
 # Defines a 1D circular space running from -pi to +pi
-class CircularSpace(RealNumberValueSpace):
+class PeriodicBoundedCircularSpace(RealNumberValueSpace):
 
     # Returns the distance between two values in the space
     #
@@ -140,11 +140,11 @@ class CircularSpace(RealNumberValueSpace):
             if diff_angle < 0.0:
                 diff_angle += 2 * math.pi
 
-        # make sure we get the smallest angle
-        if diff_angle > math.pi:
-            return [ diff_angle - 2 * math.pi, diff_angle ]
-        else:
+        # return the positive angle first, and the negative angle second
+        if diff_angle >= 0.0:
             return [ diff_angle, diff_angle - 2 * math.pi ]
+        else:
+            return [ diff_angle + 2 * math.pi, diff_angle ]
 
     # Returns the value in the space that is closest to the target value
     #
