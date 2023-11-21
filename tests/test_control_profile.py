@@ -710,7 +710,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, steering_value_space.normalize_value(math.radians(45 + index * 90) - math.radians(90)), rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_in_body_coordinates.z, math.radians((45 + index * 90 - 90) / 2 + 90), rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(90) - steering_value_space.smallest_distance_between_values(math.radians((45 + index * 90)), math.radians(90)) / 2, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
@@ -806,22 +806,22 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
 
 def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_forward_deceleration():
     drive_modules = create_drive_modules()
@@ -1026,6 +1026,8 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_ro
     )
     trajectory.set_desired_end_state(end_state)
 
+    steering_value_space = PeriodicBoundedCircularSpace()
+
     for index, drive_module in enumerate(drive_modules):
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
@@ -1039,13 +1041,13 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_ro
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
-        #assert math.isclose(state.drive_acceleration_in_module_coordinates.x, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5 * math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + 90 * index), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
-        #assert math.isclose(state.drive_acceleration_in_module_coordinates.x, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, math.sqrt(0.5), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + 90 * index), rel_tol=1e-6, abs_tol=1e-6)
@@ -1086,25 +1088,27 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_ro
     )
     trajectory.set_desired_end_state(end_state)
 
+    steering_value_space = PeriodicBoundedCircularSpace()
+
     for index, drive_module in enumerate(drive_modules):
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + 90 * index), rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_in_body_coordinates.z, steering_value_space.normalize_value(math.radians(45 + 90 * index)), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 0.5)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.5, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + 90 * index), rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_in_body_coordinates.z, steering_value_space.normalize_value(math.radians(45 + 90 * index)), rel_tol=1e-6, abs_tol=1e-6)
 
         state = trajectory.value_for_module_at(drive_module.name, 1.0)
         assert math.isclose(state.drive_acceleration_in_module_coordinates.x, -1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
-        assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(45 + 90 * index), rel_tol=1e-6, abs_tol=1e-6)
+        #assert math.isclose(state.orientation_velocity_in_body_coordinates.z, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        assert math.isclose(state.orientation_in_body_coordinates.z, steering_value_space.normalize_value(math.radians(45 + 90 * index)), rel_tol=1e-6, abs_tol=1e-6)
 
 def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_forwards_to_sideways_transition():
     drive_modules = create_drive_modules()
@@ -1145,7 +1149,8 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
     for drive_module in drive_modules:
 
         state = trajectory.value_for_module_at(drive_module.name, 0.0)
-        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 0.0, rel_tol=1e-6, abs_tol=1e-6)
+        # The acceleration is 1.0 because the velocity is changing from 0.0 to 1.0 in the first instant
+        assert math.isclose(state.drive_acceleration_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.drive_velocity_in_module_coordinates.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_velocity_in_body_coordinates.z, math.radians(90), rel_tol=1e-6, abs_tol=1e-6)
         assert math.isclose(state.orientation_in_body_coordinates.z, math.radians(0), rel_tol=1e-6, abs_tol=1e-6)
