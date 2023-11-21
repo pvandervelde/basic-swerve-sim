@@ -430,6 +430,8 @@ def simulation_run_trajectory(
     body_state = motion_set.body_state
 
     for motion in motion_set.motions:
+        print("Processing motion set at {} ...".format(current_sim_time_in_seconds))
+
         controller.on_tick(current_sim_time_in_seconds)
         controller.on_desired_state_update(motion)
 
