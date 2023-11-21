@@ -104,12 +104,14 @@ class SingleVariableCompoundProfileValue(object):
 
 class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
-    def __init__(self, start: float, end: float, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+    def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
         self.coordinate_space = coordinate_space
         self.profiles: List[SingleVariableCompoundProfileValue] = [
             SingleVariableCompoundProfileValue(0.0, start),
-            SingleVariableCompoundProfileValue(1.0, end)
+            SingleVariableCompoundProfileValue(end_time, end)
         ]
+
+        self.end_time = end_time
 
         # We have two points (begin and end) so at best we can do a linear approach
         self.maximum_polynomial_order = 1
@@ -118,8 +120,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction < 0.0:
             time_fraction = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_fraction > self.end_time:
+            time_fraction = self.end_time
 
         section = SingleVariableCompoundProfileValue(
             time_fraction,
@@ -177,8 +179,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction < 0.0:
             time_fraction = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_fraction > self.end_time:
+            time_fraction = self.end_time
 
         poly = self.polynomial_at_time(time_fraction)
         first_deriv = poly.deriv(1)
@@ -226,8 +228,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction < 0.0:
             time_fraction = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_fraction > self.end_time:
+            time_fraction = self.end_time
 
         poly = self.polynomial_at_time(time_fraction)
         first_deriv = poly.deriv(2)
@@ -237,8 +239,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction < 0.0:
             time_fraction = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_fraction > self.end_time:
+            time_fraction = self.end_time
 
         poly = self.polynomial_at_time(time_fraction)
         first_deriv = poly.deriv(3)
@@ -248,8 +250,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_fraction < 0.0:
             time_fraction = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_fraction > self.end_time:
+            time_fraction = self.end_time
 
         poly = self.polynomial_at_time(time_fraction)
         return self.coordinate_space.normalize_value(poly(time_fraction))
