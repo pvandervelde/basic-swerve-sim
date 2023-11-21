@@ -1,0 +1,51 @@
+---
+plan:
+  description: "in place rotation and linear movement from 45-degree forwards"
+  name: "inplace_rotation_and_translation_from_45_fwd"
+  start_state:
+    body:
+      position_in_meters_relative_to_world:
+        x: 0.0
+        y: 0.0
+      orientation_in_radians_relative_to_world:
+        z: 0.0
+      angular_velocity_in_radians_per_second:
+        z: 0.0
+      linear_velocity_in_meters_per_second:
+        x: 0.0
+        y: 0.0
+    modules:
+      - name: "left-front"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "left_rear"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "right-rear"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+      - name: "right-front"
+        orientation_in_radians_relative_to_body: 0.0
+        velocity_in_meters_per_second: 0.0
+  commands:
+    - time_span: 0.5
+      modules:
+        - name: "left-front"
+          orientation_in_radians_relative_to_body: 1.4008778720722006
+          velocity_in_meters_per_second: 0.0
+        - name: "left_rear"
+          orientation_in_radians_relative_to_body: 0.785398
+          velocity_in_meters_per_second: 0.0
+        - name: "right-rear"
+          orientation_in_radians_relative_to_body: 0.16991845472269596
+          velocity_in_meters_per_second: 0.0
+        - name: "right-front"
+          orientation_in_radians_relative_to_body: 0.785398
+          velocity_in_meters_per_second: 0.0
+    - time_span: 2.0
+      body:
+        angular_velocity_in_radians_per_second:
+          z: 1.0
+        linear_velocity_in_meters_per_second:
+          x: 0.70710678118
+          y: 0.70710678118
