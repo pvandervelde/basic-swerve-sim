@@ -54,7 +54,7 @@ class ControlModelBase(object):
     # Returns the proposed wheel states which will achieve the given body motion. The list will contain
     # both a forward, i.e. with the steering angle such that the drive motor turns 'forwards', and a
     # reverse state, i.e. with the steering angle such that the drive motor turns 'backwards'.
-    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues]]:
+    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues, DriveModuleDesiredValues]]:
         return []
 
 class SimpleFourWheelSteeringControlModel(ControlModelBase):
@@ -129,7 +129,7 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             0.0,)
 
     # Inverse kinematics
-    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues]]:
+    def state_of_wheel_modules_from_body_motion(self, state: BodyMotion) -> List[Tuple[DriveModuleDesiredValues, DriveModuleDesiredValues]]:
         # Kinematics
         # Literature:
         # - https://www.chiefdelphi.com/t/paper-4-wheel-independent-drive-independent-steering-swerve/107383/5
