@@ -6,14 +6,14 @@ from sim_output.animate_motion_profile import plot_profile
 from swerve_controller.geometry import LinearUnboundedSpace, PeriodicBoundedCircularSpace, RealNumberValueSpace
 from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 
-def get_linear_motion_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end, value_space)
+def get_linear_motion_profile(start: float, end: float, end_time: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, end_time, value_space)
 
-def get_scurve_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableSCurveProfile(start, end, value_space)
+def get_scurve_profile(start: float, end: float, end_time: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end, end_time, value_space)
 
-def get_trapezoidal_profile(start: float, end: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableTrapezoidalProfile(start, end, value_space)
+def get_trapezoidal_profile(start: float, end: float, end_time: float, value_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end, end_time, value_space)
 
 def read_arguments() -> Mapping[str, any]:
     parser = argparse.ArgumentParser(
@@ -38,16 +38,17 @@ def simulation_run_motion_profiles(arg_dict: Mapping[str, any]):
 
     print("Outputting to {}".format(output_directory))
 
-    start = 0.0
-    end = 10.0
+    start_value = 0.0
+    end_value = 10.0
+    end_time = 2.0
 
     profiles: List[Tuple[str, TransientVariableProfile]] = [
-        ('linear-unbounded', get_linear_motion_profile(start, end, LinearUnboundedSpace())),
-        ('linear-periodic', get_linear_motion_profile(start, end, PeriodicBoundedCircularSpace())),
-        ('trapezoidal-unbounded', get_trapezoidal_profile(start, end, LinearUnboundedSpace())),
-        ('trapezoidal-periodic', get_trapezoidal_profile(start, end, PeriodicBoundedCircularSpace())),
-        ('s-curve-unbounded', get_scurve_profile(start, end, LinearUnboundedSpace())),
-        ('s-curve-periodic', get_scurve_profile(start, end, PeriodicBoundedCircularSpace())),
+        ('linear-unbounded', get_linear_motion_profile(start_value, end_value, end_time, LinearUnboundedSpace())),
+        ('linear-periodic', get_linear_motion_profile(start_value, end_value, end_time, PeriodicBoundedCircularSpace())),
+        ('trapezoidal-unbounded', get_trapezoidal_profile(start_value, end_value, end_time, LinearUnboundedSpace())),
+        ('trapezoidal-periodic', get_trapezoidal_profile(start_value, end_value, end_time, PeriodicBoundedCircularSpace())),
+        ('s-curve-unbounded', get_scurve_profile(start_value, end_value, end_time, LinearUnboundedSpace())),
+        ('s-curve-periodic', get_scurve_profile(start_value, end_value, end_time, PeriodicBoundedCircularSpace())),
     ]
 
     motion_directory = path.join(output_directory, 'motion_profiles')
@@ -55,7 +56,7 @@ def simulation_run_motion_profiles(arg_dict: Mapping[str, any]):
         print("Output directory {} does not exist. Creating directory ...".format(motion_directory))
         makedirs(motion_directory)
 
-    simulation_rate_in_hz = 100
+    simulation_rate_in_hz = 50
     current_sim_time_in_seconds = 0.0
 
     points_in_time: List[float] = [ ]
@@ -64,9 +65,7 @@ def simulation_run_motion_profiles(arg_dict: Mapping[str, any]):
     accelerations: List[List[float]] = [ [] for pair in profiles ]
     jerks: List[List[float]] = [ [] for pair in profiles ]
 
-    # Assume the movement takes 1.0 seconds
-    profile_motion_time = 1.0
-    step_count = int(profile_motion_time * simulation_rate_in_hz)
+    step_count = int(end_time * simulation_rate_in_hz)
     time_step_in_seconds =  1.0 / float(simulation_rate_in_hz)
 
     for time_index in range(1, step_count + 2):
@@ -75,10 +74,10 @@ def simulation_run_motion_profiles(arg_dict: Mapping[str, any]):
 
         for index, pair in enumerate(profiles):
             profile = pair[1]
-            positions[index].append(profile.value_at(current_sim_time_in_seconds / profile_motion_time))
-            velocities[index].append(profile.first_derivative_at(current_sim_time_in_seconds / profile_motion_time))
-            accelerations[index].append(profile.second_derivative_at(current_sim_time_in_seconds / profile_motion_time))
-            jerks[index].append(profile.third_derivative_at(current_sim_time_in_seconds / profile_motion_time))
+            positions[index].append(profile.value_at(current_sim_time_in_seconds))
+            velocities[index].append(profile.first_derivative_at(current_sim_time_in_seconds))
+            accelerations[index].append(profile.second_derivative_at(current_sim_time_in_seconds))
+            jerks[index].append(profile.third_derivative_at(current_sim_time_in_seconds))
 
         current_sim_time_in_seconds += time_step_in_seconds
 
