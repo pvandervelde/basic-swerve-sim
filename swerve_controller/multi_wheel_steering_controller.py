@@ -57,7 +57,7 @@ class ModuleFirstSteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -131,11 +131,11 @@ class ModuleFirstSteeringController(BaseSteeringController):
     # time.
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
-        time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span()
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         for drive_module in self.modules:
-            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)  #### WRONG TYPE
+            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
             result.append(DriveModuleDesiredValues(
                     state.name,
                     state.orientation_in_body_coordinates.z,
@@ -259,12 +259,19 @@ class ModuleFirstSteeringController(BaseSteeringController):
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
 
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.drive_module_trajectory is None:
+            return 0.0
+        else:
+            return self.drive_module_trajectory.min_trajectory_time_in_seconds
+
 class ModuleFollowsBodySteeringController(BaseSteeringController):
 
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -346,7 +353,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
         trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
-        time_fraction = time_from_start_of_trajectory / trajectory_time
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         if self.is_executing_body_trajectory:
@@ -509,11 +516,20 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
 
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.is_executing_body_trajectory:
+            return self.body_trajectory.min_trajectory_time_in_seconds
+        elif self.is_executing_module_trajectory:
+            return self.module_trajectory_from_command.min_trajectory_time_in_seconds
+        else:
+            return 0.0
+
 class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile],
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile],
             interpolation_frequency_in_hz: int):
         # Get the geometry for the robot
         self.modules = drive_modules
@@ -592,7 +608,7 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
         trajectory_time = self.active_trajectory.time_span()
-        time_fraction = time_from_start_of_trajectory / trajectory_time
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         for drive_module in self.modules:
@@ -615,7 +631,6 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
             trajectory = BodyControlledDriveModuleProfile(
                 self.modules,
                 self.control_model,
-                min_trajectory_time_in_seconds=desired_motion.time_for_motion(),
                 min_body_to_module_resolution_per_second=100,
                 motion_profile_func=self.motion_profile_func,
             )
@@ -695,3 +710,10 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
+
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.active_trajectory is None:
+            return 0.0
+        else:
+            return self.active_trajectory.time_span()

@@ -86,19 +86,19 @@ class BodyMotionProfile(object):
             current: BodyState,
             desired: BodyMotion,
             min_trajectory_time_in_seconds: float,
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.start_state = current
         self.end_state = desired
         self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
 
         self.profile = [
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x, LinearUnboundedSpace()),
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y, LinearUnboundedSpace()),
-            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.x, desired.linear_velocity.x, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.y, desired.linear_velocity.y, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.linear_velocity.z, desired.linear_velocity.z, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
 
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x, LinearUnboundedSpace()),
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y, LinearUnboundedSpace()),
-            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.x, desired.angular_velocity.x, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.y, desired.angular_velocity.y, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
+            motion_profile_func(current.motion_in_body_coordinates.angular_velocity.z, desired.angular_velocity.z, min_trajectory_time_in_seconds, LinearUnboundedSpace()),
         ]
 
     def body_motion_at(self, time_fraction: float) -> BodyMotion:
@@ -133,7 +133,7 @@ class DriveModuleStateProfile(ModuleStateProfile):
             self,
             drive_modules: List[DriveModule],
             min_trajectory_time_in_seconds: float,
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
         self.start_states: List[DriveModuleMeasuredValues] = []
@@ -158,10 +158,10 @@ class DriveModuleStateProfile(ModuleStateProfile):
             end_steering_angle = end.steering_angle_in_radians if not math.isinf(end.steering_angle_in_radians) else start.orientation_in_body_coordinates.z
             module_profiles = [
                 # Orientation
-                self.motion_profile_func(start.orientation_in_body_coordinates.z, end_steering_angle, PeriodicBoundedCircularSpace()),
+                self.motion_profile_func(start.orientation_in_body_coordinates.z, end_steering_angle, self.min_trajectory_time_in_seconds, PeriodicBoundedCircularSpace()),
 
                 # Drive velocity
-                self.motion_profile_func(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second, LinearUnboundedSpace()),
+                self.motion_profile_func(start.drive_velocity_in_module_coordinates.x, end.drive_velocity_in_meters_per_second, self.min_trajectory_time_in_seconds, LinearUnboundedSpace()),
             ]
 
             self.profiles[self.modules[i].name] = module_profiles
@@ -183,7 +183,7 @@ class DriveModuleStateProfile(ModuleStateProfile):
     def time_span(self) -> float:
         return self.min_trajectory_time_in_seconds
 
-    def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
+    def value_for_module_at(self, id: str, time_since_start_of_profile: float) -> DriveModuleMeasuredValues:
         if len(self.start_states) == 0 or len(self.end_states) == 0:
             raise IncompleteTrajectoryException()
 
@@ -202,13 +202,13 @@ class DriveModuleStateProfile(ModuleStateProfile):
             steering_module.name,
             steering_module.steering_axis_xy_position.x,
             steering_module.steering_axis_xy_position.y,
-            profiles[0].value_at(time_fraction),
-            profiles[0].first_derivative_at(time_fraction),
-            profiles[0].second_derivative_at(time_fraction),
-            profiles[0].third_derivative_at(time_fraction),
-            profiles[1].value_at(time_fraction),
-            profiles[1].first_derivative_at(time_fraction),
-            profiles[1].second_derivative_at(time_fraction),
+            profiles[0].value_at(time_since_start_of_profile),
+            profiles[0].first_derivative_at(time_since_start_of_profile),
+            profiles[0].second_derivative_at(time_since_start_of_profile),
+            profiles[0].third_derivative_at(time_since_start_of_profile),
+            profiles[1].value_at(time_since_start_of_profile),
+            profiles[1].first_derivative_at(time_since_start_of_profile),
+            profiles[1].second_derivative_at(time_since_start_of_profile),
         )
 
 class DriveModuleCalculatedProfilePoint(object):
@@ -224,17 +224,22 @@ class ValueDerrivativeSet(object):
         self.second_derivative = second_derivative
         self.third_derivative = third_derivative
 
+class TimeStatePair(object):
+    def __init__(self, time_fraction: float, state: List[ValueDerrivativeSet]):
+        self.time_fraction = time_fraction
+        self.state = state
+
 class LimitedDriveModuleProfile(object):
     def __init__(self, drive_modules: List[DriveModule]):
         self.drive_modules = drive_modules
 
         # Store the steering angles for each point in time for each module
         # The first value is the time fraction, the second value is a list of steering angles for each module
-        self.steering_profiles: List[Tuple[float, List[ValueDerrivativeSet]]] = []
+        self.steering_profiles: List[TimeStatePair] = []
 
         # Store the drive velocities for each point in time for each module
         # The first value is the time fraction, the second value is a list of drive velocities for each module
-        self.velocity_profiles: List[Tuple[float, List[ValueDerrivativeSet]]] = []
+        self.velocity_profiles: List[TimeStatePair] = []
 
     def add_profile_point(self, time_step_leading_up_to_value: float, steering_angle: List[float], drive_velocity: List[float]):
         steering_mapping: List[ValueDerrivativeSet] = []
@@ -243,8 +248,8 @@ class LimitedDriveModuleProfile(object):
             steering_mapping.append(ValueDerrivativeSet(steering_angle[index], 0.0, 0.0, 0.0))
             drive_mapping.append(ValueDerrivativeSet(drive_velocity[index], 0.0, 0.0, 0.0))
 
-        self.steering_profiles.append((time_step_leading_up_to_value, steering_mapping))
-        self.velocity_profiles.append((time_step_leading_up_to_value, drive_mapping))
+        self.steering_profiles.append(TimeStatePair(time_step_leading_up_to_value, steering_mapping))
+        self.velocity_profiles.append(TimeStatePair(time_step_leading_up_to_value, drive_mapping))
 
     def calculate_accelerations(self):
         # Steering angle
@@ -255,27 +260,27 @@ class LimitedDriveModuleProfile(object):
                 # First point
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].second_derivative = 0.0
+                    current_points.state[module_index].second_derivative = 0.0
             elif index == len(self.steering_profiles) - 1:
                 # Last point
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].second_derivative = 0.0
+                    current_points.state[module_index].second_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
                 next_points = self.steering_profiles[index + 1]
 
-                time_difference_in_the_past = current_points[0]
-                time_difference_in_the_future = next_points[0]
+                time_difference_in_the_past = current_points.time_fraction
+                time_difference_in_the_future = next_points.time_fraction
 
                 for module_index in range(len(self.drive_modules)):
-                    previous_value = previous_points[1][module_index].first_derivative
-                    current_value = current_points[1][module_index].first_derivative
-                    next_value = next_points[1][module_index].first_derivative
+                    previous_value = previous_points.state[module_index].first_derivative
+                    current_value = current_points.state[module_index].first_derivative
+                    next_value = next_points.state[module_index].first_derivative
 
                     acceleration_from_past = (current_value - previous_value) / time_difference_in_the_past
                     acceleration_in_future = (next_value - current_value) / time_difference_in_the_future
-                    self.steering_profiles[index][1][module_index].second_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
+                    self.steering_profiles[index].state[module_index].second_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
 
         # Drive velocity
         for index in range(len(self.velocity_profiles)):
@@ -285,27 +290,27 @@ class LimitedDriveModuleProfile(object):
                 # First point
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].first_derivative = 0.0
+                    current_points.state[module_index].first_derivative = 0.0
             elif index == len(self.velocity_profiles) - 1:
                 # Last point
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].first_derivative = 0.0
+                    current_points.state[module_index].first_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.velocity_profiles[index - 1]
                 next_points = self.velocity_profiles[index + 1]
 
-                time_difference_in_the_past = current_points[0]
-                time_difference_in_the_future = next_points[0]
+                time_difference_in_the_past = current_points.time_fraction
+                time_difference_in_the_future = next_points.time_fraction
 
                 for module_index in range(len(self.drive_modules)):
-                    previous_value = previous_points[1][module_index].value
-                    current_value = current_points[1][module_index].value
-                    next_value = next_points[1][module_index].value
+                    previous_value = previous_points.state[module_index].value
+                    current_value = current_points.state[module_index].value
+                    next_value = next_points.state[module_index].value
 
                     acceleration_from_past = (current_value - previous_value) / time_difference_in_the_past
                     acceleration_in_future = (next_value - current_value) / time_difference_in_the_future
-                    self.velocity_profiles[index][1][module_index].first_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
+                    self.velocity_profiles[index].state[module_index].first_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
 
     def calculate_derrivatives(self):
         self.calculate_velocities()
@@ -321,27 +326,27 @@ class LimitedDriveModuleProfile(object):
                 # First point
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].third_derivative = 0.0
+                    current_points.state[module_index].third_derivative = 0.0
             elif index == len(self.steering_profiles) - 1:
                 # Last point
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].third_derivative = 0.0
+                    current_points.state[module_index].third_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
                 next_points = self.steering_profiles[index + 1]
 
-                time_difference_in_the_past = current_points[0]
-                time_difference_in_the_future = next_points[0]
+                time_difference_in_the_past = current_points.time_fraction
+                time_difference_in_the_future = next_points.time_fraction
 
                 for module_index in range(len(self.drive_modules)):
-                    previous_value = previous_points[1][module_index].second_derivative
-                    current_value = current_points[1][module_index].second_derivative
-                    next_value = next_points[1][module_index].second_derivative
+                    previous_value = previous_points.state[module_index].second_derivative
+                    current_value = current_points.state[module_index].second_derivative
+                    next_value = next_points.state[module_index].second_derivative
 
                     acceleration_from_past = (current_value - previous_value) / time_difference_in_the_past
                     acceleration_in_future = (next_value - current_value) / time_difference_in_the_future
-                    self.steering_profiles[index][1][module_index].third_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
+                    self.steering_profiles[index].state[module_index].third_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
 
         # Drive velocity
         for index in range(len(self.velocity_profiles)):
@@ -351,27 +356,27 @@ class LimitedDriveModuleProfile(object):
                 # First point
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].second_derivative = 0.0
+                    current_points.state[module_index].second_derivative = 0.0
             elif index == len(self.velocity_profiles) - 1:
                 # Last point
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].second_derivative = 0.0
+                    current_points.state[module_index].second_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.velocity_profiles[index - 1]
                 next_points = self.velocity_profiles[index + 1]
 
-                time_difference_in_the_past = current_points[0]
-                time_difference_in_the_future = next_points[0]
+                time_difference_in_the_past = current_points.time_fraction
+                time_difference_in_the_future = next_points.time_fraction
 
                 for module_index in range(len(self.drive_modules)):
-                    previous_value = previous_points[1][module_index].first_derivative
-                    current_value = current_points[1][module_index].first_derivative
-                    next_value = next_points[1][module_index].first_derivative
+                    previous_value = previous_points.state[module_index].first_derivative
+                    current_value = current_points.state[module_index].first_derivative
+                    next_value = next_points.state[module_index].first_derivative
 
                     acceleration_from_past = (current_value - previous_value) / time_difference_in_the_past
                     acceleration_in_future = (next_value - current_value) / time_difference_in_the_future
-                    self.velocity_profiles[index][1][module_index].second_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
+                    self.velocity_profiles[index].state[module_index].second_derivative = (acceleration_from_past + acceleration_in_future) / 2.0
 
     def calculate_velocities(self):
         # Only do the steering velocity because there is no need to calculate the drive velocity as it is already calculated
@@ -382,27 +387,27 @@ class LimitedDriveModuleProfile(object):
                 # First point
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].first_derivative = 0.0
+                    current_points.state[module_index].first_derivative = 0.0
             elif index == len(self.steering_profiles) - 1:
                 # Last point
                 for module_index in range(len(self.drive_modules)):
-                    current_points[1][module_index].first_derivative = 0.0
+                    current_points.state[module_index].first_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
                 next_points = self.steering_profiles[index + 1]
 
-                time_difference_in_the_past = current_points[0]
-                time_difference_in_the_future = next_points[0]
+                time_difference_in_the_past = current_points.time_fraction
+                time_difference_in_the_future = next_points.time_fraction
 
                 for module_index in range(len(self.drive_modules)):
-                    previous_value = previous_points[1][module_index].value
-                    current_value = current_points[1][module_index].value
-                    next_value = next_points[1][module_index].value
+                    previous_value = previous_points.state[module_index].value
+                    current_value = current_points.state[module_index].value
+                    next_value = next_points.state[module_index].value
 
                     velocity_from_past = (current_value - previous_value) / time_difference_in_the_past
                     velocity_in_future = (next_value - current_value) / time_difference_in_the_future
-                    self.steering_profiles[index][1][module_index].first_derivative = (velocity_from_past + velocity_in_future) / 2.0
+                    self.steering_profiles[index].state[module_index].first_derivative = (velocity_from_past + velocity_in_future) / 2.0
 
     def limit_profiles(self):
         self.calculate_derrivatives()
@@ -423,24 +428,96 @@ class LimitedDriveModuleProfile(object):
         #       Calculate the ratio between the desired and actual acceleration and scale the timestep by that ratio squared
 
         # For each timestep find the biggest values in the steering angle/velocity/acceleration/jerk
+        for time_index, time_pair in enumerate(self.steering_profiles):
+            max_steering_velocity = 0.0
+            max_steering_acceleration = 0.0
+            max_steering_jerk = 0.0
 
-        # limit the steering velocity / acceleration / jerk
+            max_steering_velocity_index = -1
+            max_steering_acceleration_index = -1
+            max_steering_jerk_index = -1
 
-        #
+            for module_index in range(len(self.drive_modules)):
+                steering_velocity = abs(time_pair.state[module_index].first_derivative)
+                steering_acceleration = abs(time_pair.state[module_index].second_derivative)
+                steering_jerk = abs(time_pair.state[module_index].third_derivative)
 
-        pass
+                if steering_velocity > max_steering_velocity:
+                    max_steering_velocity = steering_velocity
+                    max_steering_velocity_index = module_index
+
+                if steering_acceleration > max_steering_acceleration:
+                    max_steering_acceleration = steering_acceleration
+                    max_steering_acceleration_index = module_index
+
+                if steering_jerk > max_steering_jerk:
+                    max_steering_jerk = steering_jerk
+                    max_steering_jerk_index = module_index
+
+            # Limit the steering velocity. Assume a linear change between the previous point and the current one.
+            if max_steering_velocity > self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity:
+                reduction_ratio = self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity / max_steering_velocity
+
+                # Reduce all the velocities
+                for module_index in range(len(self.drive_modules)):
+                    time_pair.state[module_index].first_derivative = time_pair.state[module_index].first_derivative * reduction_ratio
+
+                # Increase the timestep so that we end up in the same location
+                time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
+
+                self.velocity_profiles[time_index].time_fraction = self.velocity_profiles[time_index].time_fraction / reduction_ratio
+
+        # limit the drive velocity
+        # For each timestep find the biggest values in the drive velocity/acceleration/jerk
+        for time_index, time_pair in enumerate(self.velocity_profiles):
+            max_drive_velocity = 0.0
+            max_drive_acceleration = 0.0
+            max_drive_jerk = 0.0
+
+            max_drive_velocity_index = -1
+            max_drive_acceleration_index = -1
+            max_drive_jerk_index = -1
+
+            for module_index in range(len(self.drive_modules)):
+                drive_velocity = abs(time_pair.state[module_index].value)
+                drive_acceleration = abs(time_pair.state[module_index].first_derivative)
+                drive_jerk = abs(time_pair.state[module_index].second_derivative)
+
+                if drive_velocity > max_drive_velocity:
+                    max_drive_velocity = drive_velocity
+                    max_drive_velocity_index = module_index
+
+                if drive_acceleration > max_drive_acceleration:
+                    max_drive_acceleration = drive_acceleration
+                    max_drive_acceleration_index = module_index
+
+                if drive_jerk > max_drive_jerk:
+                    max_drive_jerk = drive_jerk
+                    max_drive_jerk_index = module_index
+
+            # Limit the drive velocity. Assume a linear change between the previous point and the current one.
+            if max_drive_velocity > self.drive_modules[max_drive_velocity_index].drive_motor_maximum_velocity:
+                reduction_ratio = self.drive_modules[max_drive_velocity_index].drive_motor_maximum_velocity / max_drive_velocity
+
+                # Reduce all the velocities
+                for module_index in range(len(self.drive_modules)):
+                    time_pair.state[module_index].value = time_pair.state[module_index].value * reduction_ratio
+
+                # Increase the timestep so that we end up in the same location
+                time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
+
+                self.steering_profiles[time_index].time_fraction = self.steering_profiles[time_index].time_fraction / reduction_ratio
 
 class BodyControlledDriveModuleProfile(ModuleStateProfile):
     def __init__(
             self,
             drive_modules: List[DriveModule],
             control_model: ControlModelBase,
-            min_trajectory_time_in_seconds: float,
             min_body_to_module_resolution_per_second: float,
-            motion_profile_func: Callable[[float, float, RealNumberValueSpace], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         self.modules = drive_modules
         self.control_model = control_model
-        self.min_trajectory_time_in_seconds = min_trajectory_time_in_seconds
+        self.min_trajectory_time_in_seconds = 1.0 # Set a default. This will be changed when we calculate the profiles
         self.motion_profile_func = motion_profile_func
 
         self.start_state_modules: List[DriveModuleMeasuredValues] = []
@@ -474,13 +551,13 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         # Compute the body profile
         start_state_body = self.control_model.body_motion_from_wheel_module_states(self.start_state_modules)
         body_profiles = [
-            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x, self.unbounded_number_space),
-            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y, self.unbounded_number_space),
-            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.linear_velocity.x, self.end_state_body.linear_velocity.x, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.linear_velocity.y, self.end_state_body.linear_velocity.y, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.linear_velocity.z, self.end_state_body.linear_velocity.z, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
 
-            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x, self.unbounded_number_space),
-            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y, self.unbounded_number_space),
-            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.angular_velocity.x, self.end_state_body.angular_velocity.x, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.angular_velocity.y, self.end_state_body.angular_velocity.y, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
+            self.motion_profile_func(start_state_body.angular_velocity.z, self.end_state_body.angular_velocity.z, self.min_trajectory_time_in_seconds, self.unbounded_number_space),
         ]
 
         # Compute intermediate steps for the modules. Assume that the whole profile is 1 second long
@@ -526,36 +603,37 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         # Limits based on: https://journals.sagepub.com/doi/10.5772/51153
         calculated_profiles.limit_profiles()
 
-        profile_total_time = sum([x[0] for x in calculated_profiles.steering_profiles])
+        profile_total_time = sum([x.time_fraction for x in calculated_profiles.steering_profiles])
 
         profiles: Mapping[str, List[SingleVariableMultiPointLinearProfile]] = {}
         for module_index in range(len(self.modules)):
             profiles[self.modules[module_index].name] = [
                 # Steering orientation
                 SingleVariableMultiPointLinearProfile(
-                    calculated_profiles.steering_profiles[0][1][module_index].value,
-                    calculated_profiles.steering_profiles[-1][1][module_index].value,
+                    calculated_profiles.steering_profiles[0].state[module_index].value,
+                    calculated_profiles.steering_profiles[-1].state[module_index].value,
                     end_time=profile_total_time,
                     coordinate_space=PeriodicBoundedCircularSpace()),
 
                 # Drive velocity
                 SingleVariableMultiPointLinearProfile(
-                    calculated_profiles.velocity_profiles[0][1][module_index].value,
-                    calculated_profiles.velocity_profiles[-1][1][module_index].value,
+                    calculated_profiles.velocity_profiles[0].state[module_index].value,
+                    calculated_profiles.velocity_profiles[-1].state[module_index].value,
                     end_time=profile_total_time)
             ]
 
         time_to_now = 0.0
         for i in range(1, len(calculated_profiles.steering_profiles)):
-            time_to_now += calculated_profiles.steering_profiles[i][0]
-            module_steering_values = calculated_profiles.steering_profiles[i][1]
-            module_drive_values = calculated_profiles.velocity_profiles[i][1]
+            time_to_now += calculated_profiles.steering_profiles[i].time_fraction
+            module_steering_values = calculated_profiles.steering_profiles[i].state
+            module_drive_values = calculated_profiles.velocity_profiles[i].state
 
             for module_index in range(len(self.modules)):
                 profiles[self.modules[module_index].name][0].add_value(time_to_now, module_steering_values[module_index].value)
                 profiles[self.modules[module_index].name][1].add_value(time_to_now, module_drive_values[module_index].value)
 
         self.module_profiles = profiles
+        self.min_trajectory_time_in_seconds = profile_total_time
 
     def set_current_state(self, module_states: List[DriveModuleMeasuredValues]):
         if len(module_states) != len(self.modules):
@@ -571,7 +649,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
     def time_span(self) -> float:
         return self.min_trajectory_time_in_seconds
 
-    def value_for_module_at(self, id: str, time_fraction: float) -> DriveModuleMeasuredValues:
+    def value_for_module_at(self, id: str, time_since_start_of_profile: float) -> DriveModuleMeasuredValues:
         if len(self.start_state_modules) == 0 or self.end_state_body is None:
             raise IncompleteTrajectoryException()
 
@@ -590,11 +668,11 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             steering_module.name,
             steering_module.steering_axis_xy_position.x,
             steering_module.steering_axis_xy_position.y,
-            profiles[0].value_at(time_fraction),
-            profiles[0].first_derivative_at(time_fraction),
-            profiles[0].second_derivative_at(time_fraction),
-            profiles[0].third_derivative_at(time_fraction),
-            profiles[1].value_at(time_fraction),
-            profiles[1].first_derivative_at(time_fraction),
-            profiles[1].second_derivative_at(time_fraction),
+            profiles[0].value_at(time_since_start_of_profile),
+            profiles[0].first_derivative_at(time_since_start_of_profile),
+            profiles[0].second_derivative_at(time_since_start_of_profile),
+            profiles[0].third_derivative_at(time_since_start_of_profile),
+            profiles[1].value_at(time_since_start_of_profile),
+            profiles[1].first_derivative_at(time_since_start_of_profile),
+            profiles[1].second_derivative_at(time_since_start_of_profile),
         )

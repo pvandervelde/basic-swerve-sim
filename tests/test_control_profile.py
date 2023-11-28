@@ -90,8 +90,8 @@ def create_drive_modules(
 
     return result
 
-def get_linear_motion_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end, number_space)
+def get_linear_motion_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, end_time, number_space)
 
 # BodyMotionTrajectory
 
@@ -130,9 +130,9 @@ def test_should_show_value_at_in_body_motion():
     assert math.isclose(trajectory.body_motion_at(0.0).linear_velocity.y, 2.0, rel_tol=1e-6, abs_tol=1e-15)
     assert math.isclose(trajectory.body_motion_at(0.0).angular_velocity.z, 3.0, rel_tol=1e-6, abs_tol=1e-15)
 
-    assert math.isclose(trajectory.body_motion_at(1.0).linear_velocity.x, 4.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(trajectory.body_motion_at(1.0).linear_velocity.y, 5.0, rel_tol=1e-6, abs_tol=1e-15)
-    assert math.isclose(trajectory.body_motion_at(1.0).angular_velocity.z, 6.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(trajectory.body_motion_at(10.0).linear_velocity.x, 4.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(trajectory.body_motion_at(10.0).linear_velocity.y, 5.0, rel_tol=1e-6, abs_tol=1e-15)
+    assert math.isclose(trajectory.body_motion_at(10.0).angular_velocity.z, 6.0, rel_tol=1e-6, abs_tol=1e-15)
 
 # DriveModuleStateTrajectory
 
@@ -723,7 +723,7 @@ def test_drive_module_trajectory_should_create_trajectory_for_sideways_to_rotati
 def test_body_controlled_drive_module_trajectory_should_create_trajectory_with_start():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -749,7 +749,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_with_e
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     end_state = BodyMotion(
         1.0,
@@ -771,7 +771,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -826,7 +826,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
 def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_forward_deceleration():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -882,7 +882,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_si
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -938,7 +938,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_si
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -994,7 +994,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_ro
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -1056,7 +1056,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_ro
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -1114,7 +1114,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -1171,7 +1171,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_si
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -1227,7 +1227,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_fo
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):
@@ -1285,7 +1285,7 @@ def test_body_controlled_drive_module_trajectory_should_create_trajectory_for_si
     drive_modules = create_drive_modules()
 
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
-    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 1.0, 10, get_linear_motion_profile)
+    trajectory = BodyControlledDriveModuleProfile(drive_modules, controller, 10, get_linear_motion_profile)
 
     current_states: List[DriveModuleMeasuredValues] = []
     for i in range(len(drive_modules)):

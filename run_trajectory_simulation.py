@@ -38,10 +38,10 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
+        steering_motor_maximum_velocity=2.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
+        drive_motor_maximum_velocity=1.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -54,10 +54,10 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
+        steering_motor_maximum_velocity=2.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
+        drive_motor_maximum_velocity=1.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -70,10 +70,10 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
+        steering_motor_maximum_velocity=2.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
+        drive_motor_maximum_velocity=1.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -86,10 +86,10 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
+        steering_motor_maximum_velocity=2.0,
         steering_motor_minimum_acceleration=0.1,
         steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
+        drive_motor_maximum_velocity=1.0,
         drive_motor_minimum_acceleration=0.1,
         drive_motor_maximum_acceleration=1.0
     )
@@ -97,8 +97,8 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
 
     return drive_modules
 
-def get_linear_motion_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end, number_space)
+def get_linear_motion_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, end_time, number_space)
 
 def get_motions(input_files: List[str]) -> List[MotionPlan]:
     result: List[MotionPlan] = []
@@ -183,11 +183,11 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
 
     return result
 
-def get_scurve_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableSCurveProfile(start, end, number_space)
+def get_scurve_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end, end_time, number_space)
 
-def get_trapezoidal_profile(start: float, end: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
-    return SingleVariableTrapezoidalProfile(start, end, number_space)
+def get_trapezoidal_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end, end_time, number_space)
 
 def initialize_drive_modules(drive_modules: List[DriveModule], module_states: List[DriveModuleDesiredValues]) -> List[DriveModuleMeasuredValues]:
     states: List[DriveModuleMeasuredValues] = []
@@ -435,7 +435,9 @@ def simulation_run_trajectory(
         controller.on_tick(current_sim_time_in_seconds)
         controller.on_desired_state_update(motion)
 
-        step_count = int(motion.time_for_motion() * simulation_rate_in_hz)
+        time_for_motion = controller.time_for_current_movement()
+
+        step_count = int(time_for_motion * simulation_rate_in_hz)
         time_step_in_seconds =  1.0 / float(simulation_rate_in_hz)
 
         for time_index in range(1, step_count + 1):
