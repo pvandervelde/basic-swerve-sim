@@ -30,6 +30,18 @@ class MotionPlan(NamedTuple):
     motions: List[MotionCommand]
 
 def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, wheel_radius: float = 0.1, wheel_width=0.1) -> List[DriveModule]:
+    steering_motor_maximum_velocity = 2.0
+    steering_motor_minimum_acceleration = 0.1
+    steering_motor_maximum_acceleration = 10.0
+    steering_motor_minimum_jerk = 0.1
+    steering_motor_maximum_jerk = 75.0
+
+    drive_motor_maximum_velocity = 1.0
+    drive_motor_minimum_acceleration = 0.1
+    drive_motor_maximum_acceleration = 5.0
+    drive_motor_minimum_jerk = 0.1
+    drive_motor_maximum_jerk = 10.0
+
     drive_modules: List[DriveModule] = []
     left_front = DriveModule(
         name="left-front",
@@ -38,12 +50,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=2.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(left_front)
 
@@ -54,12 +70,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=2.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(left_rear)
 
@@ -70,12 +90,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=2.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(right_rear)
 
@@ -86,12 +110,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=2.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=1.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(right_front)
 

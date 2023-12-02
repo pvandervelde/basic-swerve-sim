@@ -16,9 +16,13 @@ def create_drive_modules(
     steering_max_velocity: float = 1.0,
     steering_min_acceleration: float = 0.1,
     steering_max_acceleration: float = 1.0,
+    steering_min_jerk: float = 0.1,
+    steering_max_jerk: float = 1.0,
     drive_max_velocity: float = 1.0,
     drive_min_acceleration: float = 0.1,
-    drive_max_acceleration: float = 1.0) -> List[DriveModule]:
+    drive_max_acceleration: float = 1.0,
+    drive_min_jerk: float = 0.1,
+    drive_max_jerk: float = 1.0) -> List[DriveModule]:
     result: List[DriveModule] = []
 
     right_front_drive = DriveModule(
@@ -31,9 +35,13 @@ def create_drive_modules(
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
+        steering_motor_minimum_jerk=steering_min_jerk,
+        steering_motor_maximum_jerk=steering_max_jerk,
         drive_motor_maximum_velocity=drive_max_velocity,
         drive_motor_minimum_acceleration=drive_min_acceleration,
-        drive_motor_maximum_acceleration=drive_max_acceleration
+        drive_motor_maximum_acceleration=drive_max_acceleration,
+        drive_motor_minimum_jerk=drive_min_jerk,
+        drive_motor_maximum_jerk=drive_max_jerk
     )
     result.append(right_front_drive)
 
@@ -47,9 +55,13 @@ def create_drive_modules(
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
+        steering_motor_minimum_jerk=steering_min_jerk,
+        steering_motor_maximum_jerk=steering_max_jerk,
         drive_motor_maximum_velocity=drive_max_velocity,
         drive_motor_minimum_acceleration=drive_min_acceleration,
-        drive_motor_maximum_acceleration=drive_max_acceleration
+        drive_motor_maximum_acceleration=drive_max_acceleration,
+        drive_motor_minimum_jerk=drive_min_jerk,
+        drive_motor_maximum_jerk=drive_max_jerk
     )
     result.append(left_front_drive)
 
@@ -63,9 +75,13 @@ def create_drive_modules(
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
+        steering_motor_minimum_jerk=steering_min_jerk,
+        steering_motor_maximum_jerk=steering_max_jerk,
         drive_motor_maximum_velocity=drive_max_velocity,
         drive_motor_minimum_acceleration=drive_min_acceleration,
-        drive_motor_maximum_acceleration=drive_max_acceleration
+        drive_motor_maximum_acceleration=drive_max_acceleration,
+        drive_motor_minimum_jerk=drive_min_jerk,
+        drive_motor_maximum_jerk=drive_max_jerk
     )
     result.append(left_rear_drive)
 
@@ -79,9 +95,13 @@ def create_drive_modules(
         steering_motor_maximum_velocity=steering_max_velocity,
         steering_motor_minimum_acceleration=steering_min_acceleration,
         steering_motor_maximum_acceleration=steering_max_acceleration,
+        steering_motor_minimum_jerk=steering_min_jerk,
+        steering_motor_maximum_jerk=steering_max_jerk,
         drive_motor_maximum_velocity=drive_max_velocity,
         drive_motor_minimum_acceleration=drive_min_acceleration,
-        drive_motor_maximum_acceleration=drive_max_acceleration
+        drive_motor_maximum_acceleration=drive_max_acceleration,
+        drive_motor_minimum_jerk=drive_min_jerk,
+        drive_motor_maximum_jerk=drive_max_jerk
     )
     result.append(right_rear_drive)
 
@@ -449,7 +469,7 @@ def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_ex
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward_motion():
-    drive_modules = create_drive_modules(1.0, 1.0)
+    drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
     motion = BodyMotion(
@@ -477,7 +497,7 @@ def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_sideways_motion():
-    drive_modules = create_drive_modules(1.0, 1.0)
+    drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
     motion = BodyMotion(
@@ -505,7 +525,7 @@ def test_should_have_parallel_left_sideways_wheels_with_forward_velocity_when_si
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_sideways_motion():
-    drive_modules = create_drive_modules(1.0, 1.0)
+    drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
     motion = BodyMotion(
@@ -533,7 +553,7 @@ def test_should_have_parallel_right_sideways_wheels_with_forward_velocity_when_s
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagonal_motion():
-    drive_modules = create_drive_modules(1.0, 1.0)
+    drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
     motion = BodyMotion(
@@ -561,7 +581,7 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
         assert math.isclose(module_state[1].drive_velocity_in_meters_per_second, -1.0, rel_tol=1e-6, abs_tol=1e-15)
 
 def test_should_have_angled_wheels_with_forward_velocity_when_pure_rotation():
-    drive_modules = create_drive_modules(1.0, 1.0)
+    drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
 
     motion = BodyMotion(
