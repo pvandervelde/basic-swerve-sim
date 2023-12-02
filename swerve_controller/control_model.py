@@ -152,29 +152,14 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
         body_state_vector = np.array(body_state_array)
         drive_state_vector = np.matmul(self.inverse_kinematics_matrix, body_state_vector)
 
-        # Calculate the drive speeds and the ratio between the required wheel velocity and the
-        # maximum velocity that the motor can provide.
+        # Calculate the drive speeds
         drive_velocities: List[float] = []
-        scales: List[float] = []
         for i in range(len(self.modules)):
 
             v_x = drive_state_vector[2 * i + 0]
             v_y = drive_state_vector[2 * i + 1]
             drive_velocity = math.sqrt(pow(v_x, 2.0) + pow(v_y, 2.0))
             drive_velocities.append(drive_velocity)
-
-            # If the scale factor is less than 1 then we want higher velocity than the motor can provide
-            # Using the scale factor this way so we can easily multiply by the scale factor to get the maximum allowed
-            # velocity later on.
-            if not math.isclose(drive_velocity, 0.0, rel_tol=1e-15, abs_tol=1e-15):
-                scale = self.modules[i].drive_motor_maximum_velocity / drive_velocity
-                scale = scale if (scale < 1.0) else 1.0
-            else:
-                scale = 1.0
-            scales.append(scale)
-
-        scales.sort(reverse=True)
-        normalization_factor = scales[0]
 
         # Assume that the steering angle is between 0 and 2 * pi
         result: List[Tuple[DriveModuleDesiredValues]] = []
@@ -227,13 +212,13 @@ class SimpleFourWheelSteeringControlModel(ControlModelBase):
             forward_state = DriveModuleDesiredValues(
                 name,
                 forward_steering_angle,
-                drive_velocity * normalization_factor,
+                drive_velocity,
             )
 
             reverse_state = DriveModuleDesiredValues(
                 name,
                 reverse_steering_angle,
-                -1.0 * drive_velocity * normalization_factor,
+                -1.0 * drive_velocity,
             )
             result.append((forward_state, reverse_state))
 
