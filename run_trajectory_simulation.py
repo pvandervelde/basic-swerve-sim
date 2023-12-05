@@ -444,7 +444,7 @@ def simulation_run_trajectory(
 
     controller.on_state_update(initial_module_states)
 
-    simulation_rate_in_hz = 25
+    simulation_rate_in_hz = 100
     current_sim_time_in_seconds = 0.0
 
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the

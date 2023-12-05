@@ -261,10 +261,6 @@ class LimitedDriveModuleProfile(object):
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
                     current_points.state[module_index].second_derivative = 0.0
-            elif index == len(self.steering_profiles) - 1:
-                # Last point
-                for module_index in range(len(self.drive_modules)):
-                    current_points.state[module_index].second_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
@@ -319,10 +315,6 @@ class LimitedDriveModuleProfile(object):
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
                     current_points.state[module_index].third_derivative = 0.0
-            elif index == len(self.steering_profiles) - 1:
-                # Last point
-                for module_index in range(len(self.drive_modules)):
-                    current_points.state[module_index].third_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
@@ -372,10 +364,6 @@ class LimitedDriveModuleProfile(object):
                 # TODO: If we ever get non-zero velocities / accelerations then we need to plug those in here
                 for module_index in range(len(self.drive_modules)):
                     current_points.state[module_index].first_derivative = 0.0
-            elif index == len(self.steering_profiles) - 1:
-                # Last point
-                for module_index in range(len(self.drive_modules)):
-                    current_points.state[module_index].first_derivative = 0.0
             else:
                 # Not the first point or the last point
                 previous_points = self.steering_profiles[index - 1]
@@ -410,12 +398,7 @@ class LimitedDriveModuleProfile(object):
         # For each timestep find the biggest values in the steering angle/velocity/acceleration/jerk
         for time_index, time_pair in enumerate(self.steering_profiles):
             max_steering_velocity = 0.0
-            max_steering_acceleration = 0.0
-            max_steering_jerk = 0.0
-
             max_steering_velocity_index = -1
-            max_steering_acceleration_index = -1
-            max_steering_jerk_index = -1
 
             for module_index in range(len(self.drive_modules)):
                 steering_velocity = abs(time_pair.state[module_index].first_derivative)
@@ -428,13 +411,66 @@ class LimitedDriveModuleProfile(object):
             if max_steering_velocity > self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity:
                 reduction_ratio = self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity / max_steering_velocity
 
+                # Increase the timestep so that we end up in the same location
+                time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
+                self.velocity_profiles[time_index].time_fraction = self.velocity_profiles[time_index].time_fraction / reduction_ratio
+
                 # Reduce all the velocities, accelerations and jerks
                 for module_index in range(len(self.drive_modules)):
                     time_pair.state[module_index].first_derivative = time_pair.state[module_index].first_derivative * reduction_ratio
 
+        # limit the steering acceleration
+        # For each timestep find the biggest values in the acceleration
+        self.calculate_velocities()
+        self.calculate_accelerations()
+        for time_index, time_pair in enumerate(self.steering_profiles):
+            max_steering_acceleration = 0.0
+            max_steering_acceleration_index = -1
+
+            for module_index in range(len(self.drive_modules)):
+                steering_acceleration = abs(time_pair.state[module_index].second_derivative)
+
+                if steering_acceleration > max_steering_acceleration:
+                    max_steering_acceleration = steering_acceleration
+                    max_steering_acceleration_index = module_index
+
+            # Limit the steering acceleration. Assume a linear change between the previous point and the current one.
+            if max_steering_acceleration > self.drive_modules[max_steering_acceleration_index].steering_motor_maximum_acceleration:
+                # The reduction ratio changes the time step, which also changes the velocity so the effect of the reduction ratio is
+                # not linear but quadratic. The equation we're trying to solve is:
+                #    a_max = (v_curr * ratio - v_prev) / (time_step / ratio) = (v_curr * ratio - v_prev) * ratio / time_step
+                # so:
+                #    a_max * time_step = (v_curr * ratio - v_prev) * ratio = v_curr * ratio^2 - v_prev * ratio
+                # So the equation to solve is
+                #    v_curr * ratio^2 - v_prev * ratio - a_max * time_step = 0
+                #
+                # Make sure that we use the correct maximum acceleration
+                max_accel = self.drive_modules[max_steering_acceleration_index].steering_motor_maximum_acceleration * abs(time_pair.state[max_steering_acceleration_index].second_derivative) / time_pair.state[max_steering_acceleration_index].second_derivative
+                discriminant = pow(-self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative, 2.0) + 4.0 * time_pair.state[max_steering_acceleration_index].first_derivative * max_accel * time_pair.time_fraction
+
+                solution_1 = (self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative + math.sqrt(discriminant)) / (2.0 * time_pair.state[max_steering_acceleration_index].first_derivative)
+                solution_2 = (self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative - math.sqrt(discriminant)) / (2.0 * time_pair.state[max_steering_acceleration_index].first_derivative)
+
+                reduction_ratio = solution_1 if solution_1 > solution_2 else solution_2
+
                 # Increase the timestep so that we end up in the same location
                 time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
                 self.velocity_profiles[time_index].time_fraction = self.velocity_profiles[time_index].time_fraction / reduction_ratio
+
+                # Reduce all the velocities, accelerations and jerks
+                for module_index in range(len(self.drive_modules)):
+                    # recalculate the velocity
+                    time_pair.state[module_index].first_derivative = time_pair.state[module_index].first_derivative * reduction_ratio
+
+                    # Recalculate the acceleration
+                    previous_velocity = self.steering_profiles[time_index - 1].state[module_index].first_derivative
+                    time_pair.state[module_index].second_derivative = (time_pair.state[module_index].first_derivative - previous_velocity) / time_pair.time_fraction
+
+                    # recalculate the next acceleration
+                    if time_index < len(self.steering_profiles) - 1:
+                        next_velocity = self.steering_profiles[time_index + 1].state[module_index].first_derivative
+                        next_time_fraction = self.steering_profiles[time_index + 1].time_fraction
+                        self.steering_profiles[time_index + 1].state[module_index].second_derivative = (next_velocity - time_pair.state[module_index].first_derivative) / next_time_fraction
 
         # limit the drive velocity
         # For each timestep find the biggest values in the drive velocity/acceleration/jerk
