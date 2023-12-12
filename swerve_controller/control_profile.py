@@ -409,15 +409,26 @@ class LimitedDriveModuleProfile(object):
 
             # Limit the steering velocity. Assume a linear change between the previous point and the current one.
             if max_steering_velocity > self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity:
-                reduction_ratio = self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity / max_steering_velocity
+                # Calculate the time step needed to reduce the velocity to the maximum velocity
+                #   v_max = (s_curr - s_prev) / time_step -> time_step = (s_curr - s_prev) / v_max
+                new_time_step = abs(time_pair.state[max_steering_velocity_index].value - self.steering_profiles[time_index - 1].state[max_steering_velocity_index].value) / self.drive_modules[max_steering_velocity_index].steering_motor_maximum_velocity
+
+                # If the timestep is larger than th original one then we can potentially insert
+                # a new point in between the current and previous point. Only do this if the new timestep
+                # is more than 50% larger than the original timestep.
+                #
+                # Increasing the size of the timestep reduces smoothness, and potentially limits the
+                # maximum velocity and acceleration that we can achieve
+                #
+                #
+                # If the timestep is smaller than the original then we may not achieve the minimum
+                # velocity / acceleration. So we should insert new point(s) between the current
+                # and next point to ensure that we achieve the minimum velocity / acceleration
+
 
                 # Increase the timestep so that we end up in the same location
-                time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
-                self.velocity_profiles[time_index].time_fraction = self.velocity_profiles[time_index].time_fraction / reduction_ratio
-
-                # Reduce all the velocities, accelerations and jerks
-                for module_index in range(len(self.drive_modules)):
-                    time_pair.state[module_index].first_derivative = time_pair.state[module_index].first_derivative * reduction_ratio
+                time_pair.time_fraction = new_time_step
+                self.velocity_profiles[time_index].time_fraction = new_time_step
 
         # limit the steering acceleration
         # For each timestep find the biggest values in the acceleration
@@ -436,26 +447,82 @@ class LimitedDriveModuleProfile(object):
 
             # Limit the steering acceleration. Assume a linear change between the previous point and the current one.
             if max_steering_acceleration > self.drive_modules[max_steering_acceleration_index].steering_motor_maximum_acceleration:
-                # The reduction ratio changes the time step, which also changes the velocity so the effect of the reduction ratio is
-                # not linear but quadratic. The equation we're trying to solve is:
-                #    a_max = (v_curr * ratio - v_prev) / (time_step / ratio) = (v_curr * ratio - v_prev) * ratio / time_step
-                # so:
-                #    a_max * time_step = (v_curr * ratio - v_prev) * ratio = v_curr * ratio^2 - v_prev * ratio
-                # So the equation to solve is
-                #    v_curr * ratio^2 - v_prev * ratio - a_max * time_step = 0
+                # Calculate the time step needed to reduce the acceleration to the maximum acceleration
+                #
+                #  a_max = (v_curr - v_prev) / time_step
+                #
+                #  and
+                #
+                #  v_curr = (s_curr - s_prev) / time_step
+                #
+                # Which means
+                #
+                #  a_max = ((s_curr - s_prev) / time_step - v_prev) / time_step
+                #
+                #  a_max * time_step^2 = (s_curr - s_prev) - v_prev * time_step -> time_step^2 * a_max + v_prev * time_step - (s_curr - s_prev) = 0
                 #
                 # Make sure that we use the correct maximum acceleration
                 max_accel = self.drive_modules[max_steering_acceleration_index].steering_motor_maximum_acceleration * abs(time_pair.state[max_steering_acceleration_index].second_derivative) / time_pair.state[max_steering_acceleration_index].second_derivative
-                discriminant = pow(-self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative, 2.0) + 4.0 * time_pair.state[max_steering_acceleration_index].first_derivative * max_accel * time_pair.time_fraction
 
-                solution_1 = (self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative + math.sqrt(discriminant)) / (2.0 * time_pair.state[max_steering_acceleration_index].first_derivative)
-                solution_2 = (self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative - math.sqrt(discriminant)) / (2.0 * time_pair.state[max_steering_acceleration_index].first_derivative)
+                # work out the solution to the quadratic equation
+                #   -b +- sqrt(b^2 - 4ac) / 2a
+                a = max_accel
+                b = self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].first_derivative
+                c = self.steering_profiles[time_index - 1].state[max_steering_acceleration_index].value - time_pair.state[max_steering_acceleration_index].value
+                discriminant = b * b - 4.0 * a * c
 
-                reduction_ratio = solution_1 if solution_1 > solution_2 else solution_2
+                solution_1 = (-b + math.sqrt(discriminant)) / (2.0 * a)
+                solution_2 = (-b - math.sqrt(discriminant)) / (2.0 * a)
+
+                if solution_1 < 0.0:
+                    new_time_step = solution_2
+                elif solution_2 < 0.0:
+                    new_time_step = solution_1
+                else:
+                    # if one of the time steps is very different from the existing timestep (i.e. very large or very small)
+                    # then we use the other one
+                    solution_1_ratio = solution_1 / time_pair.time_fraction if solution_1 > time_pair.time_fraction else time_pair.time_fraction / solution_1
+                    solution_2_ratio = solution_2 / time_pair.time_fraction if solution_2 > time_pair.time_fraction else time_pair.time_fraction / solution_2
+
+                    solution_1_to_previous_ratio = solution_1 / self.steering_profiles[time_index - 1].time_fraction if solution_1 > self.steering_profiles[time_index - 1].time_fraction else self.steering_profiles[time_index - 1].time_fraction / solution_1
+                    solution_2_to_previous_ratio = solution_2 / self.steering_profiles[time_index - 1].time_fraction if solution_2 > self.steering_profiles[time_index - 1].time_fraction else self.steering_profiles[time_index - 1].time_fraction / solution_2
+
+                    if solution_1_ratio > solution_2_ratio:
+                        if solution_1_to_previous_ratio < solution_2_to_previous_ratio:
+                            new_time_step = solution_1
+                        else:
+                            new_time_step = solution_2
+                    else:
+                        if solution_1_to_previous_ratio < solution_2_to_previous_ratio:
+                            new_time_step = solution_1
+                        else:
+                            new_time_step = solution_2
+
+                # If the timestep is larger than th original one then we can potentially insert
+                # a new point in between the current and previous point. Only do this if the new timestep
+                # is more than 50% larger than the original timestep.
+                #
+                # Increasing the size of the timestep reduces smoothness, and potentially limits the
+                # maximum velocity and acceleration that we can achieve
+                #
+                #
+                # If the timestep is smaller than the original then we may not achieve the minimum
+                # velocity / acceleration. So we should insert new point(s) between the current
+                # and next point to ensure that we achieve the minimum velocity / acceleration
+                #
+                # None of that is actually easy because we care about the distance traveled, and the final
+                # destination. If we split the node then we also need to split the distance travelled,
+                # but that split is dependent on travel time etc.
+                #
+                # So maybe this is physics telling us that we need a better general approach
+
+                if new_time_step < time_pair.time_fraction:
+                    pass
 
                 # Increase the timestep so that we end up in the same location
-                time_pair.time_fraction = time_pair.time_fraction / reduction_ratio
-                self.velocity_profiles[time_index].time_fraction = self.velocity_profiles[time_index].time_fraction / reduction_ratio
+                reduction_ratio = time_pair.time_fraction / new_time_step
+                time_pair.time_fraction = new_time_step
+                self.velocity_profiles[time_index].time_fraction = new_time_step
 
                 # Reduce all the velocities, accelerations and jerks
                 for module_index in range(len(self.drive_modules)):
@@ -598,6 +665,11 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
 
         profile_total_time = sum([x.time_fraction for x in calculated_profiles.steering_profiles])
 
+        #with open("h://temp//4ws//steering_profile.csv", "w") as steering_file:
+        #    steering_file.write("time,")
+        #    steering_file.write(f"steering_angle,")
+        #    steering_file.write("\n")
+
         profiles: Mapping[str, List[SingleVariableMultiPointLinearProfile]] = {}
         for module_index in range(len(self.modules)):
             profiles[self.modules[module_index].name] = [
@@ -615,8 +687,12 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                     end_time=profile_total_time)
             ]
 
+        #steering_file.write(f"{ 0.0 },")
+        #steering_file.write(f"{ calculated_profiles.steering_profiles[0].state[0].value },")
+        #steering_file.write("\n")
+
         time_to_now = 0.0
-        for i in range(1, len(calculated_profiles.steering_profiles)):
+        for i in range(1, len(calculated_profiles.steering_profiles) - 1):
             time_to_now += calculated_profiles.steering_profiles[i].time_fraction
             module_steering_values = calculated_profiles.steering_profiles[i].state
             module_drive_values = calculated_profiles.velocity_profiles[i].state
@@ -624,6 +700,14 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
             for module_index in range(len(self.modules)):
                 profiles[self.modules[module_index].name][0].add_value(time_to_now, module_steering_values[module_index].value)
                 profiles[self.modules[module_index].name][1].add_value(time_to_now, module_drive_values[module_index].value)
+
+            #steering_file.write(f"{ time_to_now },")
+            #steering_file.write(f"{ module_steering_values[0].value },")
+            #steering_file.write("\n")
+
+        #steering_file.write(f"{ time_to_now },")
+        #steering_file.write(f"{ calculated_profiles.steering_profiles[-1].state[0].value },")
+        #steering_file.write("\n")
 
         self.module_profiles = profiles
         self.min_trajectory_time_in_seconds = profile_total_time
