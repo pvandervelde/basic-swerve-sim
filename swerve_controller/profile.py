@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import math
+from numpy import linspace, quantile
 from numpy.polynomial.polynomial import Polynomial
+from scipy.interpolate import BSpline, splrep, splev
 from typing import List, Tuple
 
 from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace
@@ -117,7 +119,6 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
     - coordinate_space: The coordinate space for the profile values.
     - profiles: A list of SingleVariableCompoundProfileValue objects representing the points in the profile.
     - end_time: The end time of the profile.
-    - maximum_polynomial_order: The maximum polynomial order that can be used for interpolation.
     """
 
     def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
@@ -139,8 +140,7 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
         self.end_time = end_time
 
-        # We have two points (begin and end) so at best we can do a linear approach
-        self.maximum_polynomial_order = 1
+        self.spline: BSpline = None
 
     def add_value(self, time_since_start_of_profile: float, value: float):
         """
@@ -172,7 +172,6 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
                 if i + 1 >= len(self.profiles):
                     # last profile
                     self.profiles.append(section)
-                    self.maximum_polynomial_order += 1
                     break
                 else:
                     # not the last profile. Go around the loop and we'll get it then
@@ -182,7 +181,6 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
                 if i - 1 >= 0:
                     if self.profiles[i - 1].location < time_since_start_of_profile:
                         self.profiles.insert(i, section)
-                        self.maximum_polynomial_order += 1
                         break
 
     def find_time_indices_for_time_fraction(self, time_since_profile_start: float) -> Tuple[int, int]:
@@ -226,36 +224,20 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_since_start_of_profile > self.end_time:
             time_since_start_of_profile = self.end_time
 
-        poly = self.polynomial_at_time(time_since_start_of_profile)
-        first_deriv = poly.deriv(1)
-        return first_deriv(time_since_start_of_profile)
+        poly = self.get_defining_spline()
+        return poly.__call__(time_since_start_of_profile, nu=1, extrapolate=False)
 
-    def polynomial_at_time(self, time_since_start_of_profile: float) -> Polynomial:
-        # find the index for the points
-        number_of_points = self.polynomial_order() + 1
-        smaller_index, larger_index = self.find_time_indices_for_time_fraction(time_since_start_of_profile)
+    def get_defining_spline(self) -> BSpline:
+        if self.spline is None:
+            k = 3 if len(self.profiles) >= 4 else len(self.profiles) - 1
 
-        # bias towards the 'future' because that's what we want to achieve
-        past_points = number_of_points // 2
-        future_points = number_of_points - past_points
+            ts: List[float] = [ x.location for x in self.profiles ]
+            ys: List[float] = [ x.value for x in self.profiles ]
+            t, c, k = splrep(ts, ys, s=0, k=k)
 
-        smallest_index = smaller_index - past_points + 1
-        if smallest_index < 0:
-            future_points += int(abs(smallest_index))
-            smallest_index = 0
+            self.spline = BSpline(t, c, k, extrapolate=False)
 
-        largest_index = larger_index + future_points - 1
-        if largest_index > len(self.profiles) - 1:
-            smallest_index -= int(abs(len(self.profiles) - 1 - largest_index))
-            largest_index = len(self.profiles) - 1
-
-        time_fractions = []
-        values = []
-        for i in range(smallest_index, largest_index + 1):
-            time_fractions.append(self.profiles[i].location)
-            values.append(self.profiles[i].value)
-
-        return Polynomial.fit(time_fractions, values, number_of_points - 1, domain=[time_fractions[0], time_fractions[len(time_fractions) - 1]])
+        return self.spline
 
     def polynomial_order(self) -> int:
         # For now we don't go beyond a 3rd order polynomial. A 3rd order polynomial should give us
@@ -285,9 +267,11 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_since_start_of_profile > self.end_time:
             time_since_start_of_profile = self.end_time
 
-        poly = self.polynomial_at_time(time_since_start_of_profile)
-        first_deriv = poly.deriv(2)
-        return first_deriv(time_since_start_of_profile)
+        poly = self.get_defining_spline()
+        if poly.k < 2:
+            return 0.0
+
+        return poly.__call__(time_since_start_of_profile, nu=2, extrapolate=False)
 
     def third_derivative_at(self, time_since_start_of_profile: float) -> float:
         """
@@ -306,9 +290,11 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_since_start_of_profile > self.end_time:
             time_since_start_of_profile = self.end_time
 
-        poly = self.polynomial_at_time(time_since_start_of_profile)
-        first_deriv = poly.deriv(3)
-        return first_deriv(time_since_start_of_profile)
+        poly = self.get_defining_spline()
+        if poly.k < 3:
+            return 0.0
+
+        return poly.__call__(time_since_start_of_profile, nu=3, extrapolate=False)
 
     def value_at(self, time_since_start_of_profile: float) -> float:
         """
@@ -327,8 +313,8 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if time_since_start_of_profile > self.end_time:
             time_since_start_of_profile = self.end_time
 
-        poly = self.polynomial_at_time(time_since_start_of_profile)
-        return self.coordinate_space.normalize_value(poly(time_since_start_of_profile))
+        poly = self.get_defining_spline()
+        return self.coordinate_space.normalize_value(poly.__call__(time_since_start_of_profile, nu=0, extrapolate=False))
 
 # see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
 class SingleVariableTrapezoidalProfile(TransientVariableProfile):

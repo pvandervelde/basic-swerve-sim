@@ -361,8 +361,8 @@ def test_should_show_value_at_with_third_order_multi_point_profile_with_periodic
 
 def test_should_show_value_at_with_third_order_with_additional_points_multi_point_profile():
     # This gives: f(x) = 0.03125 * x^3 + 0.125 * x^2 + 0.125 * x + 1
-    start = 2.0
-    end = 1.0
+    start = 1.0
+    end = 2.0
     end_time = 2.0
     profile = SingleVariableMultiPointLinearProfile(start, end, end_time=end_time)
     profile.add_value(0.3 * end_time, 1.12675)
