@@ -32,7 +32,7 @@ class MotionPlan(NamedTuple):
 def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, wheel_radius: float = 0.1, wheel_width=0.1) -> List[DriveModule]:
     steering_motor_maximum_velocity = 2.0
     steering_motor_minimum_acceleration = 0.1
-    steering_motor_maximum_acceleration = 10.0
+    steering_motor_maximum_acceleration = 1000.0
     steering_motor_minimum_jerk = 0.1
     steering_motor_maximum_jerk = 75.0
 
