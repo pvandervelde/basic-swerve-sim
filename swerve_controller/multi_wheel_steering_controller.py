@@ -12,9 +12,9 @@ from swerve_controller.profile import TransientVariableProfile
 # local
 from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
 from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
-from .control_profile import BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
+from .control_profile import BodyControlledDriveModuleProfile, BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
 from .drive_module import DriveModule
-from .geometry import Point
+from .geometry import Point, RealNumberValueSpace
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 class BaseSteeringController(ABC):
@@ -57,7 +57,7 @@ class ModuleFirstSteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -131,11 +131,11 @@ class ModuleFirstSteeringController(BaseSteeringController):
     # time.
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
-        time_fraction = time_from_start_of_trajectory / self.drive_module_trajectory.time_span()
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         for drive_module in self.modules:
-            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)  #### WRONG TYPE
+            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
             result.append(DriveModuleDesiredValues(
                     state.name,
                     state.orientation_in_body_coordinates.z,
@@ -252,10 +252,6 @@ class ModuleFirstSteeringController(BaseSteeringController):
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
-        # Correct for motor capabilities (max velocity, max acceleration, deadband etc.)
-        # and make sure that the trajectories of the different modules all span the same time frame
-        drive_module_trajectory.align_module_profiles()
-
         self.drive_module_trajectory = drive_module_trajectory
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
 
@@ -263,12 +259,19 @@ class ModuleFirstSteeringController(BaseSteeringController):
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
 
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.drive_module_trajectory is None:
+            return 0.0
+        else:
+            return self.drive_module_trajectory.min_trajectory_time_in_seconds
+
 class ModuleFollowsBodySteeringController(BaseSteeringController):
 
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -350,7 +353,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
         trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
-        time_fraction = time_from_start_of_trajectory / trajectory_time
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         if self.is_executing_body_trajectory:
@@ -513,14 +516,25 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
 
-class TimeShiftedModuleSteeringController(BaseSteeringController):
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.is_executing_body_trajectory:
+            return self.body_trajectory.min_trajectory_time_in_seconds
+        elif self.is_executing_module_trajectory:
+            return self.module_trajectory_from_command.min_trajectory_time_in_seconds
+        else:
+            return 0.0
+
+class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
             self,
             drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float], TransientVariableProfile]):
+            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile],
+            interpolation_frequency_in_hz: int):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
+        self.interpolation_frequency_in_hz = interpolation_frequency_in_hz
 
         # Use a simple control model for the time being. Just need something that roughly works
         self.control_model = SimpleFourWheelSteeringControlModel(self.modules)
@@ -573,8 +587,7 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
         ]
 
         # trajectories
-        self.body_trajectory: BodyMotionProfile = None
-        self.module_trajectory_from_command: DriveModuleStateProfile = None
+        self.active_trajectory: ModuleStateProfile = None
 
          # Keep track of our position in time so that we can figure out where on the current
         # trajectory we should be
@@ -582,10 +595,6 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
         self.trajectory_was_started_at_time_in_seconds = 0.0
         self.last_state_update_time = 0.0
         self.min_time_for_trajectory: float = 0.0
-
-        # flags
-        self.is_executing_body_trajectory: bool = False
-        self.is_executing_module_trajectory: bool = False
 
     def body_state_at_current_time(self) -> BodyState:
         return self.body_state
@@ -598,106 +607,46 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
-        trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
-        time_fraction = time_from_start_of_trajectory / trajectory_time
+        trajectory_time = self.active_trajectory.time_span()
+        time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
-        if self.is_executing_body_trajectory:
-            body_state = self.body_trajectory.body_motion_at(time_fraction)
-            drive_module_desired_values = self.control_model.state_of_wheel_modules_from_body_motion(body_state)
-            for i in range(len(self.modules)):
-                # Wheels are moving. We don't know what kind of movement yet though, so figure out if:
-                # - The wheel are moving at some significant velocity, in that case pick the state that most
-                #   closely matches the current state, i.e. match the drive velocity and the steering angle as
-                #   close as possible
-                # - The wheel is moving slowly, in that case we may just be close to the moment where the wheel
-                #   stops moving (either just before it does that, or just after). This is where we could potentially
-                #   flip directions (or we might just have flipped directions)
-                #   - If we have just flipped directions then we should probably continue in the same way (but maybe not)
-
-                #previous_state_for_module = self.previous_module_states[i]
-
-                current_state_for_module = self.module_states[i]
-                current_steering_angle = current_state_for_module.orientation_in_body_coordinates.z
-                current_velocity = current_state_for_module.drive_velocity_in_module_coordinates.x
-
-                #previous_rotation_difference = current_steering_angle - previous_state_for_module.orientation_in_body_coordinates.z
-                #previous_velocity_difference = current_velocity - previous_state_for_module.drive_velocity_in_module_coordinates.x
-
-                states_for_module = drive_module_desired_values[i]
-
-                first_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[0].steering_angle_in_radians)
-                second_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[1].steering_angle_in_radians)
-
-                first_state_velocity_difference = states_for_module[0].drive_velocity_in_meters_per_second - current_velocity
-                second_state_velocity_difference = states_for_module[1].drive_velocity_in_meters_per_second - current_velocity
-
-                # Possibilities:
-                # - first velocity change and first orientation change are the smallest -> pick the first state
-                # - second velocity change and second orientation change are the smallest -> pick the second state
-                # - first velocity change is larger and second orientation change is larger -> Bad state. Pick the one with the least relative change?
-
-                if abs(first_state_rotation_difference) <= abs(second_state_rotation_difference):
-                    if abs(first_state_velocity_difference) <= abs(second_state_velocity_difference):
-                        # first rotation and velocity change are the smallest, so take the first state
-                        result.append(states_for_module[0])
-                    else:
-                        if math.isclose(abs(first_state_rotation_difference), abs(second_state_rotation_difference), rel_tol=1e-7, abs_tol=1e-7):
-                            # first rotation is equal to the second rotation
-                            # first velocity larger than the second velocity.
-                            # pick the second state
-                            result.append(states_for_module[1])
-                        else:
-                            # first rotation is the smallest but second velocity is the smallest
-                            result.append(states_for_module[0])
-                else:
-                    if abs(second_state_velocity_difference) <= abs(first_state_velocity_difference):
-                        # second rotation and velocity change are the smallest, so take the second state
-                        result.append(states_for_module[1])
-                    else:
-                        if math.isclose(abs(first_state_rotation_difference), abs(second_state_rotation_difference), rel_tol=1e-7, abs_tol=1e-7):
-                            # second rotation is equal to the first rotation
-                            # second velocity larger than the first velocity.
-                            # pick the first state
-                            result.append(states_for_module[0])
-                        else:
-                            # second rotation is the smallest but first velocity is the smallest
-                            result.append(states_for_module[1])
-        else:
-            for drive_module in self.modules:
-                state = self.module_trajectory_from_command.value_for_module_at(drive_module.name, time_fraction)
-                result.append(DriveModuleDesiredValues(
-                    state.name,
-                    state.orientation_in_body_coordinates.z,
-                    state.drive_velocity_in_module_coordinates.x
-                ))
+        for drive_module in self.modules:
+            state = self.active_trajectory.value_for_module_at(drive_module.name, time_fraction)
+            result.append(DriveModuleDesiredValues(
+                state.name,
+                state.orientation_in_body_coordinates.z,
+                state.drive_velocity_in_module_coordinates.x
+            ))
 
         return result
 
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
-        if isinstance(desired_motion, BodyMotionCommand):
-            trajectory = BodyMotionProfile(
-                self.body_state,
-                desired_motion.to_body_state(self.control_model),
-                desired_motion.time_for_motion(),
-                self.motion_profile_func)
-            self.body_trajectory = trajectory
+        # Translate the motion profiles into a set of module motion profiles
+        # Then handle the limiting
 
-            self.is_executing_body_trajectory = True
-            self.is_executing_module_trajectory = False
+        if isinstance(desired_motion, BodyMotionCommand):
+            trajectory = BodyControlledDriveModuleProfile(
+                self.modules,
+                self.control_model,
+                min_body_to_module_resolution_per_second=100,
+                motion_profile_func=self.motion_profile_func,
+            )
+            trajectory.set_current_state(self.module_states)
+            trajectory.set_desired_end_state(desired_motion.to_body_state(self.control_model))
+            self.active_trajectory = trajectory
         else:
             if isinstance(desired_motion, DriveModuleMotionCommand):
                 trajectory = DriveModuleStateProfile(self.modules, desired_motion.time_for_motion(), self.motion_profile_func)
                 trajectory.set_current_state(self.module_states)
                 trajectory.set_desired_end_state(desired_motion.to_drive_module_state(self.control_model)[0])
-                self.module_trajectory_from_command = trajectory
-
-                self.is_executing_body_trajectory = False
-                self.is_executing_module_trajectory = True
+                self.active_trajectory = trajectory
             else:
                 raise InvalidMotionCommandException()
+
+        # TODO Check that if a large jump in steering angle is required that we actually do something about that
 
         self.trajectory_was_started_at_time_in_seconds = self.current_time_in_seconds
         self.min_time_for_trajectory = desired_motion.time_for_motion()
@@ -761,3 +710,10 @@ class TimeShiftedModuleSteeringController(BaseSteeringController):
     # On clock tick, determine if we need to recalculate the trajectories for the drive modules
     def on_tick(self, current_time_in_seconds: float):
         self.current_time_in_seconds = current_time_in_seconds
+
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.active_trajectory is None:
+            return 0.0
+        else:
+            return self.active_trajectory.time_span()

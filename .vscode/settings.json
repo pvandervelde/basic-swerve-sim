@@ -8,7 +8,9 @@
         "D:/dev/languages/miniforge3/envs/ros-humble\\Lib\\site-packages"
     ],
     "python.formatting.provider": "black",
-    "python.testing.pytestArgs": [],
+    "python.testing.pytestArgs": [
+        "."
+    ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
 }

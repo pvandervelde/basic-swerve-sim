@@ -1,7 +1,7 @@
 ---
 plan:
-  description: "in place rotation from 0-degree forwards"
-  name: "inplace_rotation_from_0_fwd"
+  description: "body [Orientation: 0; Velocity: [angular, positive]] - Modules [Orientation [rotation, inplace]]"
+  name: "inplace_rotation"
   start_state:
     body:
       position_in_meters_relative_to_world:
@@ -28,21 +28,7 @@ plan:
         orientation_in_radians_relative_to_body: 0.0
         velocity_in_meters_per_second: 0.0
   commands:
-    - time_span: 1.0
-      body:
-        angular_velocity_in_radians_per_second:
-          z: 0.0
-        linear_velocity_in_meters_per_second:
-          x: 1.0
-          y: 0.0
-    - time_span: 1.0
-      body:
-        angular_velocity_in_radians_per_second:
-          z: 1.0
-        linear_velocity_in_meters_per_second:
-          x: 0.0
-          y: 0.0
-    - time_span: 1.0
+    - time_span: 2.0
       body:
         angular_velocity_in_radians_per_second:
           z: 1.0

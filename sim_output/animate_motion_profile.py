@@ -126,10 +126,13 @@ animation_data: AnimationData = None
 animated_plots: AnimatedPlots = None
 
 motion_profile_colors: List[str] = [
-    "darkorange",
+    "orange",
     "green",
     "blue",
-    "purple"
+    "purple",
+    "red",
+    "darkgreen",
+    "darkblue"
 ]
 
 def animate(time_index: int):

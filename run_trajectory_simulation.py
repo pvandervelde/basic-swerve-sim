@@ -3,6 +3,7 @@ from os import makedirs, path
 from pathlib import Path
 
 from typing import Callable, List, Mapping, NamedTuple, Tuple
+from swerve_controller.geometry import RealNumberValueSpace
 from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 import yaml
 from yaml.loader import SafeLoader
@@ -14,6 +15,7 @@ from swerve_controller.control import BodyMotionCommand, DriveModuleMotionComman
 from swerve_controller.control_model import DriveModuleDesiredValues, DriveModuleMeasuredValues, Point
 from swerve_controller.drive_module import DriveModule
 from swerve_controller.multi_wheel_steering_controller import (
+    LimitedModuleFollowsBodySteeringController,
     ModuleFirstSteeringController,
     ModuleFollowsBodySteeringController,
 )
@@ -28,6 +30,18 @@ class MotionPlan(NamedTuple):
     motions: List[MotionCommand]
 
 def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, wheel_radius: float = 0.1, wheel_width=0.1) -> List[DriveModule]:
+    steering_motor_maximum_velocity = 2.0
+    steering_motor_minimum_acceleration = 0.1
+    steering_motor_maximum_acceleration = 1000.0
+    steering_motor_minimum_jerk = 0.1
+    steering_motor_maximum_jerk = 75.0
+
+    drive_motor_maximum_velocity = 1.0
+    drive_motor_minimum_acceleration = 0.1
+    drive_motor_maximum_acceleration = 5.0
+    drive_motor_minimum_jerk = 0.1
+    drive_motor_maximum_jerk = 10.0
+
     drive_modules: List[DriveModule] = []
     left_front = DriveModule(
         name="left-front",
@@ -36,12 +50,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(left_front)
 
@@ -52,12 +70,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), 0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(left_rear)
 
@@ -68,12 +90,16 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(-0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(right_rear)
 
@@ -84,19 +110,23 @@ def get_drive_module_info(robot_length: float = 1.2, robot_width: float = 1.1, w
         steering_axis_xy_position=Point(0.5 * (robot_length - 2 * wheel_radius), -0.5 * (robot_width - wheel_width), 0.0),
         wheel_radius=wheel_radius,
         wheel_width=wheel_width,
-        steering_motor_maximum_velocity=10.0,
-        steering_motor_minimum_acceleration=0.1,
-        steering_motor_maximum_acceleration=1.0,
-        drive_motor_maximum_velocity=10.0,
-        drive_motor_minimum_acceleration=0.1,
-        drive_motor_maximum_acceleration=1.0
+        steering_motor_maximum_velocity=steering_motor_maximum_velocity,
+        steering_motor_minimum_acceleration=steering_motor_minimum_acceleration,
+        steering_motor_maximum_acceleration=steering_motor_maximum_acceleration,
+        steering_motor_minimum_jerk=steering_motor_minimum_jerk,
+        steering_motor_maximum_jerk=steering_motor_maximum_jerk,
+        drive_motor_maximum_velocity=drive_motor_maximum_velocity,
+        drive_motor_minimum_acceleration=drive_motor_minimum_acceleration,
+        drive_motor_maximum_acceleration=drive_motor_maximum_acceleration,
+        drive_motor_minimum_jerk=drive_motor_minimum_jerk,
+        drive_motor_maximum_jerk=drive_motor_maximum_jerk
     )
     drive_modules.append(right_front)
 
     return drive_modules
 
-def get_linear_motion_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableLinearProfile(start, end)
+def get_linear_motion_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableLinearProfile(start, end, end_time, number_space)
 
 def get_motions(input_files: List[str]) -> List[MotionPlan]:
     result: List[MotionPlan] = []
@@ -181,11 +211,11 @@ def get_motions(input_files: List[str]) -> List[MotionPlan]:
 
     return result
 
-def get_scurve_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableSCurveProfile(start, end)
+def get_scurve_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableSCurveProfile(start, end, end_time, number_space)
 
-def get_trapezoidal_profile(start: float, end: float) -> TransientVariableProfile:
-    return SingleVariableTrapezoidalProfile(start, end)
+def get_trapezoidal_profile(start: float, end: float, end_time: float, number_space: RealNumberValueSpace) -> TransientVariableProfile:
+    return SingleVariableTrapezoidalProfile(start, end, end_time, number_space)
 
 def initialize_drive_modules(drive_modules: List[DriveModule], module_states: List[DriveModuleDesiredValues]) -> List[DriveModuleMeasuredValues]:
     states: List[DriveModuleMeasuredValues] = []
@@ -275,10 +305,10 @@ def read_arguments() -> Mapping[str, any]:
         "-c",
         "--control-level",
         action="store",
-        choices=['module', 'body'],
+        choices=['module', 'body', 'limited'],
         default='module',
         required=False,
-        help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body'"
+        help="The name of the controller that should be used for the simulation. Current options are: 'module', 'body', 'limited'"
     )
 
     parser.add_argument(
@@ -395,6 +425,9 @@ def simulation_run_trajectory(
     if controller_name == 'body':
         controller = ModuleFollowsBodySteeringController(drive_modules, motion_profile_func)
 
+    if controller_name == 'limited':
+        controller = LimitedModuleFollowsBodySteeringController(drive_modules, motion_profile_func, 100)
+
     motion_directory = path.join(output_directory, motion_set.name, controller_name, motion_profile)
 
     state_file_path = path.join(motion_directory, "sim_results.csv")
@@ -411,7 +444,7 @@ def simulation_run_trajectory(
 
     controller.on_state_update(initial_module_states)
 
-    simulation_rate_in_hz = 25
+    simulation_rate_in_hz = 100
     current_sim_time_in_seconds = 0.0
 
     # The motion set should be a command 'trajectory', i.e. a collection of ControlCommands with the
@@ -425,10 +458,14 @@ def simulation_run_trajectory(
     body_state = motion_set.body_state
 
     for motion in motion_set.motions:
+        print("Processing motion set at {} ...".format(current_sim_time_in_seconds))
+
         controller.on_tick(current_sim_time_in_seconds)
         controller.on_desired_state_update(motion)
 
-        step_count = int(motion.time_for_motion() * simulation_rate_in_hz)
+        time_for_motion = controller.time_for_current_movement()
+
+        step_count = int(time_for_motion * simulation_rate_in_hz)
         time_step_in_seconds =  1.0 / float(simulation_rate_in_hz)
 
         for time_index in range(1, step_count + 1):

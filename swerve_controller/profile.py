@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
 import math
+from numpy import linspace, quantile
 from numpy.polynomial.polynomial import Polynomial
+from scipy.interpolate import BSpline, splrep, splev
 from typing import List, Tuple
+
+from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace
 
 # local
 from .errors import InvalidTimeFractionException
@@ -25,68 +29,72 @@ class ProfilePoint(object):
 class TransientVariableProfile(ABC):
 
     @abstractmethod
-    def first_derivative_at(self, time_fraction: float) -> float:
+    def first_derivative_at(self, time_since_start_of_profile: float) -> float:
         pass
 
     @abstractmethod
-    def second_derivative_at(self, time_fraction: float) -> float:
+    def second_derivative_at(self, time_since_start_of_profile: float) -> float:
         pass
 
     @abstractmethod
-    def third_derivative_at(self, time_fraction: float) -> float:
+    def third_derivative_at(self, time_since_start_of_profile: float) -> float:
         pass
 
     @abstractmethod
-    def value_at(self, time_fraction: float) -> float:
+    def value_at(self, time_since_start_of_profile: float) -> float:
         pass
 
 class SingleVariableLinearProfile(TransientVariableProfile):
 
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.coordinate_space = coordinate_space
+        self.start = coordinate_space.normalize_value(start)
+        self.end = coordinate_space.normalize_value(end)
 
-    def first_derivative_at(self, time_fraction: float) -> float:
-        return self.end - self.start
+        self.end_time = end_time
 
-    def second_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def first_derivative_at(self, time_since_start_of_profile: float) -> float:
+        return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / self.end_time
+
+    def second_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return (self.end - self.start) / 0.01
+        if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
+            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
 
-        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return -(self.end - self.start) / 0.01
+        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
+            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
 
         return 0.0
 
-    def third_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def third_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return (self.end - self.start) / 0.01 / 0.01
+        if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
+            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
 
-        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
-            return -(self.end - self.start) / 0.01 / 0.01
+        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
+            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
 
         return 0.0
 
-    def value_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def value_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return self.start
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return self.end
 
-        return (self.end - self.start) * time_fraction + self.start
+        distance = self.coordinate_space.smallest_distance_between_values(self.start, self.end)
+        return self.coordinate_space.normalize_value(distance * time_since_start_of_profile / self.end_time + self.start)
 
 class SingleVariableCompoundProfileValue(object):
 
@@ -99,59 +107,92 @@ class SingleVariableCompoundProfileValue(object):
         self.value = value
 
 class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
+    """
+    A class representing a single-variable multi-point linear profile.
 
-    def __init__(self, start: float, end: float):
+    This class is used to create a profile with multiple points. Between each point a linear profile is assumed.
+    The profile is assumed to start at time = 0.0 and ends at the given end_time. In order to retrieve a value
+    or derivative either a specific time_fraction is specified (between 0.0 and 1.0) which internally is translated to
+    a given point in time, or a specific point in time is specified.
+
+    Attributes:
+    - coordinate_space: The coordinate space for the profile values.
+    - profiles: A list of SingleVariableCompoundProfileValue objects representing the points in the profile.
+    - end_time: The end time of the profile.
+    """
+
+    def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        """
+        Initializes a SingleVariableMultiPointLinearProfile object.
+
+        Args:
+        - start: The starting value of the profile.
+        - end: The ending value of the profile.
+        - end_time: The end time of the profile. Default is 1.0.
+        - coordinate_space: The coordinate space for the profile values. Default is LinearUnboundedSpace().
+        """
+
+        self.coordinate_space = coordinate_space
         self.profiles: List[SingleVariableCompoundProfileValue] = [
             SingleVariableCompoundProfileValue(0.0, start),
-            SingleVariableCompoundProfileValue(1.0, end)
+            SingleVariableCompoundProfileValue(end_time, end)
         ]
 
-        # We have two points (begin and end) so at best we can do a linear approach
-        self.maximum_polynomial_order = 1
+        self.end_time = end_time
 
-    def add_value(self, time_fraction: float, value: float):
-        if time_fraction < 0.0:
-            time_fraction = 0.0
+        self.spline: BSpline = None
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+    def add_value(self, time_since_start_of_profile: float, value: float):
+        """
+        Adds a value to the profile at the specified time fraction.
 
-        section = SingleVariableCompoundProfileValue(time_fraction,value)
+        Args:
+        - time_since_start_of_profile: The time since the profile started.
+        - value: The value to add to the profile.
+        """
+
+        if time_since_start_of_profile < 0.0:
+            time_since_start_of_profile = 0.0
+
+        if time_since_start_of_profile > self.end_time:
+            time_since_start_of_profile = self.end_time
+
+        section = SingleVariableCompoundProfileValue(
+            time_since_start_of_profile,
+            self.coordinate_space.normalize_value(value))
 
         for i in range(len(self.profiles)):
-            if math.isclose(time_fraction, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
+            if math.isclose(time_since_start_of_profile, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
                 # Matching location. Replace it
                 self.profiles[i] = section
                 # we're replacing an existing point so the minimum polynomial order doesn't change
                 break
 
-            if self.profiles[i].location < time_fraction:
+            if self.profiles[i].location < time_since_start_of_profile:
                 if i + 1 >= len(self.profiles):
                     # last profile
                     self.profiles.append(section)
-                    self.maximum_polynomial_order += 1
                     break
                 else:
                     # not the last profile. Go around the loop and we'll get it then
                     continue
 
-            if self.profiles[i].location > time_fraction:
+            if self.profiles[i].location > time_since_start_of_profile:
                 if i - 1 >= 0:
-                    if self.profiles[i - 1].location < time_fraction:
+                    if self.profiles[i - 1].location < time_since_start_of_profile:
                         self.profiles.insert(i, section)
-                        self.maximum_polynomial_order += 1
                         break
 
-    def find_time_indices_for_time_fraction(self, time_fraction: float) -> Tuple[int, int]:
+    def find_time_indices_for_time_fraction(self, time_since_profile_start: float) -> Tuple[int, int]:
         # Assumption:
-        #  0.0 <= time_fraction <= 1.0
+        #  0.0 <= time_since_profile_start <= end_time
 
-        # Find the two time fractions that encompasses the given time_fraction. One value will be the closest
+        # Find the two time points that encompasses the given time_since_profile_start. One value will be the closest
         # smaller value and one will be the closest larger value
         index = -1
         for i in range(len(self.profiles)):
             # If the i-th value is smaller and the (i+1)-th is bigger then we have found the correct location
-            if self.profiles[i].location >= time_fraction:
+            if self.profiles[i].location >= time_since_profile_start:
                 # Found the first location that is bigger than time_fraction
                 index = i
                 break
@@ -159,50 +200,44 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if index == -1:
             # we didn't find anything. that's weird because there's a guaranteed beginning and ending
             # throw a hissy
-            raise InvalidTimeFractionException(f'Could not find any known time locations smaller and larger than { time_fraction }')
+            raise InvalidTimeFractionException(f'Could not find any known time locations smaller and larger than { time_since_profile_start }')
 
         if i == 0:
             return (i, i + 1)
         else:
             return ( i - 1, i)
 
-    def first_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
+    def first_derivative_at(self, time_since_start_of_profile: float) -> float:
+        """
+        Calculates the first derivative of the profile at the specified time.
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        Args:
+        - time_fraction: The time at which to calculate the first derivative.
 
-        poly = self.polynomial_at_time(time_fraction)
-        first_deriv = poly.deriv(1)
-        return first_deriv(time_fraction)
+        Returns:
+        The value of the first derivative at the specified time.
+        """
 
-    def polynomial_at_time(self, time_fraction: float) -> Polynomial:
-        # find the index for the points
-        number_of_points = self.polynomial_order() + 1
-        smaller_index, larger_index = self.find_time_indices_for_time_fraction(time_fraction)
+        if time_since_start_of_profile < 0.0:
+            time_since_start_of_profile = 0.0
 
-        # bias towards the 'future' because that's what we want to achieve
-        past_points = number_of_points // 2
-        future_points = number_of_points - past_points
+        if time_since_start_of_profile > self.end_time:
+            time_since_start_of_profile = self.end_time
 
-        smallest_index = smaller_index - past_points + 1
-        if smallest_index < 0:
-            future_points += int(abs(smallest_index))
-            smallest_index = 0
+        poly = self.get_defining_spline()
+        return poly.__call__(time_since_start_of_profile, nu=1, extrapolate=False)
 
-        largest_index = larger_index + future_points - 1
-        if largest_index > len(self.profiles) - 1:
-            smallest_index -= int(abs(len(self.profiles) - 1 - largest_index))
-            largest_index = len(self.profiles) - 1
+    def get_defining_spline(self) -> BSpline:
+        if self.spline is None:
+            k = 3 if len(self.profiles) >= 4 else len(self.profiles) - 1
 
-        time_fractions = []
-        values = []
-        for i in range(smallest_index, largest_index + 1):
-            time_fractions.append(self.profiles[i].location)
-            values.append(self.profiles[i].value)
+            ts: List[float] = [ x.location for x in self.profiles ]
+            ys: List[float] = [ x.value for x in self.profiles ]
+            t, c, k = splrep(ts, ys, s=0, k=k)
 
-        return Polynomial.fit(time_fractions, values, number_of_points - 1, domain=[time_fractions[0], time_fractions[len(time_fractions) - 1]])
+            self.spline = BSpline(t, c, k, extrapolate=False)
+
+        return self.spline
 
     def polynomial_order(self) -> int:
         # For now we don't go beyond a 3rd order polynomial. A 3rd order polynomial should give us
@@ -215,243 +250,80 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         else:
             return 3
 
-    def second_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
+    def second_derivative_at(self, time_since_start_of_profile: float) -> float:
+        """
+        Calculates the second derivative of the profile at the specified time.
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        Args:
+        - time_since_start_of_profile: The time at which to calculate the second derivative.
 
-        poly = self.polynomial_at_time(time_fraction)
-        first_deriv = poly.deriv(2)
-        return first_deriv(time_fraction)
+        Returns:
+        The value of the second derivative at the specified time.
+        """
 
-    def third_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
+        if time_since_start_of_profile < 0.0:
+            time_since_start_of_profile = 0.0
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+        if time_since_start_of_profile > self.end_time:
+            time_since_start_of_profile = self.end_time
 
-        poly = self.polynomial_at_time(time_fraction)
-        first_deriv = poly.deriv(3)
-        return first_deriv(time_fraction)
+        poly = self.get_defining_spline()
+        if poly.k < 2:
+            return 0.0
 
-    def value_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
+        return poly.__call__(time_since_start_of_profile, nu=2, extrapolate=False)
 
-        if time_fraction > 1.0:
-            time_fraction = 1.0
+    def third_derivative_at(self, time_since_start_of_profile: float) -> float:
+        """
+        Calculate the third derivative of the profile at a given time.
 
-        poly = self.polynomial_at_time(time_fraction)
-        return poly(time_fraction)
+        Args:
+            time_since_start_of_profile (float): The time since the start of the profile.
 
-class CompoundProfileSection(object):
+        Returns:
+            float: The value of the third derivative at the given time.
+        """
 
-    def __init__(
-        self,
-        starting_location_fraction: float,
-        ending_location_fraction: float,
-        profile: TransientVariableProfile
-    ):
-        self.starting_location = starting_location_fraction
-        self.ending_location = ending_location_fraction
-        self.profile = profile
+        if time_since_start_of_profile < 0.0:
+            time_since_start_of_profile = 0.0
 
-class SingleVariableCompoundProfile(TransientVariableProfile):
-    def __init__(self):
-        self.profiles: List[CompoundProfileSection] = []
+        if time_since_start_of_profile > self.end_time:
+            time_since_start_of_profile = self.end_time
 
-    def add_profile(self, starting_time_fraction: float, ending_time_fraction: float, profile: TransientVariableProfile):
-        if starting_time_fraction > ending_time_fraction:
-            raise InvalidTimeFractionException()
+        poly = self.get_defining_spline()
+        if poly.k < 3:
+            return 0.0
 
-        if starting_time_fraction < 0.0:
-            starting_time_fraction = 0.0
+        return poly.__call__(time_since_start_of_profile, nu=3, extrapolate=False)
 
-        if ending_time_fraction > 1.0:
-            ending_time_fraction = 1.0
+    def value_at(self, time_since_start_of_profile: float) -> float:
+        """
+        Returns the value of the profile at a given time.
 
-        section = CompoundProfileSection(starting_time_fraction, ending_time_fraction, profile)
+        Args:
+            time_since_start_of_profile (float): The time since the start of the profile.
 
-        if len(self.profiles) == 0:
-            self.profiles.append(section)
-            return
+        Returns:
+            float: The value of the profile at the given time.
+        """
 
-        index = 0
-        for i in range(len(self.profiles)):
-            if self.profiles[i].ending_location <= starting_time_fraction:
-                if i + 1 >= len(self.profiles):
-                    # last profile
-                    index = i + 1
-                    break
-                else:
-                    # not the last profile. Go around the loop and we'll get it then
-                    continue
+        if time_since_start_of_profile < 0.0:
+            time_since_start_of_profile = 0.0
 
-            if self.profiles[i].starting_location >= ending_time_fraction:
-                if i - 1 >= 0:
-                    if self.profiles[i - 1].ending_location <= starting_time_fraction:
-                        index = i
-                        break
-                    else:
-                        raise InvalidTimeFractionException(f'The profile overlaps with existing profile at { starting_time_fraction }')
-                else:
-                    index = 0
-                    break
-            else:
-                if self.profiles[i].ending_location <= ending_time_fraction:
-                    continue
-                else:
-                    raise InvalidTimeFractionException(f'The profile overlaps with existing profile at { ending_time_fraction }')
+        if time_since_start_of_profile > self.end_time:
+            time_since_start_of_profile = self.end_time
 
-        self.profiles.insert(index, section)
-
-    def find_profile_for_time_fraction(self, time_fraction: float) -> CompoundProfileSection:
-        # Find the profile that encompasses the given time_fraction. This profile will have a smaller start time
-        # and a larger end time.
-        #
-        # It is possible that the time fraction is on the connection of two profiles. In that case we take the
-        # profile which has a matching start.
-        #
-        # It is also possible that there is no profile for the given time_fraction. In that case we assume a linear
-        # profile between existing profiles, or between the first profile and the start of time, or between the last
-        # profile and the end of time.
-        for i in range(len(self.profiles)):
-            # If the start of the profile is smaller and the end is bigger then we have found the correct profile
-            # Profiles are assumed to be inclusive of the start and exclusive of the end, except for the last profile
-            if self.profiles[i].starting_location <= time_fraction:
-                if self.profiles[i].ending_location > time_fraction:
-                    return self.profiles[i]
-                else:
-                    # The end is either smaller or equal
-                    if self.profiles[i].ending_location == time_fraction:
-                        if i + 1 < len(self.profiles):
-                            # not the last profile so the next profile should get it
-                            continue
-                        else:
-                            # last profile, if this profile ends at the 1.0 fraction then
-                            # return it. Otherwise assume a constant profile for the end
-                            if self.profiles[i].ending_location == 1.0:
-                                return self.profiles[i]
-                            else:
-                                value = self.profiles[i].profile.value_at(1.0)
-                                return CompoundProfileSection(
-                                    self.profiles[i].ending_location,
-                                    1.0,
-                                    SingleVariableLinearProfile(
-                                        value,
-                                        value
-                                    ))
-                    else:
-                        # The end is smaller
-                        if i < len(self.profiles) - 1:
-                            # There are more profiles. The next one should get it
-                            continue
-                        else:
-                            value = self.profiles[i].profile.value_at(1.0)
-                            return CompoundProfileSection(
-                                self.profiles[i].ending_location,
-                                1.0,
-                                SingleVariableLinearProfile(
-                                    value,
-                                    value
-                                ))
-            else:
-                # Start is bigger and we haven't found a profile. Check if the end on the previous
-                # profile is smaller. If so then we found a gap in our profiles
-                if i - 1 >= 0:
-                    return CompoundProfileSection(
-                        self.profiles[i - 1].ending_location,
-                        self.profiles[i].starting_location,
-                        SingleVariableLinearProfile(
-                            self.profiles[i - 1].profile.value_at(1.0),
-                            self.profiles[i].profile.value_at(0.0)
-                        ))
-                else:
-                    # The current profile is the first one. So make a profile, assuming linear
-                    value = self.profiles[i].profile.value_at(0.0)
-                    return CompoundProfileSection(
-                        0.0,
-                        self.profiles[i].starting_location,
-                        SingleVariableLinearProfile(
-                            value,
-                            value
-                        ))
-
-        # We should never end here. But if we do, we're hosed
-        return CompoundProfileSection(
-            0.0,
-            1.0,
-            SingleVariableLinearProfile(
-                0.0,
-                0.0
-            ))
-
-    def first_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
-
-        if time_fraction > 1.0:
-            time_fraction = 1.0
-
-        profile = self.find_profile_for_time_fraction(time_fraction)
-        from_start = time_fraction - profile.starting_location
-        total = profile.ending_location - profile.starting_location
-
-        local_fraction = from_start / total
-        return profile.profile.first_derivative_at(local_fraction)
-
-    def second_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
-
-        if time_fraction > 1.0:
-            time_fraction = 1.0
-
-        profile = self.find_profile_for_time_fraction(time_fraction)
-        from_start = time_fraction - profile.starting_location
-        total = profile.ending_location - profile.starting_location
-
-        local_fraction = from_start / total
-        return profile.profile.second_derivative_at(local_fraction)
-
-    def third_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
-
-        if time_fraction > 1.0:
-            time_fraction = 1.0
-
-        profile = self.find_profile_for_time_fraction(time_fraction)
-        from_start = time_fraction - profile.starting_location
-        total = profile.ending_location - profile.starting_location
-
-        local_fraction = from_start / total
-        return profile.profile.third_derivative_at(local_fraction)
-
-    def value_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
-            time_fraction = 0.0
-
-        if time_fraction > 1.0:
-            time_fraction = 1.0
-
-        profile = self.find_profile_for_time_fraction(time_fraction)
-        from_start = time_fraction - profile.starting_location
-        total = profile.ending_location - profile.starting_location
-
-        local_fraction = from_start / total
-        return profile.profile.value_at(local_fraction)
+        poly = self.get_defining_spline()
+        return self.coordinate_space.normalize_value(poly.__call__(time_since_start_of_profile, nu=0, extrapolate=False))
 
 # see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
 class SingleVariableTrapezoidalProfile(TransientVariableProfile):
 
-
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, end_time: float = 1.0, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.value_space = value_space
+        self.start = value_space.normalize_value(start)
+        self.end = value_space.normalize_value(end)
+        self.end_time = end_time
 
         # For a trapezoidal motion profile the progress in the profile
         # is based on the first derrivative, e.g. if the profile is
@@ -497,112 +369,117 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         # s = v * 2/3 * t
         #
         # v = 1.5 * s / t
-        self.velocity = 1.5 * (end - start) / 1.0
+        self.velocity = 1.5 * (self.end - self.start) / self.end_time
 
-        self.acceleration_phase_ratio = 1/3
-        self.constant_phase_ratio = 1/3
-        self.deceleration_phase_ratio = 1/3
+        self.acceleration_phase_ratio = 1/3 * self.end_time
+        self.constant_phase_ratio = 1/3 * self.end_time
+        self.deceleration_phase_ratio = 1/3 * self.end_time
 
-    def first_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def first_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if time_fraction < self.acceleration_phase_ratio:
+        if time_since_start_of_profile < self.acceleration_phase_ratio:
             # Accelerating
             starting_velocity = 0.0
-            velocity_due_to_acceleration = ((self.velocity - starting_velocity) / self.acceleration_phase_ratio) * time_fraction
+            velocity_due_to_acceleration = ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) * time_since_start_of_profile
             return starting_velocity + velocity_due_to_acceleration
 
-        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
             starting_velocity = self.velocity
             ending_velocity = 0.0
-            velocity_due_to_acceleration = ((ending_velocity - self.velocity) / self.deceleration_phase_ratio) * (time_fraction - (self.acceleration_phase_ratio + self.constant_phase_ratio))
+            velocity_due_to_acceleration = ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) * (time_since_start_of_profile - (self.acceleration_phase_ratio + self.constant_phase_ratio))
             return starting_velocity + velocity_due_to_acceleration
 
         return self.velocity
 
-    def second_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def second_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if time_fraction < self.acceleration_phase_ratio:
+        if time_since_start_of_profile < self.acceleration_phase_ratio:
             # Accelerating
             starting_velocity = 0.0
-            return (self.velocity - starting_velocity) / self.acceleration_phase_ratio
+            return (self.velocity - starting_velocity) / (self.acceleration_phase_ratio)
 
-        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
             ending_velocity = 0.0
-            return (ending_velocity - self.velocity) / self.deceleration_phase_ratio
+            return (ending_velocity - self.velocity) / (self.deceleration_phase_ratio)
 
         return 0.0
 
-    def third_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def third_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if math.isclose(0.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
             starting_velocity = 0.0
-            return (((self.velocity - starting_velocity) / self.acceleration_phase_ratio) - 0.0) / 0.01
+            return (((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) - 0.0) / 0.01
 
-        if math.isclose(time_fraction, self.acceleration_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(time_since_start_of_profile, self.acceleration_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
             starting_velocity = 0.0
-            return (0.0 - ((self.velocity - starting_velocity) / self.acceleration_phase_ratio)) / 0.01
+            return (0.0 - ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio))) / 0.01
 
-        if math.isclose(time_fraction, self.acceleration_phase_ratio + self.constant_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(time_since_start_of_profile, (self.acceleration_phase_ratio + self.constant_phase_ratio), rel_tol=1e-2, abs_tol=1e-2):
             ending_velocity = 0.0
-            return (((ending_velocity - self.velocity) / self.deceleration_phase_ratio) - 0.0) / 0.01
+            return (((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) - 0.0) / 0.01
 
-        if math.isclose(1.0, time_fraction, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
             ending_velocity = 0.0
-            return (0.0 - ((ending_velocity - self.velocity) / self.acceleration_phase_ratio)) / 0.01
+            return (0.0 - ((ending_velocity - self.velocity) / (self.acceleration_phase_ratio))) / 0.01
 
         return 0.0
 
-    def value_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def value_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return self.start
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return self.end
 
-        if time_fraction < self.acceleration_phase_ratio:
+        if time_since_start_of_profile < self.acceleration_phase_ratio:
             # Accelerating
             starting_velocity = 0.0
-            distance_change_from_velocity = starting_velocity * time_fraction
-            distance_change_from_acceleration = 0.5 * ((self.velocity - starting_velocity) / self.acceleration_phase_ratio) * time_fraction * time_fraction
-            return self.start + distance_change_from_velocity + distance_change_from_acceleration
+            distance_change_from_velocity = starting_velocity * time_since_start_of_profile
+            distance_change_from_acceleration = 0.5 * ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) * time_since_start_of_profile * time_since_start_of_profile
+            result = self.start + distance_change_from_velocity + distance_change_from_acceleration
+            return self.value_space.normalize_value(result)
 
         distance_due_to_inital_acceleration = 0.5 * self.velocity * self.acceleration_phase_ratio
-        if time_fraction > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
             # deccelerating
             distance_due_to_constant_velocity = self.velocity * self.constant_phase_ratio
 
-            deceleration_time = time_fraction - (self.acceleration_phase_ratio + self.constant_phase_ratio)
+            deceleration_time = (time_since_start_of_profile - (self.acceleration_phase_ratio + self.constant_phase_ratio))
             ending_velocity = 0.0
-            distance_due_to_deceleration = self.velocity * deceleration_time + 0.5 * ((ending_velocity - self.velocity) / self.deceleration_phase_ratio) * deceleration_time * deceleration_time
-            return self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+            distance_due_to_deceleration = self.velocity * deceleration_time + 0.5 * ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) * deceleration_time * deceleration_time
+            result = self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+            return self.value_space.normalize_value(result)
 
-        return self.start + distance_due_to_inital_acceleration + (time_fraction - self.acceleration_phase_ratio) * self.velocity
+        result = self.start + distance_due_to_inital_acceleration + (time_since_start_of_profile - self.acceleration_phase_ratio) * self.velocity
+        return self.value_space.normalize_value(result)
 
 # S-Curve profile
 # --> controlled by the second derivative being linear
 class SingleVariableSCurveProfile(TransientVariableProfile):
 
 
-    def __init__(self, start: float, end: float):
-        self.start = start
-        self.end = end
+    def __init__(self, start: float, end: float, end_time: float = 1.0, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+        self.value_space = value_space
+        self.start = value_space.normalize_value(start)
+        self.end = value_space.normalize_value(end)
+        self.end_time = end_time
 
         #      t_1     t_2  t_3     t_4  t_5       t_6  t_7
         #  |    *______*
@@ -652,15 +529,15 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
         # Solving the linear equations for distance based on jerk for each section
         # gives the
         #
-        # s = j * 10 / 512 * t
+        # s = j * 10 / 512 * t^3
         #
-        # j =  (s * 512) / (10 * t)
-        self.jerk = 512 / 10 * (end - start) / 1.0
+        # j =  (s * 512) / (10 * t^3)
+        self.jerk = 512 / 10 * (self.end - self.start) / math.pow(self.end_time, 3.0)
 
-        self.positive_acceleration_phase_ratio = 1/8
-        self.constant_acceleration_phase_ratio = 1/8
-        self.negative_acceleration_phase_ratio = 1/8
-        self.constant_phase_ratio = 1/4
+        self.positive_acceleration_phase_ratio = 1/8 * self.end_time
+        self.constant_acceleration_phase_ratio = 1/8 * self.end_time
+        self.negative_acceleration_phase_ratio = 1/8 * self.end_time
+        self.constant_phase_ratio = 1/4 * self.end_time
 
         self.t1 = self.positive_acceleration_phase_ratio
         self.t2 = self.t1 + self.constant_acceleration_phase_ratio
@@ -668,138 +545,145 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
         self.t4 = self.t3 + self.constant_phase_ratio
         self.t5 = self.t4 + self.positive_acceleration_phase_ratio
         self.t6 = self.t5  + self.constant_acceleration_phase_ratio
-        self.t7 = 1.0
+        self.t7 = self.end_time
 
-    def first_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def first_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if time_fraction < self.t1:
-            return 0.5 * self.jerk * time_fraction * time_fraction
+        if time_since_start_of_profile < self.t1:
+            return 0.5 * self.jerk * time_since_start_of_profile * time_since_start_of_profile
 
         a1 = self.jerk * self.t1
         v1 = 0.5 * a1 * self.t1
-        if time_fraction < self.t2:
-            return  v1 + a1 * (time_fraction - self.t1)
+        if time_since_start_of_profile < self.t2:
+            return  v1 + a1 * (time_since_start_of_profile - self.t1)
 
         a2 = a1
         v2 = v1 + a1 * (self.t2 - self.t1)
-        if time_fraction < self.t3:
-            return -0.5 * self.jerk * (time_fraction - self.t2) * (time_fraction - self.t2) + a2 * (time_fraction - self.t2) + v2
+        if time_since_start_of_profile < self.t3:
+            return -0.5 * self.jerk * (time_since_start_of_profile - self.t2) * (time_since_start_of_profile - self.t2) + a2 * (time_since_start_of_profile - self.t2) + v2
 
         v3 = -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2) + a2 * (self.t3 - self.t2) + v2
-        if time_fraction < self.t4:
+        if time_since_start_of_profile < self.t4:
             return v3
 
-        if time_fraction < self.t5:
-            return -0.5 * self.jerk * (time_fraction - self.t4) * (time_fraction - self.t4) + v3
+        if time_since_start_of_profile < self.t5:
+            return -0.5 * self.jerk * (time_since_start_of_profile - self.t4) * (time_since_start_of_profile - self.t4) + v3
 
         a5 = -self.jerk * (self.t5 - self.t4)
         v5 = -0.5 * self.jerk * (self.t5 - self.t4) * (self.t5 - self.t4) + v3
-        if time_fraction < self.t6:
-            return a5 * (time_fraction - self.t5) + v5
+        if time_since_start_of_profile < self.t6:
+            return a5 * (time_since_start_of_profile - self.t5) + v5
 
         a6 = a5
         v6 = a5 * (self.t6 - self.t5) + v5
-        return 0.5 * self.jerk * (time_fraction - self.t6) * (time_fraction - self.t6) + a6 * (time_fraction - self.t6) + v6
+        return 0.5 * self.jerk * (time_since_start_of_profile - self.t6) * (time_since_start_of_profile - self.t6) + a6 * (time_since_start_of_profile - self.t6) + v6
 
-    def second_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def second_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if time_fraction < self.t1:
-            return self.jerk * time_fraction
+        if time_since_start_of_profile < self.t1:
+            return self.jerk * time_since_start_of_profile
 
-        if time_fraction < self.t2:
+        if time_since_start_of_profile < self.t2:
             return self.jerk * self.t1
 
-        if time_fraction < self.t3:
-            return -self.jerk * (time_fraction - self.t2) + self.jerk * self.t1
+        if time_since_start_of_profile < self.t3:
+            return -self.jerk * (time_since_start_of_profile - self.t2) + self.jerk * self.t1
 
-        if time_fraction < self.t4:
+        if time_since_start_of_profile < self.t4:
             return 0.0
 
-        if time_fraction < self.t5:
-            return -self.jerk * (time_fraction - self.t4)
+        if time_since_start_of_profile < self.t5:
+            return -self.jerk * (time_since_start_of_profile - self.t4)
 
-        if time_fraction < self.t6:
+        if time_since_start_of_profile < self.t6:
             return -self.jerk * (self.t5 - self.t4)
 
-        return -self.jerk * (self.t5 - self.t4) + self.jerk * (time_fraction - self.t6)
+        return -self.jerk * (self.t5 - self.t4) + self.jerk * (time_since_start_of_profile - self.t6)
 
-    def third_derivative_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def third_derivative_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return 0.0
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return 0.0
 
-        if time_fraction < self.t1:
+        if time_since_start_of_profile < self.t1:
             return self.jerk
 
-        if time_fraction < self.t2:
+        if time_since_start_of_profile < self.t2:
             return 0.0
 
-        if time_fraction < self.t3:
+        if time_since_start_of_profile < self.t3:
             return -self.jerk
 
-        if time_fraction < self.t4:
+        if time_since_start_of_profile < self.t4:
             return 0.0
 
-        if time_fraction < self.t5:
+        if time_since_start_of_profile < self.t5:
             return -self.jerk
 
-        if time_fraction < self.t6:
+        if time_since_start_of_profile < self.t6:
             return 0.0
 
         return self.jerk
 
-    def value_at(self, time_fraction: float) -> float:
-        if time_fraction < 0.0:
+    def value_at(self, time_since_start_of_profile: float) -> float:
+        if time_since_start_of_profile < 0.0:
             return self.start
 
-        if time_fraction > 1.0:
+        if time_since_start_of_profile > self.end_time:
             return self.end
 
-        if time_fraction < self.t1:
-            return 1/6 * self.jerk * math.pow(time_fraction, 3.0) + self.start
+        if time_since_start_of_profile < self.t1:
+            result = 1/6 * self.jerk * math.pow(time_since_start_of_profile, 3.0) + self.start
+            return self.value_space.normalize_value(result)
 
         a1 = self.jerk * self.t1
         v1 = 0.5 * a1 * self.t1
         s1 = 1/6 * self.jerk * math.pow(self.t1, 3.0) + self.start
-        if time_fraction < self.t2:
-            return  v1 * (time_fraction - self.t1) + 0.5 * a1 * (time_fraction - self.t1) * (time_fraction - self.t1) + s1
+        if time_since_start_of_profile < self.t2:
+            result =  v1 * (time_since_start_of_profile - self.t1) + 0.5 * a1 * (time_since_start_of_profile - self.t1) * (time_since_start_of_profile - self.t1) + s1
+            return self.value_space.normalize_value(result)
 
         a2 = a1
         v2 = v1 + a1 * (self.t2 - self.t1)
         s2 = v1 * (self.t2 - self.t1) + 0.5 * a1 * (self.t2 - self.t1) * (self.t2 - self.t1) + s1
-        if time_fraction < self.t3:
-            return -1/6 * self.jerk * math.pow(time_fraction - self.t2, 3.0) + 0.5 * a2 * math.pow(time_fraction - self.t2, 2.0) + v2 * (time_fraction - self.t2) + s2
+        if time_since_start_of_profile < self.t3:
+            result = -1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t2, 3.0) + 0.5 * a2 * math.pow(time_since_start_of_profile - self.t2, 2.0) + v2 * (time_since_start_of_profile - self.t2) + s2
+            return self.value_space.normalize_value(result)
 
         v3 = -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2) + a1 * (self.t3 - self.t2) + v2
         s3 = -1/6 * self.jerk * math.pow(self.t3 - self.t2, 3.0) + 0.5 * a2 * math.pow(self.t3 - self.t2, 2.0) + v2 * (self.t3 - self.t2) + s2
-        if time_fraction < self.t4:
-            return v3 * (time_fraction - self.t3) + s3
+        if time_since_start_of_profile < self.t4:
+            result = v3 * (time_since_start_of_profile - self.t3) + s3
+            return self.value_space.normalize_value(result)
 
         s4 = v3 * (self.t4 - self.t3) + s3
-        if time_fraction < self.t5:
-            return -1/6 * self.jerk * math.pow(time_fraction - self.t4, 3.0) + v3 * (time_fraction - self.t4) + s4
+        if time_since_start_of_profile < self.t5:
+            result = -1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t4, 3.0) + v3 * (time_since_start_of_profile - self.t4) + s4
+            return self.value_space.normalize_value(result)
 
         a5 = -self.jerk * (self.t5 - self.t4)
         v5 = -0.5 * self.jerk * (self.t5 - self.t4) * (self.t5 - self.t4) + v3
         s5 = -1/6 * self.jerk * math.pow(self.t5 - self.t4, 3.0) + v3 * (self.t5 - self.t4) + s4
-        if time_fraction < self.t6:
-            return 0.5 * a5 * math.pow(time_fraction - self.t5, 2.0) + v5 * (time_fraction - self.t5) + s5
+        if time_since_start_of_profile < self.t6:
+            result = 0.5 * a5 * math.pow(time_since_start_of_profile - self.t5, 2.0) + v5 * (time_since_start_of_profile - self.t5) + s5
+            return self.value_space.normalize_value(result)
 
         a6 = a5
         v6 = a5 * (self.t6 - self.t5) + v5
         s6 = 0.5 * a5 * math.pow(self.t6 - self.t5, 2.0) + v5 * (self.t6 - self.t5) + s5
-        return 1/6 * self.jerk * math.pow(time_fraction - self.t6, 3.0) + 0.5 * a6 * math.pow(time_fraction - self.t6, 2.0) + v6 * (time_fraction - self.t6) + s6
+        result = 1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t6, 3.0) + 0.5 * a6 * math.pow(time_since_start_of_profile - self.t6, 2.0) + v6 * (time_since_start_of_profile - self.t6) + s6
+        return self.value_space.normalize_value(result)
 
 # 4th and 5th order s-curve
