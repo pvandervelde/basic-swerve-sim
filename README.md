@@ -8,6 +8,22 @@ an insight into how the different drive modules in a swerve drive have to behave
 body motions. In this context a drive module consists of a wheel and the mechanical and electrical parts to make the
 wheel rotate forwards and backwards as well as controlling the steering angle of the wheel.
 
+## Running the scripts
+
+There are three different scripts in this repository that each provide different information. These scripts are:
+
+* `run_trajectory_simulation.py` - This script runs a simulation of the robot body and drive modules in response to a
+  series of movement commands. The script will output the state of the robot body and the drive modules at each step in
+  time.
+* `run_motion_profiles.py` - This script calculates the behaviour of a values for a number of motion profiles.
+* `run_verification.py` - This script runs a series of tests to verify that the code is working as expected.
+
+### Trajectory simulation
+
+### Motion profiles
+
+### Verification
+
 ## Overview
 
 In order to run this simulation the code needs to determine both the inverse kinematics and the forward kinematics
