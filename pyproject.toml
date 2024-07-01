@@ -1,0 +1,15 @@
+[project]
+name = "basic-swerve-sim"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Petrik van der Velde", email = "petrikvandervelde@gmail.com"},
+]
+dependencies = []
+requires-python = "==3.9.*"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+
+
+[tool.pdm]
+distribution = false
