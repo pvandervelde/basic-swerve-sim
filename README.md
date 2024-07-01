@@ -1,5 +1,7 @@
 # basic-swerve-sim
 
+[![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm-project.org)
+
 This package contains Python code that simulates the state of a wheeled mobile robot which has all wheel drive
 and all wheel steering. This kind of drive system is known as a swerve drive. The code was developed to provide
 an insight into how the different drive modules in a swerve drive have to behave in order to get the desired
