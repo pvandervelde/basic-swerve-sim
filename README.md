@@ -1,12 +1,67 @@
 # basic-swerve-sim
 
 [![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm-project.org)
+[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com/)
 
 This package contains Python code that simulates the state of a wheeled mobile robot which has all wheel drive
 and all wheel steering. This kind of drive system is known as a swerve drive. The code was developed to provide
 an insight into how the different drive modules in a swerve drive have to behave in order to get the desired
 body motions. In this context a drive module consists of a wheel and the mechanical and electrical parts to make the
 wheel rotate forwards and backwards as well as controlling the steering angle of the wheel.
+
+## Running the scripts
+
+There are three different scripts in this repository that each provide different information. These scripts are:
+
+* `run_trajectory_simulation.py` - This script runs a simulation of the robot body and drive modules in response to a
+  series of movement commands. The script will output the state of the robot body and the drive modules at each step in
+  time.
+* `run_motion_profiles.py` - This script calculates the behaviour of a values for a number of motion profiles.
+* `run_verification.py` - This script runs a series of tests to verify that the code is working as expected.
+
+### Trajectory simulation
+
+To run a trajectory simulation the following command can be used:
+
+```shell
+python run_trajectory_simulation.py --file <INPUT_FILE> --output <OUTPUT_DIRECTORY> --control-level <CONTROL_LEVEL> --motion-profile <MOTION_PROFILE>
+```
+
+Where:
+
+* `<INPUT_FILE>` - The file path for the input file which contains the desired motions to be executed. Can be provided
+  multiple times.
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
+* `<CONTROL_LEVEL>` - The name of the controller that should be used for the simulation. Current options are: 'module',
+  'body', 'limited'.
+* `<MOTION_PROFILE>` - The name of the motion profile that controls the velocity and acceleration profiles for the drive
+  module motors. Current options are: 'linear', 'trapezoidal', 'scurve'.
+
+### Motion profiles
+
+To run a motion profile calculation the following command can be used:
+
+```shell
+python run_motion_profiles.py --output <OUTPUT_DIRECTORY>
+```
+
+Where:
+
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
+
+### Verification
+
+To run a verification test the following command can be used:
+
+```shell
+python run_verification.py --file <INPUT_FILE> --output <OUTPUT_DIRECTORY>
+```
+
+Where:
+
+* `<INPUT_FILE>` - The file path for the input file which contains the desired verifications to be executed. Can be
+  provided multiple times.
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
 
 ## Overview
 
