@@ -21,9 +21,47 @@ There are three different scripts in this repository that each provide different
 
 ### Trajectory simulation
 
+To run a trajectory simulation the following command can be used:
+
+```shell
+python run_trajectory_simulation.py --file <INPUT_FILE> --output <OUTPUT_DIRECTORY> --control-level <CONTROL_LEVEL> --motion-profile <MOTION_PROFILE>
+```
+
+Where:
+
+* `<INPUT_FILE>` - The file path for the input file which contains the desired motions to be executed. Can be provided
+  multiple times.
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
+* `<CONTROL_LEVEL>` - The name of the controller that should be used for the simulation. Current options are: 'module',
+  'body', 'limited'.
+* `<MOTION_PROFILE>` - The name of the motion profile that controls the velocity and acceleration profiles for the drive
+  module motors. Current options are: 'linear', 'trapezoidal', 'scurve'.
+
 ### Motion profiles
 
+To run a motion profile calculation the following command can be used:
+
+```shell
+python run_motion_profiles.py --output <OUTPUT_DIRECTORY>
+```
+
+Where:
+
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
+
 ### Verification
+
+To run a verification test the following command can be used:
+
+```shell
+python run_verification.py --file <INPUT_FILE> --output <OUTPUT_DIRECTORY>
+```
+
+Where:
+
+* `<INPUT_FILE>` - The file path for the input file which contains the desired verifications to be executed. Can be
+  provided multiple times.
+* `<OUTPUT_DIRECTORY>` - The directory path for the output files.
 
 ## Overview
 
