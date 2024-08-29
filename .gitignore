@@ -1,5 +1,8 @@
 __pycache__/
 .vscode/
+.pytest_cache/
+.venv/
+
 verification/linear_module_first/verification_results.xlsx
 verification/linear_module_first/~$verification_results.xlsx
 verification/linear_body_first/~$verification_simple_4w_steering.xlsx
