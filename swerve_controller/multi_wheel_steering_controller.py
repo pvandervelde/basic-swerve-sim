@@ -2,10 +2,8 @@
 
 from abc import ABC, abstractmethod
 import math
-from turtle import forward
 
-import numpy as np
-from typing import Callable, Mapping, List, Tuple
+from typing import Callable, List
 
 from swerve_controller.profile import TransientVariableProfile
 
@@ -14,8 +12,8 @@ from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionC
 from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
 from .control_profile import BodyControlledDriveModuleProfile, BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
 from .drive_module import DriveModule
-from .geometry import Point, RealNumberValueSpace
-from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
+from .geometry import RealNumberValueSpace
+from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues
 
 class BaseSteeringController(ABC):
 

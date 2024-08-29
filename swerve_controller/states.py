@@ -1,5 +1,5 @@
 import math
-from typing import Mapping, List, Tuple
+from typing import Tuple
 
 # local
 from .geometry import Orientation, Point, Vector3

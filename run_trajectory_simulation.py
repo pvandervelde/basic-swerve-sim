@@ -2,7 +2,7 @@ import argparse
 from os import makedirs, path
 from pathlib import Path
 
-from typing import Callable, List, Mapping, NamedTuple, Tuple
+from typing import List, Mapping, NamedTuple, Tuple
 from swerve_controller.geometry import RealNumberValueSpace
 from swerve_controller.profile import SingleVariableLinearProfile, SingleVariableSCurveProfile, SingleVariableTrapezoidalProfile, TransientVariableProfile
 import yaml

@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Mapping, List, Tuple
+from typing import List, Tuple
 
 # local
 from .control_model import ControlModelBase
 from .geometry import Vector3
-from .states import BodyState, DriveModuleDesiredValues, BodyMotion
+from .states import DriveModuleDesiredValues, BodyMotion
 
 class InvalidMotionCommandException(Exception):
     pass

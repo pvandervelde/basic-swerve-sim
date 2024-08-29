@@ -1,20 +1,30 @@
 [project]
 name = "basic-swerve-sim"
 version = "0.1.0"
-description = "Default template for PDM package"
+description = "This package contains Python code that simulates the state of a wheeled mobile robot which has all wheel drive and all wheel steering"
 authors = [
     { name = "Petrik van der Velde", email = "petrikvandervelde@gmail.com" },
 ]
 dependencies = [
-    "pytest>=8.2.2",
     "matplotlib>=3.9.0",
     "numpy>=2.0.0",
     "plotly>=5.22.0",
+    "argparse>=1.4.0",
+    "scipy>=1.14.1",
+    "pyyaml>=6.0.2",
 ]
-requires-python = "==3.9.*"
+requires-python = "==3.12.*"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 
-
 [tool.pdm]
 distribution = false
+
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest>=8.3.2",
+    "pytest-cov>=5.0.0",
+]
+lint = [
+    "black>=24.8.0",
+]
