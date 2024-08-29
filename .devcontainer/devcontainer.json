@@ -15,7 +15,15 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"bierner.markdown-mermaid",
+				"bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+				"DavidAnson.vscode-markdownlint",
+				"donjayamanne.githistory",
+				"eamodio.gitlens",
 				"formulahendry.auto-close-tag",
+				"GitHub.copilot-chat",
+				"GitHub.copilot",
+				"mhutchie.git-graph",
 				"ms-python.debugpy",
 				"ms-python.isort",
 				"ms-python.python",
