@@ -1,8 +1,6 @@
-import math
-from typing import Mapping, List, Tuple
 
 # local
-from .geometry import Orientation, Point, Vector3
+from .geometry import Point
 
 class Wheel(object):
 

@@ -1,18 +1,9 @@
-from abc import ABC, abstractmethod
 import argparse
-from csv import DictReader
 from datetime import datetime
-from distutils import util
-from math import cos, isclose, isinf, pi, radians, sin, sqrt
-import numpy as np
-from os import makedirs, path
+from os import path
 from pathlib import Path
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-import plotly.offline as py
-from random import random
 import subprocess
-from typing import List, Mapping, NamedTuple, Tuple
+from typing import List, Mapping, NamedTuple
 import yaml
 from yaml.loader import SafeLoader
 

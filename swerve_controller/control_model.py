@@ -5,11 +5,11 @@ from __future__ import annotations
 import math
 import numpy as np
 from numpy.linalg import pinv
-from typing import Mapping, List, Tuple
+from typing import List, Tuple
 
 # local
 from .drive_module import DriveModule
-from .geometry import LinearUnboundedSpace, Orientation, PeriodicBoundedCircularSpace, Point, Vector3
+from .geometry import LinearUnboundedSpace, PeriodicBoundedCircularSpace
 from .states import DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 # TODO replace normalize_angle and difference_between_angles with the PeriodicBoundedCircularSpace

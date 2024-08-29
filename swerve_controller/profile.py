@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 import math
-from numpy import linspace, quantile
-from numpy.polynomial.polynomial import Polynomial
-from scipy.interpolate import BSpline, splrep, splev
+from scipy.interpolate import BSpline, splrep
 from typing import List, Tuple
 
 from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace

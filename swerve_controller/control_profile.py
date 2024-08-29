@@ -7,13 +7,12 @@ from swerve_controller.geometry import LinearUnboundedSpace, PeriodicBoundedCirc
 
 from .errors import IncompleteTrajectoryException
 from .drive_module import DriveModule
-from .profile import SingleVariableLinearProfile, SingleVariableMultiPointLinearProfile, ProfilePoint, SingleVariableTrapezoidalProfile, TransientVariableProfile
+from .profile import SingleVariableMultiPointLinearProfile, TransientVariableProfile
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues, BodyMotion
 
 # Helper functions
 
 from typing import List, Tuple
-from numbers import Real
 
 def select_directions_for_modules(
         drive_modules: List[DriveModule],
