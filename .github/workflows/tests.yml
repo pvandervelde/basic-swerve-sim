@@ -19,7 +19,7 @@ jobs:
         uses: pdm-project/setup-pdm@v4
 
       - name: Install dependencies
-        run: pdm install -v
+        run: pdm sync -d -G test
 
       - name: Test with pytest
         run: |
