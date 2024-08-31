@@ -17,12 +17,14 @@
 			"extensions": [
 				"bierner.markdown-mermaid",
 				"bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+				"charliermarsh.ruff",
 				"DavidAnson.vscode-markdownlint",
 				"donjayamanne.githistory",
 				"eamodio.gitlens",
 				"formulahendry.auto-close-tag",
 				"GitHub.copilot-chat",
 				"GitHub.copilot",
+				"github.vscode-github-actions",
 				"mhutchie.git-graph",
 				"ms-python.debugpy",
 				"ms-python.isort",
@@ -37,7 +39,6 @@
 				"python.analysis.inlayHints.functionReturnTypes": true,
 				"python.analysis.inlayHints.pytestParameters": true,
 				"python.analysis.inlayHints.variableTypes": true,
-				"python.formatting.provider": "black",
 				"python.linting.enabled": true,
 				"python.linting.mypyEnabled": true,
 				"python.testing.pytestArgs": [
