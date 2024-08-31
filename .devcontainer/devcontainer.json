@@ -32,21 +32,7 @@
 				"ms-python.vscode-pylance",
 				"redhat.vscode-yaml",
 				"tamasfe.even-better-toml"
-			],
-			"settings": {
-				"debugpy.debugJustMyCode": true,
-				"python.analysis.autoFormatStrings": true,
-				"python.analysis.inlayHints.functionReturnTypes": true,
-				"python.analysis.inlayHints.pytestParameters": true,
-				"python.analysis.inlayHints.variableTypes": true,
-				"python.linting.enabled": true,
-				"python.linting.mypyEnabled": true,
-				"python.testing.pytestArgs": [
-					"."
-				],
-				"python.testing.pytestEnabled": true,
-				"python.testing.unittestEnabled": false
-			}
+			]
 		}
 	},
 	// Use 'postCreateCommand' to run commands after the container is created.
