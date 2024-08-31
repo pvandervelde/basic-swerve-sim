@@ -1,19 +1,25 @@
 #!/usr/bin/python3
 
-from abc import ABC, abstractmethod
 import math
-
+from abc import ABC, abstractmethod
 from typing import Callable, List
 
 from swerve_controller.profile import TransientVariableProfile
 
 # local
-from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
-from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
-from .control_profile import BodyControlledDriveModuleProfile, BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
+from .control import (BodyMotionCommand, DriveModuleMotionCommand,
+                      InvalidMotionCommandException, MotionCommand)
+from .control_model import (ControlModelBase,
+                            SimpleFourWheelSteeringControlModel,
+                            difference_between_angles)
+from .control_profile import (BodyControlledDriveModuleProfile,
+                              BodyMotionProfile, DriveModuleStateProfile,
+                              ModuleStateProfile)
 from .drive_module import DriveModule
 from .geometry import RealNumberValueSpace
-from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues
+from .states import (BodyState, DriveModuleDesiredValues,
+                     DriveModuleMeasuredValues)
+
 
 class BaseSteeringController(ABC):
 
@@ -350,7 +356,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
-        trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
+        trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()  # noqa: F841
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
@@ -605,7 +611,7 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
         time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
 
-        trajectory_time = self.active_trajectory.time_span()
+        trajectory_time = self.active_trajectory.time_span()  # noqa: F841
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
@@ -701,6 +707,20 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
             local_x_jerk,
             local_y_jerk,
             orientation_jerk
+        )
+
+        self.last_state_update_time = self.current_time_in_seconds
+
+    # On clock tick, determine if we need to recalculate the trajectories for the drive modules
+    def on_tick(self, current_time_in_seconds: float):
+        self.current_time_in_seconds = current_time_in_seconds
+
+    # Returns the time in seconds that the current movement would need to complete.
+    def time_for_current_movement(self) -> float:
+        if self.active_trajectory is None:
+            return 0.0
+        else:
+            return self.active_trajectory.time_span()
         )
 
         self.last_state_update_time = self.current_time_in_seconds
