@@ -1,21 +1,17 @@
 {
     "debugpy.debugJustMyCode": true,
     "[python]": {
-        "analysis.autoFormatStrings": true,
-        "analysis.inlayHints.functionReturnTypes": true,
-        "analysis.inlayHints.pytestParameters": true,
-        "analysis.inlayHints.variableTypes": true,
-        "testing.pytestArgs": [
-            "."
-        ],
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
             "source.fixAll": "explicit",
             "source.organizeImports": "explicit"
         },
         "editor.defaultFormatter": "charliermarsh.ruff",
-        "testing.pytestEnabled": true,
-        "testing.unittestEnabled": false,
     },
     "ruff.nativeServer": "on",
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }
