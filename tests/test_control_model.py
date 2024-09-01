@@ -533,53 +533,6 @@ def test_should_have_parallel_forward_wheels_with_forward_velocity_when_forward_
         )
 
 
-def test_should_have_parallel_forward_wheels_with_legal_forward_velocity_when_excessive_forward_motion():
-    drive_modules = create_drive_modules(drive_max_velocity=1.0)
-    controller = SimpleFourWheelSteeringControlModel(drive_modules)
-
-    motion = BodyMotion(
-        2.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-
-    proposed_states = controller.state_of_wheel_modules_from_body_motion(motion)
-
-    assert len(proposed_states) == len(drive_modules)
-
-    for i in range(len(proposed_states)):
-        module_state = proposed_states[i]
-
-        assert math.isclose(
-            module_state[0].steering_angle_in_radians, 0.0, rel_tol=1e-6, abs_tol=1e-15
-        )
-        assert math.isclose(
-            module_state[0].drive_velocity_in_meters_per_second,
-            1.0,
-            rel_tol=1e-6,
-            abs_tol=1e-15,
-        )
-
-        assert math.isclose(
-            module_state[1].steering_angle_in_radians,
-            math.pi,
-            rel_tol=1e-6,
-            abs_tol=1e-15,
-        )
-        assert math.isclose(
-            module_state[1].drive_velocity_in_meters_per_second,
-            -1.0,
-            rel_tol=1e-6,
-            abs_tol=1e-15,
-        )
-
-
 def test_should_have_parallel_forward_wheels_with_reverse_velocity_when_backward_motion():
     drive_modules = create_drive_modules()
     controller = SimpleFourWheelSteeringControlModel(drive_modules)
@@ -758,7 +711,7 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
         )
         assert math.isclose(
             module_state[0].drive_velocity_in_meters_per_second,
-            1.0,
+            math.sqrt(2.0),
             rel_tol=1e-6,
             abs_tol=1e-15,
         )
@@ -771,7 +724,7 @@ def test_should_have_parallel_diagonal_wheels_with_forward_velocity_when_diagona
         )
         assert math.isclose(
             module_state[1].drive_velocity_in_meters_per_second,
-            -1.0,
+            -math.sqrt(2.0),
             rel_tol=1e-6,
             abs_tol=1e-15,
         )

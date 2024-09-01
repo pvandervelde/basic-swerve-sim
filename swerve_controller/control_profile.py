@@ -680,9 +680,9 @@ class LimitedDriveModuleProfile(object):
                 solution_1 = (-b + math.sqrt(discriminant)) / (2.0 * a)
                 solution_2 = (-b - math.sqrt(discriminant)) / (2.0 * a)
 
-                if solution_1 < 0.0:
+                if solution_1 <= 0.0:
                     new_time_step = solution_2
-                elif solution_2 < 0.0:
+                elif solution_2 <= 0.0:
                     new_time_step = solution_1
                 else:
                     # if one of the time steps is very different from the existing timestep (i.e. very large or very small)
