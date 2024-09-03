@@ -391,6 +391,25 @@ class LimitedDriveModuleProfile(object):
             TimeStatePair(time_step_leading_up_to_value, drive_mapping)
         )
 
+    def add_start_point(
+        self,
+        time_step_leading_up_to_value: float,
+        steering_angle: List[ValueDerrivativeSet],
+        drive_velocity: List[ValueDerrivativeSet],
+    ):
+        steering_mapping: List[ValueDerrivativeSet] = []
+        drive_mapping: List[ValueDerrivativeSet] = []
+        for index in range(len(self.drive_modules)):
+            steering_mapping.append(steering_angle[index])
+            drive_mapping.append(drive_velocity[index])
+
+        self.steering_profiles.append(
+            TimeStatePair(time_step_leading_up_to_value, steering_mapping)
+        )
+        self.velocity_profiles.append(
+            TimeStatePair(time_step_leading_up_to_value, drive_mapping)
+        )
+
     def calculate_accelerations(self):
         # Steering angle
         for index in range(len(self.steering_profiles)):
@@ -870,21 +889,30 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
         if self.end_state_body is None:
             return
 
-        start_steering_orientation: List[float] = []
-        start_drive_velocity: List[float] = []
+        start_steering_orientation: List[ValueDerrivativeSet] = []
+        start_drive_velocity: List[ValueDerrivativeSet] = []
         for module_index in range(len(self.modules)):
             start = self.start_state_modules[module_index]
             start_steering_orientation.append(
-                self.steering_number_space.normalize_value(
-                    start.orientation_in_body_coordinates.z
+                ValueDerrivativeSet(
+                    self.steering_number_space.normalize_value(
+                        start.orientation_in_body_coordinates.z
+                    ),
+                    0.0,
+                    0.0,
+                    0.0,
                 )
             )
-            start_drive_velocity.append(start.drive_velocity_in_module_coordinates.x)
+            start_drive_velocity.append(
+                ValueDerrivativeSet(
+                    start.drive_velocity_in_module_coordinates.x, 0.0, 0.0, 0.0
+                )
+            )
 
         calculated_profiles: LimitedDriveModuleProfile = LimitedDriveModuleProfile(
             self.modules
         )
-        calculated_profiles.add_profile_point(
+        calculated_profiles.add_start_point(
             0.0, start_steering_orientation, start_drive_velocity
         )
 
@@ -941,8 +969,10 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
 
         # We don't include the start that is defined by the actual current state. We also don't
         # add the end
-        previous_steering_angles: List[float] = start_steering_orientation
-        previous_drive_velocities: List[float] = start_drive_velocity
+        previous_steering_angles: List[float] = [
+            x.value for x in start_steering_orientation
+        ]
+        previous_drive_velocities: List[float] = [x.value for x in start_drive_velocity]
 
         # Iterate over all the internal frames and 1 extra to include the end state
         for frame_index in range(1, number_of_frames + 1):
@@ -979,6 +1009,7 @@ class BodyControlledDriveModuleProfile(ModuleStateProfile):
                 current_steering_orientation,
                 current_drive_velocity,
             )
+
             previous_steering_angles = current_steering_orientation
             previous_drive_velocities = current_drive_velocity
 

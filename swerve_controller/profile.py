@@ -2,7 +2,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from scipy.interpolate import BSpline, splrep
+from scipy.interpolate import BSpline, make_interp_spline
 
 from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace
 
@@ -136,9 +136,17 @@ class SingleVariableLinearProfile(TransientVariableProfile):
 
 
 class SingleVariableCompoundProfileValue(object):
-    def __init__(self, location_fraction: float, value: float):
+    def __init__(
+        self,
+        location_fraction: float,
+        value: float,
+        first_derivative=0.0,
+        second_derivative=0.0,
+    ):
         self.location = location_fraction
         self.value = value
+        self.first_derivative = first_derivative
+        self.second_derivative = second_derivative
 
 
 class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
@@ -161,6 +169,10 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         start: float,
         end: float,
         end_time: float = 1.0,
+        start_velocity: float = 0.0,
+        end_velocity: float = 0.0,
+        start_acceleration: float = 0.0,
+        end_acceleration: float = 0.0,
         coordinate_space: RealNumberValueSpace = LinearUnboundedSpace(),
     ):
         """
@@ -175,15 +187,25 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
         self.coordinate_space = coordinate_space
         self.profiles: List[SingleVariableCompoundProfileValue] = [
-            SingleVariableCompoundProfileValue(0.0, start),
-            SingleVariableCompoundProfileValue(end_time, end),
+            SingleVariableCompoundProfileValue(
+                0.0, start, start_velocity, start_acceleration
+            ),
+            SingleVariableCompoundProfileValue(
+                end_time, end, end_velocity, end_acceleration
+            ),
         ]
 
         self.end_time = end_time
 
         self.spline: BSpline = None
 
-    def add_value(self, time_since_start_of_profile: float, value: float):
+    def add_value(
+        self,
+        time_since_start_of_profile: float,
+        value: float,
+        first_derivative: float = 0.0,
+        second_derivative: float = 0.0,
+    ):
         """
         Adds a value to the profile at the specified time fraction.
 
@@ -199,7 +221,10 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
             time_since_start_of_profile = self.end_time
 
         section = SingleVariableCompoundProfileValue(
-            time_since_start_of_profile, self.coordinate_space.normalize_value(value)
+            time_since_start_of_profile,
+            self.coordinate_space.normalize_value(value),
+            first_derivative,
+            second_derivative,
         )
 
         for i in range(len(self.profiles)):
@@ -285,9 +310,19 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
             ts: List[float] = [x.location for x in self.profiles]
             ys: List[float] = [x.value for x in self.profiles]
-            t, c, k = splrep(ts, ys, s=0, k=k)
 
-            self.spline = BSpline(t, c, k, extrapolate=False)
+            starting_first_derivative = self.profiles[0].first_derivative
+            ending_first_derivative = self.profiles[-1].first_derivative
+
+            self.spline = make_interp_spline(
+                ts,
+                ys,
+                k=k,
+                bc_type=(
+                    [(1, starting_first_derivative)],
+                    [(1, ending_first_derivative)],
+                ),
+            )
 
         return self.spline
 
