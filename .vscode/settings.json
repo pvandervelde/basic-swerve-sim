@@ -1,13 +1,14 @@
 {
-    "python.autoComplete.extraPaths": [
-        "D:\\dev\\languages\\miniforge3\\envs\\ros-humble\\Library\\lib/site-packages",
-        "D:/dev/languages/miniforge3/envs/ros-humble\\Lib\\site-packages"
-    ],
-    "python.analysis.extraPaths": [
-        "D:\\dev\\languages\\miniforge3\\envs\\ros-humble\\Library\\lib/site-packages",
-        "D:/dev/languages/miniforge3/envs/ros-humble\\Lib\\site-packages"
-    ],
-    "python.formatting.provider": "black",
+    "debugpy.debugJustMyCode": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff",
+    },
+    "ruff.nativeServer": "on",
     "python.testing.pytestArgs": [
         "."
     ],

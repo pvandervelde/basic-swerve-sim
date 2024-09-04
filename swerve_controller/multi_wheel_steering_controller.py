@@ -1,22 +1,35 @@
 #!/usr/bin/python3
 
-from abc import ABC, abstractmethod
 import math
-
+from abc import ABC, abstractmethod
 from typing import Callable, List
 
 from swerve_controller.profile import TransientVariableProfile
 
 # local
-from .control import BodyMotionCommand, DriveModuleMotionCommand, InvalidMotionCommandException, MotionCommand
-from .control_model import difference_between_angles, ControlModelBase, SimpleFourWheelSteeringControlModel
-from .control_profile import BodyControlledDriveModuleProfile, BodyMotionProfile, DriveModuleStateProfile, ModuleStateProfile
+from .control import (
+    BodyMotionCommand,
+    DriveModuleMotionCommand,
+    InvalidMotionCommandException,
+    MotionCommand,
+)
+from .control_model import (
+    ControlModelBase,
+    SimpleFourWheelSteeringControlModel,
+    difference_between_angles,
+)
+from .control_profile import (
+    BodyControlledDriveModuleProfile,
+    BodyMotionProfile,
+    DriveModuleStateProfile,
+    ModuleStateProfile,
+)
 from .drive_module import DriveModule
 from .geometry import RealNumberValueSpace
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues
 
-class BaseSteeringController(ABC):
 
+class BaseSteeringController(ABC):
     # Returns the current pose of the robot body, based on the current state of the
     # drive modules.
     @abstractmethod
@@ -31,7 +44,9 @@ class BaseSteeringController(ABC):
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
     @abstractmethod
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleMeasuredValues]:
+    def drive_module_state_at_future_time(
+        self, future_time_in_seconds: float
+    ) -> List[DriveModuleMeasuredValues]:
         pass
 
     # Updates the currently stored drive module state
@@ -50,12 +65,15 @@ class BaseSteeringController(ABC):
     def on_tick(self, current_time_in_seconds: float):
         pass
 
-class ModuleFirstSteeringController(BaseSteeringController):
 
+class ModuleFirstSteeringController(BaseSteeringController):
     def __init__(
-            self,
-            drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
+        self,
+        drive_modules: List[DriveModule],
+        motion_profile_func: Callable[
+            [float, float, float, RealNumberValueSpace], TransientVariableProfile
+        ],
+    ):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -88,8 +106,9 @@ class ModuleFirstSteeringController(BaseSteeringController):
                 0.0,
                 0.0,
                 0.0,
-                0.0
-            ) for drive_module in drive_modules
+                0.0,
+            )
+            for drive_module in drive_modules
         ]
 
         # Use a simple control model for the time being. Just need something that roughly works
@@ -127,18 +146,26 @@ class ModuleFirstSteeringController(BaseSteeringController):
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
-        time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+    def drive_module_state_at_future_time(
+        self, future_time_in_seconds: float
+    ) -> List[DriveModuleDesiredValues]:
+        time_from_start_of_trajectory = (
+            future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+        )
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         for drive_module in self.modules:
-            state = self.drive_module_trajectory.value_for_module_at(drive_module.name, time_fraction)
-            result.append(DriveModuleDesiredValues(
+            state = self.drive_module_trajectory.value_for_module_at(
+                drive_module.name, time_fraction
+            )
+            result.append(
+                DriveModuleDesiredValues(
                     state.name,
                     state.orientation_in_body_coordinates.z,
-                    state.drive_velocity_in_module_coordinates.x
-                ))
+                    state.drive_velocity_in_module_coordinates.x,
+                )
+            )
 
         return result
 
@@ -157,34 +184,82 @@ class ModuleFirstSteeringController(BaseSteeringController):
         self.module_states = current_module_states
 
         # Calculate the current body state
-        body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
-        time_step_in_seconds = self.current_time_in_seconds - self.last_state_update_time
+        body_motion = self.control_model.body_motion_from_wheel_module_states(
+            self.module_states
+        )
+        time_step_in_seconds = (
+            self.current_time_in_seconds - self.last_state_update_time
+        )
         # Position
-        local_x_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
-        local_y_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+        local_x_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.x
+                + body_motion.linear_velocity.x
+            )
+        )
+        local_y_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.y
+                + body_motion.linear_velocity.y
+            )
+        )
         # Orientation
-        global_orientation = self.body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
+        global_orientation = (
+            self.body_state.orientation_in_world_coordinates.z
+            + time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.angular_velocity.z
+                + body_motion.angular_velocity.z
+            )
+        )
         # Acceleration
         local_x_acceleration = 0.0
         local_y_acceleration = 0.0
         orientation_acceleration = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_acceleration = (body_motion.linear_velocity.x - self.body_state.motion_in_body_coordinates.linear_velocity.x) / time_step_in_seconds
-            local_y_acceleration = (body_motion.linear_velocity.y - self.body_state.motion_in_body_coordinates.linear_velocity.y) / time_step_in_seconds
-            orientation_acceleration = (body_motion.angular_velocity.z - self.body_state.motion_in_body_coordinates.angular_velocity.z) / time_step_in_seconds
+            local_x_acceleration = (
+                body_motion.linear_velocity.x
+                - self.body_state.motion_in_body_coordinates.linear_velocity.x
+            ) / time_step_in_seconds
+            local_y_acceleration = (
+                body_motion.linear_velocity.y
+                - self.body_state.motion_in_body_coordinates.linear_velocity.y
+            ) / time_step_in_seconds
+            orientation_acceleration = (
+                body_motion.angular_velocity.z
+                - self.body_state.motion_in_body_coordinates.angular_velocity.z
+            ) / time_step_in_seconds
 
         # Jerk
         local_x_jerk = 0.0
         local_y_jerk = 0.0
         orientation_jerk = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_jerk = (local_x_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.x) / time_step_in_seconds
-            local_y_jerk = (local_y_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.y) / time_step_in_seconds
-            orientation_jerk = (orientation_acceleration - self.body_state.motion_in_body_coordinates.angular_acceleration.z) / time_step_in_seconds
+            local_x_jerk = (
+                local_x_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.x
+            ) / time_step_in_seconds
+            local_y_jerk = (
+                local_y_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.y
+            ) / time_step_in_seconds
+            orientation_jerk = (
+                orientation_acceleration
+                - self.body_state.motion_in_body_coordinates.angular_acceleration.z
+            ) / time_step_in_seconds
 
         self.body_state = BodyState(
-            self.body_state.position_in_world_coordinates.x + local_x_distance * math.cos(global_orientation) - local_y_distance * math.sin(global_orientation),
-            self. body_state.position_in_world_coordinates.y + local_x_distance * math.sin(global_orientation) + local_y_distance * math.cos(global_orientation),
+            self.body_state.position_in_world_coordinates.x
+            + local_x_distance * math.cos(global_orientation)
+            - local_y_distance * math.sin(global_orientation),
+            self.body_state.position_in_world_coordinates.y
+            + local_x_distance * math.sin(global_orientation)
+            + local_y_distance * math.cos(global_orientation),
             global_orientation,
             body_motion.linear_velocity.x,
             body_motion.linear_velocity.y,
@@ -194,7 +269,7 @@ class ModuleFirstSteeringController(BaseSteeringController):
             orientation_acceleration,
             local_x_jerk,
             local_y_jerk,
-            orientation_jerk
+            orientation_jerk,
         )
 
         self.last_state_update_time = self.current_time_in_seconds
@@ -202,7 +277,9 @@ class ModuleFirstSteeringController(BaseSteeringController):
     # Updates the currently stored desired body state. On the next time tick the
     # drive module trajectory will be updated to match the new desired end state.
     def on_desired_state_update(self, desired_motion: MotionCommand):
-        desired_potential_states = desired_motion.to_drive_module_state(self.control_model)
+        desired_potential_states = desired_motion.to_drive_module_state(
+            self.control_model
+        )
 
         # Select which state to use, either the forward one or the reverse one.
         # - If there are two directions we need to pick, otherwise pick the only one we have
@@ -211,7 +288,15 @@ class ModuleFirstSteeringController(BaseSteeringController):
 
         desired_states = desired_potential_states[0]
         if len(desired_potential_states[1]) > 0:
-            is_stopped = [math.isclose(state.drive_velocity_in_module_coordinates.x, 0.0, rel_tol=1e-7, abs_tol=1e-7) for state in self.module_states]
+            is_stopped = [
+                math.isclose(
+                    state.drive_velocity_in_module_coordinates.x,
+                    0.0,
+                    rel_tol=1e-7,
+                    abs_tol=1e-7,
+                )
+                for state in self.module_states
+            ]
             if all(is_stopped):
                 # wheels aren't moving. Can do any move we like. Limit steering movemement.
                 total_first_rotation = 0.0
@@ -225,8 +310,14 @@ class ModuleFirstSteeringController(BaseSteeringController):
                     if current < 0:
                         current += 2 * math.pi
 
-                    total_first_rotation += abs(desired_potential_states[0][i].steering_angle_in_radians - current)
-                    total_second_rotation += abs(desired_potential_states[1][i].steering_angle_in_radians - current)
+                    total_first_rotation += abs(
+                        desired_potential_states[0][i].steering_angle_in_radians
+                        - current
+                    )
+                    total_second_rotation += abs(
+                        desired_potential_states[1][i].steering_angle_in_radians
+                        - current
+                    )
 
                 if total_second_rotation < total_first_rotation:
                     desired_states = desired_potential_states[1]
@@ -246,7 +337,9 @@ class ModuleFirstSteeringController(BaseSteeringController):
         #
         #    Also keep in mind that steering the wheel effectively changes the velocity of the wheel
         #    if we use a co-axial system
-        drive_module_trajectory = DriveModuleStateProfile(self.modules, self.min_time_for_trajectory, self.motion_profile_func)
+        drive_module_trajectory = DriveModuleStateProfile(
+            self.modules, self.min_time_for_trajectory, self.motion_profile_func
+        )
         drive_module_trajectory.set_current_state(self.module_states)
         drive_module_trajectory.set_desired_end_state(self.desired_motion)
 
@@ -264,12 +357,15 @@ class ModuleFirstSteeringController(BaseSteeringController):
         else:
             return self.drive_module_trajectory.min_trajectory_time_in_seconds
 
-class ModuleFollowsBodySteeringController(BaseSteeringController):
 
+class ModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
-            self,
-            drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile]):
+        self,
+        drive_modules: List[DriveModule],
+        motion_profile_func: Callable[
+            [float, float, float, RealNumberValueSpace], TransientVariableProfile
+        ],
+    ):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -305,8 +401,9 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                 0.0,
                 0.0,
                 0.0,
-                0.0
-            ) for drive_module in drive_modules
+                0.0,
+            )
+            for drive_module in drive_modules
         ]
 
         self.previous_module_states: List[DriveModuleMeasuredValues] = [
@@ -320,15 +417,16 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                 0.0,
                 0.0,
                 0.0,
-                0.0
-            ) for drive_module in drive_modules
+                0.0,
+            )
+            for drive_module in drive_modules
         ]
 
         # trajectories
         self.body_trajectory: BodyMotionProfile = None
         self.module_trajectory_from_command: DriveModuleStateProfile = None
 
-         # Keep track of our position in time so that we can figure out where on the current
+        # Keep track of our position in time so that we can figure out where on the current
         # trajectory we should be
         self.current_time_in_seconds = 0.0
         self.trajectory_was_started_at_time_in_seconds = 0.0
@@ -347,16 +445,26 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
-        time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+    def drive_module_state_at_future_time(
+        self, future_time_in_seconds: float
+    ) -> List[DriveModuleDesiredValues]:
+        time_from_start_of_trajectory = (
+            future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+        )
 
-        trajectory_time = self.body_trajectory.time_span() if self.is_executing_body_trajectory else self.module_trajectory_from_command.time_span()
+        trajectory_time = (  # noqa: F841
+            self.body_trajectory.time_span()
+            if self.is_executing_body_trajectory
+            else self.module_trajectory_from_command.time_span()
+        )
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         if self.is_executing_body_trajectory:
             body_state = self.body_trajectory.body_motion_at(time_fraction)
-            drive_module_desired_values = self.control_model.state_of_wheel_modules_from_body_motion(body_state)
+            drive_module_desired_values = (
+                self.control_model.state_of_wheel_modules_from_body_motion(body_state)
+            )
             for i in range(len(self.modules)):
                 # Wheels are moving. We don't know what kind of movement yet though, so figure out if:
                 # - The wheel are moving at some significant velocity, in that case pick the state that most
@@ -367,34 +475,59 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                 #   flip directions (or we might just have flipped directions)
                 #   - If we have just flipped directions then we should probably continue in the same way (but maybe not)
 
-                #previous_state_for_module = self.previous_module_states[i]
+                # previous_state_for_module = self.previous_module_states[i]
 
                 current_state_for_module = self.module_states[i]
-                current_steering_angle = current_state_for_module.orientation_in_body_coordinates.z
-                current_velocity = current_state_for_module.drive_velocity_in_module_coordinates.x
+                current_steering_angle = (
+                    current_state_for_module.orientation_in_body_coordinates.z
+                )
+                current_velocity = (
+                    current_state_for_module.drive_velocity_in_module_coordinates.x
+                )
 
-                #previous_rotation_difference = current_steering_angle - previous_state_for_module.orientation_in_body_coordinates.z
-                #previous_velocity_difference = current_velocity - previous_state_for_module.drive_velocity_in_module_coordinates.x
+                # previous_rotation_difference = current_steering_angle - previous_state_for_module.orientation_in_body_coordinates.z
+                # previous_velocity_difference = current_velocity - previous_state_for_module.drive_velocity_in_module_coordinates.x
 
                 states_for_module = drive_module_desired_values[i]
 
-                first_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[0].steering_angle_in_radians)
-                second_state_rotation_difference = difference_between_angles(current_steering_angle, states_for_module[1].steering_angle_in_radians)
+                first_state_rotation_difference = difference_between_angles(
+                    current_steering_angle,
+                    states_for_module[0].steering_angle_in_radians,
+                )
+                second_state_rotation_difference = difference_between_angles(
+                    current_steering_angle,
+                    states_for_module[1].steering_angle_in_radians,
+                )
 
-                first_state_velocity_difference = states_for_module[0].drive_velocity_in_meters_per_second - current_velocity
-                second_state_velocity_difference = states_for_module[1].drive_velocity_in_meters_per_second - current_velocity
+                first_state_velocity_difference = (
+                    states_for_module[0].drive_velocity_in_meters_per_second
+                    - current_velocity
+                )
+                second_state_velocity_difference = (
+                    states_for_module[1].drive_velocity_in_meters_per_second
+                    - current_velocity
+                )
 
                 # Possibilities:
                 # - first velocity change and first orientation change are the smallest -> pick the first state
                 # - second velocity change and second orientation change are the smallest -> pick the second state
                 # - first velocity change is larger and second orientation change is larger -> Bad state. Pick the one with the least relative change?
 
-                if abs(first_state_rotation_difference) <= abs(second_state_rotation_difference):
-                    if abs(first_state_velocity_difference) <= abs(second_state_velocity_difference):
+                if abs(first_state_rotation_difference) <= abs(
+                    second_state_rotation_difference
+                ):
+                    if abs(first_state_velocity_difference) <= abs(
+                        second_state_velocity_difference
+                    ):
                         # first rotation and velocity change are the smallest, so take the first state
                         result.append(states_for_module[0])
                     else:
-                        if math.isclose(abs(first_state_rotation_difference), abs(second_state_rotation_difference), rel_tol=1e-7, abs_tol=1e-7):
+                        if math.isclose(
+                            abs(first_state_rotation_difference),
+                            abs(second_state_rotation_difference),
+                            rel_tol=1e-7,
+                            abs_tol=1e-7,
+                        ):
                             # first rotation is equal to the second rotation
                             # first velocity larger than the second velocity.
                             # pick the second state
@@ -403,11 +536,18 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                             # first rotation is the smallest but second velocity is the smallest
                             result.append(states_for_module[0])
                 else:
-                    if abs(second_state_velocity_difference) <= abs(first_state_velocity_difference):
+                    if abs(second_state_velocity_difference) <= abs(
+                        first_state_velocity_difference
+                    ):
                         # second rotation and velocity change are the smallest, so take the second state
                         result.append(states_for_module[1])
                     else:
-                        if math.isclose(abs(first_state_rotation_difference), abs(second_state_rotation_difference), rel_tol=1e-7, abs_tol=1e-7):
+                        if math.isclose(
+                            abs(first_state_rotation_difference),
+                            abs(second_state_rotation_difference),
+                            rel_tol=1e-7,
+                            abs_tol=1e-7,
+                        ):
                             # second rotation is equal to the first rotation
                             # second velocity larger than the first velocity.
                             # pick the first state
@@ -417,12 +557,16 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                             result.append(states_for_module[1])
         else:
             for drive_module in self.modules:
-                state = self.module_trajectory_from_command.value_for_module_at(drive_module.name, time_fraction)
-                result.append(DriveModuleDesiredValues(
-                    state.name,
-                    state.orientation_in_body_coordinates.z,
-                    state.drive_velocity_in_module_coordinates.x
-                ))
+                state = self.module_trajectory_from_command.value_for_module_at(
+                    drive_module.name, time_fraction
+                )
+                result.append(
+                    DriveModuleDesiredValues(
+                        state.name,
+                        state.orientation_in_body_coordinates.z,
+                        state.drive_velocity_in_module_coordinates.x,
+                    )
+                )
 
         return result
 
@@ -434,16 +578,23 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                 self.body_state,
                 desired_motion.to_body_state(self.control_model),
                 desired_motion.time_for_motion(),
-                self.motion_profile_func)
+                self.motion_profile_func,
+            )
             self.body_trajectory = trajectory
 
             self.is_executing_body_trajectory = True
             self.is_executing_module_trajectory = False
         else:
             if isinstance(desired_motion, DriveModuleMotionCommand):
-                trajectory = DriveModuleStateProfile(self.modules, desired_motion.time_for_motion(), self.motion_profile_func)
+                trajectory = DriveModuleStateProfile(
+                    self.modules,
+                    desired_motion.time_for_motion(),
+                    self.motion_profile_func,
+                )
                 trajectory.set_current_state(self.module_states)
-                trajectory.set_desired_end_state(desired_motion.to_drive_module_state(self.control_model)[0])
+                trajectory.set_desired_end_state(
+                    desired_motion.to_drive_module_state(self.control_model)[0]
+                )
                 self.module_trajectory_from_command = trajectory
 
                 self.is_executing_body_trajectory = False
@@ -465,37 +616,85 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
         self.previous_module_states = self.module_states
         self.module_states = current_module_states
 
-         # Calculate the current body state
-        body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        # Calculate the current body state
+        body_motion = self.control_model.body_motion_from_wheel_module_states(
+            self.module_states
+        )
 
-        time_step_in_seconds = self.current_time_in_seconds - self.last_state_update_time
+        time_step_in_seconds = (
+            self.current_time_in_seconds - self.last_state_update_time
+        )
         # Position
-        local_x_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
-        local_y_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+        local_x_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.x
+                + body_motion.linear_velocity.x
+            )
+        )
+        local_y_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.y
+                + body_motion.linear_velocity.y
+            )
+        )
         # Orientation
-        global_orientation = self.body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
+        global_orientation = (
+            self.body_state.orientation_in_world_coordinates.z
+            + time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.angular_velocity.z
+                + body_motion.angular_velocity.z
+            )
+        )
 
         # Acceleration
         local_x_acceleration = 0.0
         local_y_acceleration = 0.0
         orientation_acceleration = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_acceleration = (body_motion.linear_velocity.x - self.body_state.motion_in_body_coordinates.linear_velocity.x) / time_step_in_seconds
-            local_y_acceleration = (body_motion.linear_velocity.y - self.body_state.motion_in_body_coordinates.linear_velocity.y) / time_step_in_seconds
-            orientation_acceleration = (body_motion.angular_velocity.z - self.body_state.motion_in_body_coordinates.angular_velocity.z) / time_step_in_seconds
+            local_x_acceleration = (
+                body_motion.linear_velocity.x
+                - self.body_state.motion_in_body_coordinates.linear_velocity.x
+            ) / time_step_in_seconds
+            local_y_acceleration = (
+                body_motion.linear_velocity.y
+                - self.body_state.motion_in_body_coordinates.linear_velocity.y
+            ) / time_step_in_seconds
+            orientation_acceleration = (
+                body_motion.angular_velocity.z
+                - self.body_state.motion_in_body_coordinates.angular_velocity.z
+            ) / time_step_in_seconds
 
         # Jerk
         local_x_jerk = 0.0
         local_y_jerk = 0.0
         orientation_jerk = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_jerk = (local_x_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.x) / time_step_in_seconds
-            local_y_jerk = (local_y_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.y) / time_step_in_seconds
-            orientation_jerk = (orientation_acceleration - self.body_state.motion_in_body_coordinates.angular_acceleration.z) / time_step_in_seconds
+            local_x_jerk = (
+                local_x_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.x
+            ) / time_step_in_seconds
+            local_y_jerk = (
+                local_y_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.y
+            ) / time_step_in_seconds
+            orientation_jerk = (
+                orientation_acceleration
+                - self.body_state.motion_in_body_coordinates.angular_acceleration.z
+            ) / time_step_in_seconds
 
         self.body_state = BodyState(
-            self.body_state.position_in_world_coordinates.x + local_x_distance * math.cos(global_orientation) - local_y_distance * math.sin(global_orientation),
-            self. body_state.position_in_world_coordinates.y + local_x_distance * math.sin(global_orientation) + local_y_distance * math.cos(global_orientation),
+            self.body_state.position_in_world_coordinates.x
+            + local_x_distance * math.cos(global_orientation)
+            - local_y_distance * math.sin(global_orientation),
+            self.body_state.position_in_world_coordinates.y
+            + local_x_distance * math.sin(global_orientation)
+            + local_y_distance * math.cos(global_orientation),
             global_orientation,
             body_motion.linear_velocity.x,
             body_motion.linear_velocity.y,
@@ -505,7 +704,7 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
             orientation_acceleration,
             local_x_jerk,
             local_y_jerk,
-            orientation_jerk
+            orientation_jerk,
         )
 
         self.last_state_update_time = self.current_time_in_seconds
@@ -523,12 +722,16 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
         else:
             return 0.0
 
+
 class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
     def __init__(
-            self,
-            drive_modules: List[DriveModule],
-            motion_profile_func: Callable[[float, float, float, RealNumberValueSpace], TransientVariableProfile],
-            interpolation_frequency_in_hz: int):
+        self,
+        drive_modules: List[DriveModule],
+        motion_profile_func: Callable[
+            [float, float, float, RealNumberValueSpace], TransientVariableProfile
+        ],
+        interpolation_frequency_in_hz: int,
+    ):
         # Get the geometry for the robot
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
@@ -565,8 +768,9 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
                 0.0,
                 0.0,
                 0.0,
-                0.0
-            ) for drive_module in drive_modules
+                0.0,
+            )
+            for drive_module in drive_modules
         ]
 
         self.previous_module_states: List[DriveModuleMeasuredValues] = [
@@ -580,14 +784,15 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
                 0.0,
                 0.0,
                 0.0,
-                0.0
-            ) for drive_module in drive_modules
+                0.0,
+            )
+            for drive_module in drive_modules
         ]
 
         # trajectories
         self.active_trajectory: ModuleStateProfile = None
 
-         # Keep track of our position in time so that we can figure out where on the current
+        # Keep track of our position in time so that we can figure out where on the current
         # trajectory we should be
         self.current_time_in_seconds = 0.0
         self.trajectory_was_started_at_time_in_seconds = 0.0
@@ -602,20 +807,28 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
 
     # Returns the state of the drive modules to required to match the current trajectory at the given
     # time.
-    def drive_module_state_at_future_time(self, future_time_in_seconds:float) -> List[DriveModuleDesiredValues]:
-        time_from_start_of_trajectory = future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+    def drive_module_state_at_future_time(
+        self, future_time_in_seconds: float
+    ) -> List[DriveModuleDesiredValues]:
+        time_from_start_of_trajectory = (
+            future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
+        )
 
-        trajectory_time = self.active_trajectory.time_span()
+        trajectory_time = self.active_trajectory.time_span()  # noqa: F841
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
         for drive_module in self.modules:
-            state = self.active_trajectory.value_for_module_at(drive_module.name, time_fraction)
-            result.append(DriveModuleDesiredValues(
-                state.name,
-                state.orientation_in_body_coordinates.z,
-                state.drive_velocity_in_module_coordinates.x
-            ))
+            state = self.active_trajectory.value_for_module_at(
+                drive_module.name, time_fraction
+            )
+            result.append(
+                DriveModuleDesiredValues(
+                    state.name,
+                    state.orientation_in_body_coordinates.z,
+                    state.drive_velocity_in_module_coordinates.x,
+                )
+            )
 
         return result
 
@@ -633,13 +846,21 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
                 motion_profile_func=self.motion_profile_func,
             )
             trajectory.set_current_state(self.module_states)
-            trajectory.set_desired_end_state(desired_motion.to_body_state(self.control_model))
+            trajectory.set_desired_end_state(
+                desired_motion.to_body_state(self.control_model)
+            )
             self.active_trajectory = trajectory
         else:
             if isinstance(desired_motion, DriveModuleMotionCommand):
-                trajectory = DriveModuleStateProfile(self.modules, desired_motion.time_for_motion(), self.motion_profile_func)
+                trajectory = DriveModuleStateProfile(
+                    self.modules,
+                    desired_motion.time_for_motion(),
+                    self.motion_profile_func,
+                )
                 trajectory.set_current_state(self.module_states)
-                trajectory.set_desired_end_state(desired_motion.to_drive_module_state(self.control_model)[0])
+                trajectory.set_desired_end_state(
+                    desired_motion.to_drive_module_state(self.control_model)[0]
+                )
                 self.active_trajectory = trajectory
             else:
                 raise InvalidMotionCommandException()
@@ -660,37 +881,85 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
         self.previous_module_states = self.module_states
         self.module_states = current_module_states
 
-         # Calculate the current body state
-        body_motion = self.control_model.body_motion_from_wheel_module_states(self.module_states)
+        # Calculate the current body state
+        body_motion = self.control_model.body_motion_from_wheel_module_states(
+            self.module_states
+        )
 
-        time_step_in_seconds = self.current_time_in_seconds - self.last_state_update_time
+        time_step_in_seconds = (
+            self.current_time_in_seconds - self.last_state_update_time
+        )
         # Position
-        local_x_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.x + body_motion.linear_velocity.x)
-        local_y_distance = time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.linear_velocity.y + body_motion.linear_velocity.y)
+        local_x_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.x
+                + body_motion.linear_velocity.x
+            )
+        )
+        local_y_distance = (
+            time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.linear_velocity.y
+                + body_motion.linear_velocity.y
+            )
+        )
         # Orientation
-        global_orientation = self.body_state.orientation_in_world_coordinates.z + time_step_in_seconds * 0.5 * (self.body_state.motion_in_body_coordinates.angular_velocity.z + body_motion.angular_velocity.z)
+        global_orientation = (
+            self.body_state.orientation_in_world_coordinates.z
+            + time_step_in_seconds
+            * 0.5
+            * (
+                self.body_state.motion_in_body_coordinates.angular_velocity.z
+                + body_motion.angular_velocity.z
+            )
+        )
 
         # Acceleration
         local_x_acceleration = 0.0
         local_y_acceleration = 0.0
         orientation_acceleration = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_acceleration = (body_motion.linear_velocity.x - self.body_state.motion_in_body_coordinates.linear_velocity.x) / time_step_in_seconds
-            local_y_acceleration = (body_motion.linear_velocity.y - self.body_state.motion_in_body_coordinates.linear_velocity.y) / time_step_in_seconds
-            orientation_acceleration = (body_motion.angular_velocity.z - self.body_state.motion_in_body_coordinates.angular_velocity.z) / time_step_in_seconds
+            local_x_acceleration = (
+                body_motion.linear_velocity.x
+                - self.body_state.motion_in_body_coordinates.linear_velocity.x
+            ) / time_step_in_seconds
+            local_y_acceleration = (
+                body_motion.linear_velocity.y
+                - self.body_state.motion_in_body_coordinates.linear_velocity.y
+            ) / time_step_in_seconds
+            orientation_acceleration = (
+                body_motion.angular_velocity.z
+                - self.body_state.motion_in_body_coordinates.angular_velocity.z
+            ) / time_step_in_seconds
 
         # Jerk
         local_x_jerk = 0.0
         local_y_jerk = 0.0
         orientation_jerk = 0.0
         if not math.isclose(time_step_in_seconds, 0.0, abs_tol=1e-4, rel_tol=1e-4):
-            local_x_jerk = (local_x_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.x) / time_step_in_seconds
-            local_y_jerk = (local_y_acceleration - self.body_state.motion_in_body_coordinates.linear_acceleration.y) / time_step_in_seconds
-            orientation_jerk = (orientation_acceleration - self.body_state.motion_in_body_coordinates.angular_acceleration.z) / time_step_in_seconds
+            local_x_jerk = (
+                local_x_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.x
+            ) / time_step_in_seconds
+            local_y_jerk = (
+                local_y_acceleration
+                - self.body_state.motion_in_body_coordinates.linear_acceleration.y
+            ) / time_step_in_seconds
+            orientation_jerk = (
+                orientation_acceleration
+                - self.body_state.motion_in_body_coordinates.angular_acceleration.z
+            ) / time_step_in_seconds
 
         self.body_state = BodyState(
-            self.body_state.position_in_world_coordinates.x + local_x_distance * math.cos(global_orientation) - local_y_distance * math.sin(global_orientation),
-            self. body_state.position_in_world_coordinates.y + local_x_distance * math.sin(global_orientation) + local_y_distance * math.cos(global_orientation),
+            self.body_state.position_in_world_coordinates.x
+            + local_x_distance * math.cos(global_orientation)
+            - local_y_distance * math.sin(global_orientation),
+            self.body_state.position_in_world_coordinates.y
+            + local_x_distance * math.sin(global_orientation)
+            + local_y_distance * math.cos(global_orientation),
             global_orientation,
             body_motion.linear_velocity.x,
             body_motion.linear_velocity.y,
@@ -700,7 +969,7 @@ class LimitedModuleFollowsBodySteeringController(BaseSteeringController):
             orientation_acceleration,
             local_x_jerk,
             local_y_jerk,
-            orientation_jerk
+            orientation_jerk,
         )
 
         self.last_state_update_time = self.current_time_in_seconds

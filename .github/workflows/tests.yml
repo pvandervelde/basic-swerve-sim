@@ -1,0 +1,30 @@
+on:
+  workflow_dispatch:
+#   push:
+#     branches: [main]
+#   pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: unit tests
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up python 3.12
+        uses: actions/setup-python@v2
+        with:
+            python-version: 3.12
+
+      - name: Setup PDM
+        uses: pdm-project/setup-pdm@v4
+
+      - name: Install dependencies
+        run: pdm sync -d -G test
+
+      - name: Test with pytest
+        run: |
+          pdm run pytest --cov=pdm --cov-config=pyproject.toml --cov-report=xml tests
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4

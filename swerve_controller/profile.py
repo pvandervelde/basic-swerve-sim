@@ -1,22 +1,23 @@
-from abc import ABC, abstractmethod
 import math
-from scipy.interpolate import BSpline, splrep
+from abc import ABC, abstractmethod
 from typing import List, Tuple
+
+from scipy.interpolate import BSpline, make_interp_spline
 
 from swerve_controller.geometry import LinearUnboundedSpace, RealNumberValueSpace
 
 # local
 from .errors import InvalidTimeFractionException
 
-class ProfilePoint(object):
 
+class ProfilePoint(object):
     def __init__(
         self,
         time_fraction: float,
         value: float,
         first_derivative: float,
         second_derivative: float,
-        third_derivative: float
+        third_derivative: float,
     ):
         self.time_fraction = time_fraction
         self.value = value
@@ -24,8 +25,8 @@ class ProfilePoint(object):
         self.second_derivative = second_derivative
         self.third_derivative = third_derivative
 
-class TransientVariableProfile(ABC):
 
+class TransientVariableProfile(ABC):
     @abstractmethod
     def first_derivative_at(self, time_since_start_of_profile: float) -> float:
         pass
@@ -42,9 +43,15 @@ class TransientVariableProfile(ABC):
     def value_at(self, time_since_start_of_profile: float) -> float:
         pass
 
-class SingleVariableLinearProfile(TransientVariableProfile):
 
-    def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+class SingleVariableLinearProfile(TransientVariableProfile):
+    def __init__(
+        self,
+        start: float,
+        end: float,
+        end_time: float = 1.0,
+        coordinate_space: RealNumberValueSpace = LinearUnboundedSpace(),
+    ):
         self.coordinate_space = coordinate_space
         self.start = coordinate_space.normalize_value(start)
         self.end = coordinate_space.normalize_value(end)
@@ -52,7 +59,10 @@ class SingleVariableLinearProfile(TransientVariableProfile):
         self.end_time = end_time
 
     def first_derivative_at(self, time_since_start_of_profile: float) -> float:
-        return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / self.end_time
+        return (
+            self.coordinate_space.smallest_distance_between_values(self.start, self.end)
+            / self.end_time
+        )
 
     def second_derivative_at(self, time_since_start_of_profile: float) -> float:
         if time_since_start_of_profile < 0.0:
@@ -62,10 +72,22 @@ class SingleVariableLinearProfile(TransientVariableProfile):
             return 0.0
 
         if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
-            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
+            return (
+                self.coordinate_space.smallest_distance_between_values(
+                    self.start, self.end
+                )
+                / 0.01
+            )
 
-        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
-            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01
+        if math.isclose(
+            self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2
+        ):
+            return (
+                -self.coordinate_space.smallest_distance_between_values(
+                    self.start, self.end
+                )
+                / 0.01
+            )
 
         return 0.0
 
@@ -77,10 +99,24 @@ class SingleVariableLinearProfile(TransientVariableProfile):
             return 0.0
 
         if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
-            return self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
+            return (
+                self.coordinate_space.smallest_distance_between_values(
+                    self.start, self.end
+                )
+                / 0.01
+                / 0.01
+            )
 
-        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
-            return -self.coordinate_space.smallest_distance_between_values(self.start, self.end) / 0.01 / 0.01
+        if math.isclose(
+            self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2
+        ):
+            return (
+                -self.coordinate_space.smallest_distance_between_values(
+                    self.start, self.end
+                )
+                / 0.01
+                / 0.01
+            )
 
         return 0.0
 
@@ -91,18 +127,27 @@ class SingleVariableLinearProfile(TransientVariableProfile):
         if time_since_start_of_profile > self.end_time:
             return self.end
 
-        distance = self.coordinate_space.smallest_distance_between_values(self.start, self.end)
-        return self.coordinate_space.normalize_value(distance * time_since_start_of_profile / self.end_time + self.start)
+        distance = self.coordinate_space.smallest_distance_between_values(
+            self.start, self.end
+        )
+        return self.coordinate_space.normalize_value(
+            distance * time_since_start_of_profile / self.end_time + self.start
+        )
+
 
 class SingleVariableCompoundProfileValue(object):
-
     def __init__(
         self,
         location_fraction: float,
-        value: float
+        value: float,
+        first_derivative=0.0,
+        second_derivative=0.0,
     ):
         self.location = location_fraction
         self.value = value
+        self.first_derivative = first_derivative
+        self.second_derivative = second_derivative
+
 
 class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
     """
@@ -119,7 +164,17 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
     - end_time: The end time of the profile.
     """
 
-    def __init__(self, start: float, end: float, end_time: float = 1.0, coordinate_space: RealNumberValueSpace = LinearUnboundedSpace()):
+    def __init__(
+        self,
+        start: float,
+        end: float,
+        end_time: float = 1.0,
+        start_velocity: float = 0.0,
+        end_velocity: float = 0.0,
+        start_acceleration: float = 0.0,
+        end_acceleration: float = 0.0,
+        coordinate_space: RealNumberValueSpace = LinearUnboundedSpace(),
+    ):
         """
         Initializes a SingleVariableMultiPointLinearProfile object.
 
@@ -132,15 +187,25 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
         self.coordinate_space = coordinate_space
         self.profiles: List[SingleVariableCompoundProfileValue] = [
-            SingleVariableCompoundProfileValue(0.0, start),
-            SingleVariableCompoundProfileValue(end_time, end)
+            SingleVariableCompoundProfileValue(
+                0.0, start, start_velocity, start_acceleration
+            ),
+            SingleVariableCompoundProfileValue(
+                end_time, end, end_velocity, end_acceleration
+            ),
         ]
 
         self.end_time = end_time
 
         self.spline: BSpline = None
 
-    def add_value(self, time_since_start_of_profile: float, value: float):
+    def add_value(
+        self,
+        time_since_start_of_profile: float,
+        value: float,
+        first_derivative: float = 0.0,
+        second_derivative: float = 0.0,
+    ):
         """
         Adds a value to the profile at the specified time fraction.
 
@@ -157,10 +222,18 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
 
         section = SingleVariableCompoundProfileValue(
             time_since_start_of_profile,
-            self.coordinate_space.normalize_value(value))
+            self.coordinate_space.normalize_value(value),
+            first_derivative,
+            second_derivative,
+        )
 
         for i in range(len(self.profiles)):
-            if math.isclose(time_since_start_of_profile, self.profiles[i].location, rel_tol=1e-7, abs_tol=1e-7):
+            if math.isclose(
+                time_since_start_of_profile,
+                self.profiles[i].location,
+                rel_tol=1e-7,
+                abs_tol=1e-7,
+            ):
                 # Matching location. Replace it
                 self.profiles[i] = section
                 # we're replacing an existing point so the minimum polynomial order doesn't change
@@ -181,7 +254,9 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
                         self.profiles.insert(i, section)
                         break
 
-    def find_time_indices_for_time_fraction(self, time_since_profile_start: float) -> Tuple[int, int]:
+    def find_time_indices_for_time_fraction(
+        self, time_since_profile_start: float
+    ) -> Tuple[int, int]:
         # Assumption:
         #  0.0 <= time_since_profile_start <= end_time
 
@@ -198,12 +273,14 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if index == -1:
             # we didn't find anything. that's weird because there's a guaranteed beginning and ending
             # throw a hissy
-            raise InvalidTimeFractionException(f'Could not find any known time locations smaller and larger than { time_since_profile_start }')
+            raise InvalidTimeFractionException(
+                f"Could not find any known time locations smaller and larger than { time_since_profile_start }"
+            )
 
         if i == 0:
             return (i, i + 1)
         else:
-            return ( i - 1, i)
+            return (i - 1, i)
 
     def first_derivative_at(self, time_since_start_of_profile: float) -> float:
         """
@@ -223,17 +300,29 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
             time_since_start_of_profile = self.end_time
 
         poly = self.get_defining_spline()
-        return poly.__call__(time_since_start_of_profile, nu=1, extrapolate=False)
+        return float(
+            poly.__call__(time_since_start_of_profile, nu=1, extrapolate=False)
+        )
 
     def get_defining_spline(self) -> BSpline:
         if self.spline is None:
             k = 3 if len(self.profiles) >= 4 else len(self.profiles) - 1
 
-            ts: List[float] = [ x.location for x in self.profiles ]
-            ys: List[float] = [ x.value for x in self.profiles ]
-            t, c, k = splrep(ts, ys, s=0, k=k)
+            ts: List[float] = [x.location for x in self.profiles]
+            ys: List[float] = [x.value for x in self.profiles]
 
-            self.spline = BSpline(t, c, k, extrapolate=False)
+            starting_first_derivative = self.profiles[0].first_derivative
+            ending_first_derivative = self.profiles[-1].first_derivative
+
+            self.spline = make_interp_spline(
+                ts,
+                ys,
+                k=k,
+                bc_type=(
+                    [(1, starting_first_derivative)],
+                    [(1, ending_first_derivative)],
+                ),
+            )
 
         return self.spline
 
@@ -269,7 +358,9 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if poly.k < 2:
             return 0.0
 
-        return poly.__call__(time_since_start_of_profile, nu=2, extrapolate=False)
+        return float(
+            poly.__call__(time_since_start_of_profile, nu=2, extrapolate=False)
+        )
 
     def third_derivative_at(self, time_since_start_of_profile: float) -> float:
         """
@@ -292,7 +383,9 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
         if poly.k < 3:
             return 0.0
 
-        return poly.__call__(time_since_start_of_profile, nu=3, extrapolate=False)
+        return float(
+            poly.__call__(time_since_start_of_profile, nu=3, extrapolate=False)
+        )
 
     def value_at(self, time_since_start_of_profile: float) -> float:
         """
@@ -312,12 +405,20 @@ class SingleVariableMultiPointLinearProfile(TransientVariableProfile):
             time_since_start_of_profile = self.end_time
 
         poly = self.get_defining_spline()
-        return self.coordinate_space.normalize_value(poly.__call__(time_since_start_of_profile, nu=0, extrapolate=False))
+        return self.coordinate_space.normalize_value(
+            float(poly.__call__(time_since_start_of_profile, nu=0, extrapolate=False))
+        )
+
 
 # see: https://www.mathworks.com/help/robotics/ug/design-a-trajectory-with-velocity-limits-using-a-trapezoidal-velocity-profile.html
 class SingleVariableTrapezoidalProfile(TransientVariableProfile):
-
-    def __init__(self, start: float, end: float, end_time: float = 1.0, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+    def __init__(
+        self,
+        start: float,
+        end: float,
+        end_time: float = 1.0,
+        value_space: RealNumberValueSpace = LinearUnboundedSpace(),
+    ):
         self.value_space = value_space
         self.start = value_space.normalize_value(start)
         self.end = value_space.normalize_value(end)
@@ -369,9 +470,9 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         # v = 1.5 * s / t
         self.velocity = 1.5 * (self.end - self.start) / self.end_time
 
-        self.acceleration_phase_ratio = 1/3 * self.end_time
-        self.constant_phase_ratio = 1/3 * self.end_time
-        self.deceleration_phase_ratio = 1/3 * self.end_time
+        self.acceleration_phase_ratio = 1 / 3 * self.end_time
+        self.constant_phase_ratio = 1 / 3 * self.end_time
+        self.deceleration_phase_ratio = 1 / 3 * self.end_time
 
     def first_derivative_at(self, time_since_start_of_profile: float) -> float:
         if time_since_start_of_profile < 0.0:
@@ -383,14 +484,23 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         if time_since_start_of_profile < self.acceleration_phase_ratio:
             # Accelerating
             starting_velocity = 0.0
-            velocity_due_to_acceleration = ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) * time_since_start_of_profile
+            velocity_due_to_acceleration = (
+                (self.velocity - starting_velocity) / (self.acceleration_phase_ratio)
+            ) * time_since_start_of_profile
             return starting_velocity + velocity_due_to_acceleration
 
-        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        if time_since_start_of_profile > (
+            self.acceleration_phase_ratio + self.constant_phase_ratio
+        ):
             # deccelerating
             starting_velocity = self.velocity
             ending_velocity = 0.0
-            velocity_due_to_acceleration = ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) * (time_since_start_of_profile - (self.acceleration_phase_ratio + self.constant_phase_ratio))
+            velocity_due_to_acceleration = (
+                (ending_velocity - self.velocity) / (self.deceleration_phase_ratio)
+            ) * (
+                time_since_start_of_profile
+                - (self.acceleration_phase_ratio + self.constant_phase_ratio)
+            )
             return starting_velocity + velocity_due_to_acceleration
 
         return self.velocity
@@ -407,7 +517,9 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
             starting_velocity = 0.0
             return (self.velocity - starting_velocity) / (self.acceleration_phase_ratio)
 
-        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        if time_since_start_of_profile > (
+            self.acceleration_phase_ratio + self.constant_phase_ratio
+        ):
             # deccelerating
             ending_velocity = 0.0
             return (ending_velocity - self.velocity) / (self.deceleration_phase_ratio)
@@ -423,19 +535,46 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
 
         if math.isclose(0.0, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
             starting_velocity = 0.0
-            return (((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) - 0.0) / 0.01
+            return (
+                ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio))
+                - 0.0
+            ) / 0.01
 
-        if math.isclose(time_since_start_of_profile, self.acceleration_phase_ratio, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(
+            time_since_start_of_profile,
+            self.acceleration_phase_ratio,
+            rel_tol=1e-2,
+            abs_tol=1e-2,
+        ):
             starting_velocity = 0.0
-            return (0.0 - ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio))) / 0.01
+            return (
+                0.0
+                - (
+                    (self.velocity - starting_velocity)
+                    / (self.acceleration_phase_ratio)
+                )
+            ) / 0.01
 
-        if math.isclose(time_since_start_of_profile, (self.acceleration_phase_ratio + self.constant_phase_ratio), rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(
+            time_since_start_of_profile,
+            (self.acceleration_phase_ratio + self.constant_phase_ratio),
+            rel_tol=1e-2,
+            abs_tol=1e-2,
+        ):
             ending_velocity = 0.0
-            return (((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) - 0.0) / 0.01
+            return (
+                ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio))
+                - 0.0
+            ) / 0.01
 
-        if math.isclose(self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2):
+        if math.isclose(
+            self.end_time, time_since_start_of_profile, rel_tol=1e-2, abs_tol=1e-2
+        ):
             ending_velocity = 0.0
-            return (0.0 - ((ending_velocity - self.velocity) / (self.acceleration_phase_ratio))) / 0.01
+            return (
+                0.0
+                - ((ending_velocity - self.velocity) / (self.acceleration_phase_ratio))
+            ) / 0.01
 
         return 0.0
 
@@ -449,31 +588,74 @@ class SingleVariableTrapezoidalProfile(TransientVariableProfile):
         if time_since_start_of_profile < self.acceleration_phase_ratio:
             # Accelerating
             starting_velocity = 0.0
-            distance_change_from_velocity = starting_velocity * time_since_start_of_profile
-            distance_change_from_acceleration = 0.5 * ((self.velocity - starting_velocity) / (self.acceleration_phase_ratio)) * time_since_start_of_profile * time_since_start_of_profile
-            result = self.start + distance_change_from_velocity + distance_change_from_acceleration
+            distance_change_from_velocity = (
+                starting_velocity * time_since_start_of_profile
+            )
+            distance_change_from_acceleration = (
+                0.5
+                * (
+                    (self.velocity - starting_velocity)
+                    / (self.acceleration_phase_ratio)
+                )
+                * time_since_start_of_profile
+                * time_since_start_of_profile
+            )
+            result = (
+                self.start
+                + distance_change_from_velocity
+                + distance_change_from_acceleration
+            )
             return self.value_space.normalize_value(result)
 
-        distance_due_to_inital_acceleration = 0.5 * self.velocity * self.acceleration_phase_ratio
-        if time_since_start_of_profile > (self.acceleration_phase_ratio + self.constant_phase_ratio):
+        distance_due_to_inital_acceleration = (
+            0.5 * self.velocity * self.acceleration_phase_ratio
+        )
+        if time_since_start_of_profile > (
+            self.acceleration_phase_ratio + self.constant_phase_ratio
+        ):
             # deccelerating
-            distance_due_to_constant_velocity = self.velocity * self.constant_phase_ratio
+            distance_due_to_constant_velocity = (
+                self.velocity * self.constant_phase_ratio
+            )
 
-            deceleration_time = (time_since_start_of_profile - (self.acceleration_phase_ratio + self.constant_phase_ratio))
+            deceleration_time = time_since_start_of_profile - (
+                self.acceleration_phase_ratio + self.constant_phase_ratio
+            )
             ending_velocity = 0.0
-            distance_due_to_deceleration = self.velocity * deceleration_time + 0.5 * ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio)) * deceleration_time * deceleration_time
-            result = self.start + distance_due_to_inital_acceleration + distance_due_to_constant_velocity + distance_due_to_deceleration
+            distance_due_to_deceleration = (
+                self.velocity * deceleration_time
+                + 0.5
+                * ((ending_velocity - self.velocity) / (self.deceleration_phase_ratio))
+                * deceleration_time
+                * deceleration_time
+            )
+            result = (
+                self.start
+                + distance_due_to_inital_acceleration
+                + distance_due_to_constant_velocity
+                + distance_due_to_deceleration
+            )
             return self.value_space.normalize_value(result)
 
-        result = self.start + distance_due_to_inital_acceleration + (time_since_start_of_profile - self.acceleration_phase_ratio) * self.velocity
+        result = (
+            self.start
+            + distance_due_to_inital_acceleration
+            + (time_since_start_of_profile - self.acceleration_phase_ratio)
+            * self.velocity
+        )
         return self.value_space.normalize_value(result)
+
 
 # S-Curve profile
 # --> controlled by the second derivative being linear
 class SingleVariableSCurveProfile(TransientVariableProfile):
-
-
-    def __init__(self, start: float, end: float, end_time: float = 1.0, value_space: RealNumberValueSpace = LinearUnboundedSpace()):
+    def __init__(
+        self,
+        start: float,
+        end: float,
+        end_time: float = 1.0,
+        value_space: RealNumberValueSpace = LinearUnboundedSpace(),
+    ):
         self.value_space = value_space
         self.start = value_space.normalize_value(start)
         self.end = value_space.normalize_value(end)
@@ -532,17 +714,17 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
         # j =  (s * 512) / (10 * t^3)
         self.jerk = 512 / 10 * (self.end - self.start) / math.pow(self.end_time, 3.0)
 
-        self.positive_acceleration_phase_ratio = 1/8 * self.end_time
-        self.constant_acceleration_phase_ratio = 1/8 * self.end_time
-        self.negative_acceleration_phase_ratio = 1/8 * self.end_time
-        self.constant_phase_ratio = 1/4 * self.end_time
+        self.positive_acceleration_phase_ratio = 1 / 8 * self.end_time
+        self.constant_acceleration_phase_ratio = 1 / 8 * self.end_time
+        self.negative_acceleration_phase_ratio = 1 / 8 * self.end_time
+        self.constant_phase_ratio = 1 / 4 * self.end_time
 
         self.t1 = self.positive_acceleration_phase_ratio
         self.t2 = self.t1 + self.constant_acceleration_phase_ratio
         self.t3 = self.t2 + self.negative_acceleration_phase_ratio
         self.t4 = self.t3 + self.constant_phase_ratio
         self.t5 = self.t4 + self.positive_acceleration_phase_ratio
-        self.t6 = self.t5  + self.constant_acceleration_phase_ratio
+        self.t6 = self.t5 + self.constant_acceleration_phase_ratio
         self.t7 = self.end_time
 
     def first_derivative_at(self, time_since_start_of_profile: float) -> float:
@@ -553,24 +735,46 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
             return 0.0
 
         if time_since_start_of_profile < self.t1:
-            return 0.5 * self.jerk * time_since_start_of_profile * time_since_start_of_profile
+            return (
+                0.5
+                * self.jerk
+                * time_since_start_of_profile
+                * time_since_start_of_profile
+            )
 
         a1 = self.jerk * self.t1
         v1 = 0.5 * a1 * self.t1
         if time_since_start_of_profile < self.t2:
-            return  v1 + a1 * (time_since_start_of_profile - self.t1)
+            return v1 + a1 * (time_since_start_of_profile - self.t1)
 
         a2 = a1
         v2 = v1 + a1 * (self.t2 - self.t1)
         if time_since_start_of_profile < self.t3:
-            return -0.5 * self.jerk * (time_since_start_of_profile - self.t2) * (time_since_start_of_profile - self.t2) + a2 * (time_since_start_of_profile - self.t2) + v2
+            return (
+                -0.5
+                * self.jerk
+                * (time_since_start_of_profile - self.t2)
+                * (time_since_start_of_profile - self.t2)
+                + a2 * (time_since_start_of_profile - self.t2)
+                + v2
+            )
 
-        v3 = -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2) + a2 * (self.t3 - self.t2) + v2
+        v3 = (
+            -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2)
+            + a2 * (self.t3 - self.t2)
+            + v2
+        )
         if time_since_start_of_profile < self.t4:
             return v3
 
         if time_since_start_of_profile < self.t5:
-            return -0.5 * self.jerk * (time_since_start_of_profile - self.t4) * (time_since_start_of_profile - self.t4) + v3
+            return (
+                -0.5
+                * self.jerk
+                * (time_since_start_of_profile - self.t4)
+                * (time_since_start_of_profile - self.t4)
+                + v3
+            )
 
         a5 = -self.jerk * (self.t5 - self.t4)
         v5 = -0.5 * self.jerk * (self.t5 - self.t4) * (self.t5 - self.t4) + v3
@@ -579,7 +783,14 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
 
         a6 = a5
         v6 = a5 * (self.t6 - self.t5) + v5
-        return 0.5 * self.jerk * (time_since_start_of_profile - self.t6) * (time_since_start_of_profile - self.t6) + a6 * (time_since_start_of_profile - self.t6) + v6
+        return (
+            0.5
+            * self.jerk
+            * (time_since_start_of_profile - self.t6)
+            * (time_since_start_of_profile - self.t6)
+            + a6 * (time_since_start_of_profile - self.t6)
+            + v6
+        )
 
     def second_derivative_at(self, time_since_start_of_profile: float) -> float:
         if time_since_start_of_profile < 0.0:
@@ -595,7 +806,10 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
             return self.jerk * self.t1
 
         if time_since_start_of_profile < self.t3:
-            return -self.jerk * (time_since_start_of_profile - self.t2) + self.jerk * self.t1
+            return (
+                -self.jerk * (time_since_start_of_profile - self.t2)
+                + self.jerk * self.t1
+            )
 
         if time_since_start_of_profile < self.t4:
             return 0.0
@@ -606,7 +820,9 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
         if time_since_start_of_profile < self.t6:
             return -self.jerk * (self.t5 - self.t4)
 
-        return -self.jerk * (self.t5 - self.t4) + self.jerk * (time_since_start_of_profile - self.t6)
+        return -self.jerk * (self.t5 - self.t4) + self.jerk * (
+            time_since_start_of_profile - self.t6
+        )
 
     def third_derivative_at(self, time_since_start_of_profile: float) -> float:
         if time_since_start_of_profile < 0.0:
@@ -643,45 +859,97 @@ class SingleVariableSCurveProfile(TransientVariableProfile):
             return self.end
 
         if time_since_start_of_profile < self.t1:
-            result = 1/6 * self.jerk * math.pow(time_since_start_of_profile, 3.0) + self.start
+            result = (
+                1 / 6 * self.jerk * math.pow(time_since_start_of_profile, 3.0)
+                + self.start
+            )
             return self.value_space.normalize_value(result)
 
         a1 = self.jerk * self.t1
         v1 = 0.5 * a1 * self.t1
-        s1 = 1/6 * self.jerk * math.pow(self.t1, 3.0) + self.start
+        s1 = 1 / 6 * self.jerk * math.pow(self.t1, 3.0) + self.start
         if time_since_start_of_profile < self.t2:
-            result =  v1 * (time_since_start_of_profile - self.t1) + 0.5 * a1 * (time_since_start_of_profile - self.t1) * (time_since_start_of_profile - self.t1) + s1
+            result = (
+                v1 * (time_since_start_of_profile - self.t1)
+                + 0.5
+                * a1
+                * (time_since_start_of_profile - self.t1)
+                * (time_since_start_of_profile - self.t1)
+                + s1
+            )
             return self.value_space.normalize_value(result)
 
         a2 = a1
         v2 = v1 + a1 * (self.t2 - self.t1)
-        s2 = v1 * (self.t2 - self.t1) + 0.5 * a1 * (self.t2 - self.t1) * (self.t2 - self.t1) + s1
+        s2 = (
+            v1 * (self.t2 - self.t1)
+            + 0.5 * a1 * (self.t2 - self.t1) * (self.t2 - self.t1)
+            + s1
+        )
         if time_since_start_of_profile < self.t3:
-            result = -1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t2, 3.0) + 0.5 * a2 * math.pow(time_since_start_of_profile - self.t2, 2.0) + v2 * (time_since_start_of_profile - self.t2) + s2
+            result = (
+                -1
+                / 6
+                * self.jerk
+                * math.pow(time_since_start_of_profile - self.t2, 3.0)
+                + 0.5 * a2 * math.pow(time_since_start_of_profile - self.t2, 2.0)
+                + v2 * (time_since_start_of_profile - self.t2)
+                + s2
+            )
             return self.value_space.normalize_value(result)
 
-        v3 = -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2) + a1 * (self.t3 - self.t2) + v2
-        s3 = -1/6 * self.jerk * math.pow(self.t3 - self.t2, 3.0) + 0.5 * a2 * math.pow(self.t3 - self.t2, 2.0) + v2 * (self.t3 - self.t2) + s2
+        v3 = (
+            -0.5 * self.jerk * (self.t3 - self.t2) * (self.t3 - self.t2)
+            + a1 * (self.t3 - self.t2)
+            + v2
+        )
+        s3 = (
+            -1 / 6 * self.jerk * math.pow(self.t3 - self.t2, 3.0)
+            + 0.5 * a2 * math.pow(self.t3 - self.t2, 2.0)
+            + v2 * (self.t3 - self.t2)
+            + s2
+        )
         if time_since_start_of_profile < self.t4:
             result = v3 * (time_since_start_of_profile - self.t3) + s3
             return self.value_space.normalize_value(result)
 
         s4 = v3 * (self.t4 - self.t3) + s3
         if time_since_start_of_profile < self.t5:
-            result = -1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t4, 3.0) + v3 * (time_since_start_of_profile - self.t4) + s4
+            result = (
+                -1
+                / 6
+                * self.jerk
+                * math.pow(time_since_start_of_profile - self.t4, 3.0)
+                + v3 * (time_since_start_of_profile - self.t4)
+                + s4
+            )
             return self.value_space.normalize_value(result)
 
         a5 = -self.jerk * (self.t5 - self.t4)
         v5 = -0.5 * self.jerk * (self.t5 - self.t4) * (self.t5 - self.t4) + v3
-        s5 = -1/6 * self.jerk * math.pow(self.t5 - self.t4, 3.0) + v3 * (self.t5 - self.t4) + s4
+        s5 = (
+            -1 / 6 * self.jerk * math.pow(self.t5 - self.t4, 3.0)
+            + v3 * (self.t5 - self.t4)
+            + s4
+        )
         if time_since_start_of_profile < self.t6:
-            result = 0.5 * a5 * math.pow(time_since_start_of_profile - self.t5, 2.0) + v5 * (time_since_start_of_profile - self.t5) + s5
+            result = (
+                0.5 * a5 * math.pow(time_since_start_of_profile - self.t5, 2.0)
+                + v5 * (time_since_start_of_profile - self.t5)
+                + s5
+            )
             return self.value_space.normalize_value(result)
 
         a6 = a5
         v6 = a5 * (self.t6 - self.t5) + v5
         s6 = 0.5 * a5 * math.pow(self.t6 - self.t5, 2.0) + v5 * (self.t6 - self.t5) + s5
-        result = 1/6 * self.jerk * math.pow(time_since_start_of_profile - self.t6, 3.0) + 0.5 * a6 * math.pow(time_since_start_of_profile - self.t6, 2.0) + v6 * (time_since_start_of_profile - self.t6) + s6
+        result = (
+            1 / 6 * self.jerk * math.pow(time_since_start_of_profile - self.t6, 3.0)
+            + 0.5 * a6 * math.pow(time_since_start_of_profile - self.t6, 2.0)
+            + v6 * (time_since_start_of_profile - self.t6)
+            + s6
+        )
         return self.value_space.normalize_value(result)
+
 
 # 4th and 5th order s-curve
