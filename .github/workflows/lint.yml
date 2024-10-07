@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Run the linter
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
 
       - name: Set up python 3.12
         uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2
