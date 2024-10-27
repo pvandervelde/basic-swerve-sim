@@ -1278,4 +1278,3 @@ def plot_movement_through_space(
     output_file_name = output_file_name_without_extension + ".html"
 
     animation.save(output_file_name, writer=writer)
-    animation.save(output_file_name, writer=writer)

@@ -8,8 +8,9 @@ from plotly.subplots import make_subplots
 from sim_output.animate_robot import plot_movement_through_space
 
 # local
-from swerve_controller.control_model import DriveModuleMeasuredValues, Point
+from swerve_controller.control_model import DriveModuleMeasuredValues
 from swerve_controller.drive_module import DriveModule
+from swerve_controller.geometry import Point
 from swerve_controller.states import BodyState
 
 

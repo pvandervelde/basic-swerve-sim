@@ -1,6 +1,9 @@
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 .venv/
+.test_data/
+test_data/
 
 verification/linear_module_first/verification_results.xlsx
 verification/linear_module_first/~$verification_results.xlsx

@@ -5,21 +5,42 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
-            "type": "python",
+            "name": "Python: Current File - rosbag",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
                 "--output",
-                "h:\\temp\\4ws",
+                "./.test_data/results",
                 "--control-level",
-                "limited",
+                "body",
                 "--motion-profile",
-                "trapezoidal",
+                "linear",
+                "--no-graphs",
+                "--directory",
+                "./.test_data/second",
+                //"--output",
+                //"h:\\temp\\motion_profiles"
+            ]
+        },
+        {
+            "name": "Python: Current File - file",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--output",
+                "./.test_data/results",
+                "--control-level",
+                "body",
+                "--motion-profile",
+                "linear",
                 "--file",
-                ".\\motions\\inplace_rotation_from_0_fwd.yaml",
+                "./motions/0_deg_fwd_constant.yaml",
                 //"--output",
                 //"h:\\temp\\motion_profiles"
             ]

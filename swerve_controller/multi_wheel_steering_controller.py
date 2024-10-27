@@ -25,7 +25,11 @@ from .control_profile import (
     ModuleStateProfile,
 )
 from .drive_module import DriveModule
-from .geometry import RealNumberValueSpace
+from .geometry import (
+    LinearUnboundedSpace,
+    PeriodicBoundedCircularSpace,
+    RealNumberValueSpace,
+)
 from .states import BodyState, DriveModuleDesiredValues, DriveModuleMeasuredValues
 
 
@@ -370,6 +374,9 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
         self.modules = drive_modules
         self.motion_profile_func = motion_profile_func
 
+        self.unbounded_number_space = LinearUnboundedSpace()
+        self.steering_number_space = PeriodicBoundedCircularSpace()
+
         # Use a simple control model for the time being. Just need something that roughly works
         self.control_model = SimpleFourWheelSteeringControlModel(self.modules)
 
@@ -452,11 +459,6 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
             future_time_in_seconds - self.trajectory_was_started_at_time_in_seconds
         )
 
-        trajectory_time = (  # noqa: F841
-            self.body_trajectory.time_span()
-            if self.is_executing_body_trajectory
-            else self.module_trajectory_from_command.time_span()
-        )
         time_fraction = time_from_start_of_trajectory
 
         result: List[DriveModuleDesiredValues] = []
@@ -489,6 +491,19 @@ class ModuleFollowsBodySteeringController(BaseSteeringController):
                 # previous_velocity_difference = current_velocity - previous_state_for_module.drive_velocity_in_module_coordinates.x
 
                 states_for_module = drive_module_desired_values[i]
+                if math.isinf(states_for_module[0].steering_angle_in_radians):
+                    states_for_module[
+                        0
+                    ].steering_angle_in_radians = current_steering_angle
+
+                if math.isinf(states_for_module[1].steering_angle_in_radians):
+                    states_for_module[
+                        1
+                    ].steering_angle_in_radians = (
+                        self.steering_number_space.normalize_value(
+                            current_steering_angle + math.pi
+                        )
+                    )
 
                 first_state_rotation_difference = difference_between_angles(
                     current_steering_angle,
