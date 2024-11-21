@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: unit tests
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Set up python 3.12
         uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2
