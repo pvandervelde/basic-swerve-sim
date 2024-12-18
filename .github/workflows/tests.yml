@@ -27,4 +27,4 @@ jobs:
           pdm run pytest --cov=pdm --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a # v5
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5
