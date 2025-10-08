@@ -13,7 +13,7 @@ dependencies = [
     "scipy>=1.14.1",
     "pyyaml>=6.0.2",
 ]
-requires-python = "==3.12.*"
+requires-python = "==3.14.*"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 
